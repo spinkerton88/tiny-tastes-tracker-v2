@@ -1,0 +1,7 @@
+{
+  "name": "tiny-tastes-tracker-v2",
+  "description": "An AI-enhanced PWA to track your baby's first 100 foods, manage recipes, and plan meals for Baby-Led Weaning. Features include AI recipe suggestions from ingredients, recipe import from photos, and AI-categorized shopping lists.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
