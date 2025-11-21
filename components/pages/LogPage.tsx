@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, TriedFoodLog } from '../../types';
 import { allFoods } from '../../constants';
@@ -9,6 +10,7 @@ interface ProfilePageProps {
   triedFoods: TriedFoodLog[];
   onSaveProfile: (profile: UserProfile) => void;
   onResetData: () => void;
+  onShowDoctorReport: () => void;
 }
 
 const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
@@ -238,36 +240,7 @@ const NoLogIllustration = () => (
 );
 
 
-const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string }> = ({ triedFoods, babyName }) => {
-    const exportToCSV = () => {
-        if (triedFoods.length === 0) {
-            alert("No data to export.");
-            return;
-        }
-        const headers = ['Food Name', 'Date', 'Meal', 'Reaction (1-7)', 'More than 1 Bite?', 'Allergy Reaction', 'Notes', 'Try Count'];
-        const rows = triedFoods.map(log => {
-            const safeFoodName = `"${(log.id || '').replace(/"/g, '""')}"`;
-            const safeNotes = `"${(log.notes || '').replace(/"/g, '""')}"`;
-            return [ safeFoodName, log.date || '', log.meal || '', log.reaction || '', log.moreThanOneBite ? "Yes" : "No", log.allergyReaction || 'none', safeNotes, log.tryCount || 1 ].join(',');
-        });
-        let csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\r\n" + rows.join("\r\n");
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "tiny_tastes_summary.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const emailPediatrician = () => {
-        alert("Please export the CSV and attach it to an email to your pediatrician.");
-        const subject = babyName ? `${babyName}'s Food Log Summary` : "Baby's Food Log Summary";
-        const body = `Hi Dr. [Name],\n\nI've attached ${babyName ? babyName + "'s" : "our baby's"} food log summary as a .csv file for you to review.\n\nThanks!`;
-        const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailtoLink;
-    };
-
+const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowDoctorReport: () => void }> = ({ triedFoods, babyName, onShowDoctorReport }) => {
     const getReactionDisplay = (reactionValue: number) => {
         if (reactionValue <= 2) return { emoji: '😩', text: 'Hated it' };
         if (reactionValue <= 4) return { emoji: '😒', text: 'Meh' };
@@ -286,12 +259,12 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string }> = ({ 
         <div>
             <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
                 <h3 className="text-xl font-semibold text-gray-800">Summary of Tried Foods</h3>
-                <div className="flex-shrink-0 flex gap-2">
-                    <button onClick={exportToCSV} className="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
-                        <Icon name="sheet" /> CSV
-                    </button>
-                    <button onClick={emailPediatrician} className="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                        <Icon name="mail" /> Email
+                <div className="flex-shrink-0">
+                    <button 
+                        onClick={onShowDoctorReport} 
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 transition-all"
+                    >
+                        <Icon name="file-text" className="w-4 h-4" /> Share Report
                     </button>
                 </div>
             </div>
@@ -344,7 +317,7 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string }> = ({ 
     );
 };
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, onSaveProfile, onResetData }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, onSaveProfile, onResetData, onShowDoctorReport }) => {
     const [activeTab, setActiveTab] = useState<'profile' | 'log'>('profile');
     
     const navButtonClasses = (tabName: 'profile' | 'log') => {
@@ -368,7 +341,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, onSa
             </div>
             
             {activeTab === 'profile' && <ProfileView userProfile={userProfile} onSaveProfile={onSaveProfile} onResetData={onResetData} />}
-            {activeTab === 'log' && <LogView triedFoods={triedFoods} babyName={userProfile?.babyName} />}
+            {activeTab === 'log' && <LogView triedFoods={triedFoods} babyName={userProfile?.babyName} onShowDoctorReport={onShowDoctorReport} />}
         </>
     );
 };

@@ -18,6 +18,7 @@ import ShoppingListModal from './components/modals/ShoppingListModal';
 import SelectRecipeModal from './components/modals/SelectRecipeModal';
 import SubstitutesModal from './components/modals/SubstitutesModal';
 import TutorialModal from './components/modals/TutorialModal';
+import DoctorReportModal from './components/modals/DoctorReportModal';
 
 
 const App: React.FC = () => {
@@ -226,6 +227,7 @@ const App: React.FC = () => {
                     triedFoods={triedFoods} 
                     onSaveProfile={saveProfile} 
                     onResetData={handleResetData} 
+                    onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
                 />;
             default:
                 return <TrackerPage triedFoods={triedFoods} onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} />;
@@ -300,6 +302,13 @@ const App: React.FC = () => {
                     onClose={() => setModalState({ type: null })}
                     onSelectSubstitute={(substituteFood) => setModalState({ type: 'LOG_FOOD', food: substituteFood })}
                 />;
+            }
+            case 'DOCTOR_REPORT': {
+                return <DoctorReportModal
+                    userProfile={userProfile}
+                    triedFoods={triedFoods}
+                    onClose={() => setModalState({ type: null })}
+                />
             }
             default:
                 return null;

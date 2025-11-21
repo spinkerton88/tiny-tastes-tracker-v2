@@ -72,6 +72,7 @@ type SuggestRecipeModalState = { type: 'SUGGEST_RECIPE' };
 type ShoppingListModalState = { type: 'SHOPPING_LIST' };
 type SelectRecipeModalState = { type: 'SELECT_RECIPE'; date: string; meal: string; };
 type SubstitutesModalState = { type: 'SUBSTITUTES'; food: Food };
+type DoctorReportModalState = { type: 'DOCTOR_REPORT' };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -84,4 +85,5 @@ export type ModalState =
   | ShoppingListModalState
   | SelectRecipeModalState
   | SubstitutesModalState
+  | DoctorReportModalState
   | NullModalState;
