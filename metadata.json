@@ -1,6 +1,6 @@
 {
-  "name": "tiny-tastes-tracker-v2",
-  "description": "An intelligent, AI-powered app to track your baby's first 100 foods. Features smart recipe suggestions, ingredient analysis, safe food substitutes, and comprehensive progress reporting for Baby-Led Weaning.",
+  "name": "tiny-tastes-tracker-ai",
+  "description": "The intelligent, AI-powered baby food tracker. Features smart recipe suggestions, instant image-to-recipe import, nutritional substitute analysis, and doctor-ready progress reports.",
   "requestFramePermissions": [
     "camera"
   ]
