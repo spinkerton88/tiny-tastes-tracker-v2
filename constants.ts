@@ -2,7 +2,8 @@
 import { FoodCategory } from './types';
 
 export const COMMON_ALLERGENS = [
-    "Cow's Milk",
+    "Dairy",
+    "Lactose",
     "Egg",
     "Peanut",
     "Tree Nut",
@@ -16,10 +17,10 @@ export const COMMON_ALLERGENS = [
 // Map foods (UPPERCASE names matching allFoods) to their contained allergens
 export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
     // Dairy
-    "YOGURT": ["Cow's Milk"],
-    "MOZZARELLA": ["Cow's Milk"],
-    "RICOTTA CHEESE": ["Cow's Milk"],
-    "COTTAGE CHEESE": ["Cow's Milk"],
+    "YOGURT": ["Dairy", "Lactose"],
+    "MOZZARELLA": ["Dairy", "Lactose"],
+    "RICOTTA CHEESE": ["Dairy", "Lactose"],
+    "COTTAGE CHEESE": ["Dairy", "Lactose"],
     
     // Eggs
     "EGGS": ["Egg"],
@@ -32,7 +33,7 @@ export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
     "FARRO": ["Wheat"],
     "BULGUR": ["Wheat"],
     "FREEKEH": ["Wheat"],
-    "WAFFLES": ["Wheat", "Egg", "Cow's Milk"], // Common ingredients assumed
+    "WAFFLES": ["Wheat", "Egg", "Dairy", "Lactose"], // Common ingredients assumed
     "HEALTHY MUFFINS": ["Wheat", "Egg"], // Common ingredients assumed
     "GNOCCHI": ["Wheat"],
     "TORTILLA": ["Wheat"], // Often wheat, though corn exists. Flagging to be safe.
@@ -252,11 +253,11 @@ export const foodGuideData: { [key: string]: { allergyRisk: string; chokingRisk:
     "PORK": { allergyRisk: "Low", chokingRisk: "High (if tough)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve very tender, slow-cooked pork (like pulled pork, no sauce). Offer a large strip of the tender meat.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue with very tender strips or offer shredded pork.</p>" },
 
     // Dairy & Eggs
-    "YOGURT": { allergyRisk: "High (Top 9 Allergen - Cow's Milk)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve plain, whole-milk (full-fat) yogurt with no added sugars. Offer it on a pre-loaded spoon for baby to grab. You can also mix in thinned peanut butter or fruit purées (once those are introduced).</p><p class='mt-2'><strong>Allergy Info:</strong> This is a top allergen. Introduce it on its own and wait 3-5 days before other new allergens. Start with a small amount.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving plain, whole-milk yogurt. You can start to mix in soft fruits or berries (smashed or quartered).</p>" },
+    "YOGURT": { allergyRisk: "High (Top 9 Allergen - Dairy)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve plain, whole-milk (full-fat) yogurt with no added sugars. Offer it on a pre-loaded spoon for baby to grab. You can also mix in thinned peanut butter or fruit purées (once those are introduced).</p><p class='mt-2'><strong>Allergy Info:</strong> This is a top allergen. Introduce it on its own and wait 3-5 days before other new allergens. Start with a small amount.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving plain, whole-milk yogurt. You can start to mix in soft fruits or berries (smashed or quartered).</p>" },
     "EGGS": { allergyRisk: "High (Top 9 Allergen)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Offer fully-cooked egg only. A great way is to make a simple 'omelet strip' by whisking one egg and cooking it flat in a pan. Cut it into long, 1-inch wide strips for baby to hold.</p><p class='mt-2'><strong>Allergy Info:</strong> Egg is a top allergen. Introduce it on its own and wait 3-5 days before introducing other new allergens. Start with a small amount.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>You can serve scrambled eggs (cooked through) or chopped hard-boiled eggs for pincer grasp practice. Continue offering omelet strips as well.</p>" },
-    "MOZZARELLA": { allergyRisk: "High (Top 9 Allergen - Cow's Milk)", chokingRisk: "Medium (melted strings)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve fresh, full-fat mozzarella. Offer a large piece for baby to gnaw on, or serve shredded mozzarella. Melted mozzarella can be stringy and difficult, but is fine in a thin layer on a quesadilla strip.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving shredded or in small, bite-sized cubes of fresh mozzarella.</p>" },
-    "RICOTTA CHEESE": { allergyRisk: "High (Top 9 Allergen - Cow's Milk)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve whole milk ricotta on a pre-loaded spoon, or spread thinly on a toast strip.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving as above.</p>" },
-    "COTTAGE CHEESE": { allergyRisk: "High (Top 9 Allergen - Cow's Milk)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Choose plain, whole milk cottage cheese. The curds are a great texture. Serve on a pre-loaded spoon or on a tray for baby to rake up.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving as is, encouraging self-feeding.</p>" },
+    "MOZZARELLA": { allergyRisk: "High (Top 9 Allergen - Dairy)", chokingRisk: "Medium (melted strings)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve fresh, full-fat mozzarella. Offer a large piece for baby to gnaw on, or serve shredded mozzarella. Melted mozzarella can be stringy and difficult, but is fine in a thin layer on a quesadilla strip.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving shredded or in small, bite-sized cubes of fresh mozzarella.</p>" },
+    "RICOTTA CHEESE": { allergyRisk: "High (Top 9 Allergen - Dairy)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve whole milk ricotta on a pre-loaded spoon, or spread thinly on a toast strip.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving as above.</p>" },
+    "COTTAGE CHEESE": { allergyRisk: "High (Top 9 Allergen - Dairy)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Choose plain, whole milk cottage cheese. The curds are a great texture. Serve on a pre-loaded spoon or on a tray for baby to rake up.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving as is, encouraging self-feeding.</p>" },
 
     // Other
     "WATER": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Offer a small amount (1-2 oz) of water in an open cup or a straw cup with meals. This is primarily for learning to drink, not for hydration (which still comes from breastmilk/formula).</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue offering water with all meals in an open cup or straw cup. Baby will gradually get better at sipping and drinking.</p>" },

@@ -168,6 +168,13 @@ const App: React.FC = () => {
             loadedProfile.knownAllergies = []; // Reset legacy string data to empty array to avoid type errors
         }
         
+        // Migration: Rename "Cow's Milk" to "Dairy"
+        if (loadedProfile && Array.isArray(loadedProfile.knownAllergies)) {
+            if (loadedProfile.knownAllergies.includes("Cow's Milk")) {
+                loadedProfile.knownAllergies = loadedProfile.knownAllergies.map(a => a === "Cow's Milk" ? "Dairy" : a);
+            }
+        }
+        
         setUserProfile(loadedProfile);
 
         if (loadedProfile) {
