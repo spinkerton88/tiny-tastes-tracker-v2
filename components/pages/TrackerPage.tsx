@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Food, TriedFoodLog, Filter, FoodCategory } from '../../types';
 import { allFoods, totalFoodCount } from '../../constants';
@@ -78,6 +79,7 @@ const NoResultsIllustration = () => (
 const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const triedFoodSet = new Set(triedFoods.map(f => f.id));
   const triedCount = triedFoods.length;
   const progressPercent = (triedCount / totalFoodCount) * 100;
@@ -139,8 +141,15 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick }) =>
         </div>
         
         <div className="mt-4 pt-3 border-t border-gray-100">
-            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Breakdown by Category</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+            <button 
+                onClick={() => setShowBreakdown(!showBreakdown)}
+                className="flex items-center justify-between w-full text-left group"
+            >
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider group-hover:text-teal-600 transition-colors">Breakdown by Category</h4>
+                <Icon name="chevron-down" className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${showBreakdown ? 'rotate-180' : ''}`} />
+            </button>
+
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 transition-all duration-300 ease-in-out overflow-hidden ${showBreakdown ? 'max-h-[1000px] opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
                 {allFoods.map(cat => {
                     const catTriedCount = cat.items.filter(item => triedFoodSet.has(item.name)).length;
                     return <CategoryProgress key={cat.category} category={cat} triedCount={catTriedCount} />;

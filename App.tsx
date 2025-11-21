@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData } from './types';
 import { totalFoodCount } from './constants';
@@ -103,7 +104,7 @@ const App: React.FC = () => {
         }
         setModalState({ type: null });
     };
-    
+
     const updateRecipeRating = async (recipeId: string, rating: number) => {
         let updatedRecipe: Recipe | undefined;
         const updatedRecipes = recipes.map(r => {
@@ -120,7 +121,7 @@ const App: React.FC = () => {
             setModalState({ type: 'VIEW_RECIPE', recipe: updatedRecipe });
         }
     };
-
+    
     const saveMealToPlan = async (date: string, meal: string, recipeId: string, recipeTitle: string) => {
         const updatedMealPlan = { ...mealPlan };
         if (!updatedMealPlan[date]) {
@@ -263,7 +264,7 @@ const App: React.FC = () => {
                 return <ViewRecipeModal 
                     recipe={modal.recipe} 
                     onClose={() => setModalState({ type: null })} 
-                    onDelete={deleteRecipe} 
+                    onDelete={deleteRecipe}
                     onUpdateRating={updateRecipeRating}
                 />;
             }

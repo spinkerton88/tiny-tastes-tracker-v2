@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Recipe } from '../../types';
 import Icon from '../ui/Icon';
@@ -51,19 +52,21 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ recipe, onClose, onDe
                     <div className="mb-4 list-disc list-inside">{formatRecipeText(recipe.ingredients) || <p>No ingredients listed.</p>}</div>
                     <h3 className="text-lg font-medium text-gray-800">Instructions</h3>
                     <div className="list-decimal list-inside">{formatRecipeText(recipe.instructions) || <p>No instructions provided.</p>}</div>
-                    
+
                     <div className="mt-6 border-t pt-4">
-                        <h3 className="text-lg font-medium text-gray-800 mb-2">Your Rating</h3>
-                        <div className="flex items-center">
+                        <h3 className="text-lg font-medium text-gray-800 mb-2">Rate this Recipe</h3>
+                        <div className="flex items-center gap-2">
                             {[1, 2, 3, 4, 5].map((star) => (
                                 <button
-                                key={star}
-                                type="button"
-                                onClick={() => onUpdateRating(recipe.id, star === recipe.rating ? 0 : star)}
-                                className="text-yellow-400 hover:text-yellow-500 focus:outline-none transition-transform transform hover:scale-110"
-                                aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                                    key={star}
+                                    onClick={() => onUpdateRating(recipe.id, star === recipe.rating ? 0 : star)}
+                                    className="focus:outline-none transition-transform hover:scale-110"
+                                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                                 >
-                                <Icon name="star" className={`w-8 h-8 ${star <= (recipe.rating || 0) ? 'fill-current' : ''}`} />
+                                    <Icon
+                                        name="star"
+                                        className={`w-8 h-8 ${star <= (recipe.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                                    />
                                 </button>
                             ))}
                         </div>

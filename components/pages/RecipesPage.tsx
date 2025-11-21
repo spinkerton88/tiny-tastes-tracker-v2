@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Recipe, RecipeFilter, MealPlan } from '../../types';
 import Icon from '../ui/Icon';
@@ -53,7 +54,7 @@ const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe
                     <Icon
                         key={star}
                         name="star"
-                        className={`w-4 h-4 text-yellow-400 ${star <= (rating || 0) ? 'fill-current' : ''}`}
+                        className={`w-3 h-3 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
                     />
                 ))}
             </div>
