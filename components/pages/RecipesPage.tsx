@@ -46,6 +46,20 @@ const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe
         return ingredients.replace(/\n/g, ', ');
     };
 
+    const StarRatingDisplay: React.FC<{ rating: number }> = ({ rating }) => {
+        return (
+            <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                    <Icon
+                        key={star}
+                        name="star"
+                        className={`w-4 h-4 text-yellow-400 ${star <= (rating || 0) ? 'fill-current' : ''}`}
+                    />
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div>
             <div className="flex flex-wrap gap-2 mb-4">
@@ -62,7 +76,10 @@ const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe
             <div className="space-y-4">
                 {filteredRecipes.length > 0 ? filteredRecipes.map(recipe => (
                     <button key={recipe.id} onClick={() => onViewRecipe(recipe)} className="w-full text-left bg-white shadow rounded-lg p-4 transition-all hover:shadow-md">
-                        <h3 className="text-lg font-semibold text-teal-700">{recipe.title}</h3>
+                        <div className="flex justify-between items-start">
+                            <h3 className="text-lg font-semibold text-teal-700 pr-2">{recipe.title}</h3>
+                            {recipe.rating && recipe.rating > 0 && <StarRatingDisplay rating={recipe.rating} />}
+                        </div>
                         <div className="mt-2 flex flex-wrap gap-2">
                             {[...(recipe.mealTypes || []), ...(recipe.tags || [])].map(tag => (
                                 <span key={tag} className={`text-xs ${['breakfast', 'lunch', 'dinner', 'snack'].includes(tag) ? 'bg-blue-100 text-blue-700' : 'bg-teal-100 text-teal-700'} px-2 py-0.5 rounded-full`}>{tag}</span>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Recipe } from '../../types';
 import Icon from '../ui/Icon';
@@ -7,6 +6,7 @@ interface ViewRecipeModalProps {
   recipe: Recipe;
   onClose: () => void;
   onDelete: (id: string) => void;
+  onUpdateRating: (id: string, rating: number) => void;
 }
 
 const formatRecipeText = (text: string) => {
@@ -25,7 +25,7 @@ const formatRecipeText = (text: string) => {
     }).filter(Boolean);
 };
 
-const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ recipe, onClose, onDelete }) => {
+const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ recipe, onClose, onDelete, onUpdateRating }) => {
     const allTags = [...(recipe.mealTypes || []), ...(recipe.tags || [])];
 
     const handleDelete = () => {
@@ -51,6 +51,23 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ recipe, onClose, onDe
                     <div className="mb-4 list-disc list-inside">{formatRecipeText(recipe.ingredients) || <p>No ingredients listed.</p>}</div>
                     <h3 className="text-lg font-medium text-gray-800">Instructions</h3>
                     <div className="list-decimal list-inside">{formatRecipeText(recipe.instructions) || <p>No instructions provided.</p>}</div>
+                    
+                    <div className="mt-6 border-t pt-4">
+                        <h3 className="text-lg font-medium text-gray-800 mb-2">Your Rating</h3>
+                        <div className="flex items-center">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                key={star}
+                                type="button"
+                                onClick={() => onUpdateRating(recipe.id, star === recipe.rating ? 0 : star)}
+                                className="text-yellow-400 hover:text-yellow-500 focus:outline-none transition-transform transform hover:scale-110"
+                                aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                                >
+                                <Icon name="star" className={`w-8 h-8 ${star <= (recipe.rating || 0) ? 'fill-current' : ''}`} />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
                 <div className="flex justify-end space-x-3 p-4 border-t bg-gray-50 rounded-b-lg">
                     <button type="button" onClick={handleDelete} className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">Delete Recipe</button>

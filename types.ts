@@ -37,6 +37,7 @@ export interface Recipe {
     tags: string[];
     mealTypes: RecipeFilter[];
     createdAt: string; // Changed from Firebase Timestamp to ISO string
+    rating?: number;
 }
 
 export interface UserProfile {

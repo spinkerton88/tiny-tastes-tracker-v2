@@ -66,7 +66,7 @@ const App: React.FC = () => {
         setTriedFoods(updatedTriedFoods);
     };
 
-    const addRecipe = async (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => {
+    const addRecipe = async (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => {
         const newRecipe: Recipe = {
             ...recipeData,
             id: crypto.randomUUID(),
@@ -104,6 +104,23 @@ const App: React.FC = () => {
         setModalState({ type: null });
     };
     
+    const updateRecipeRating = async (recipeId: string, rating: number) => {
+        let updatedRecipe: Recipe | undefined;
+        const updatedRecipes = recipes.map(r => {
+            if (r.id === recipeId) {
+                updatedRecipe = { ...r, rating };
+                return updatedRecipe;
+            }
+            return r;
+        });
+        localStorage.setItem(`tiny-tastes-tracker-recipes`, JSON.stringify(updatedRecipes));
+        setRecipes(updatedRecipes);
+
+        if (modalState.type === 'VIEW_RECIPE' && modalState.recipe.id === recipeId && updatedRecipe) {
+            setModalState({ type: 'VIEW_RECIPE', recipe: updatedRecipe });
+        }
+    };
+
     const saveMealToPlan = async (date: string, meal: string, recipeId: string, recipeTitle: string) => {
         const updatedMealPlan = { ...mealPlan };
         if (!updatedMealPlan[date]) {
@@ -162,6 +179,7 @@ const App: React.FC = () => {
                     tags: Array.isArray(r.tags) ? r.tags : [],
                     mealTypes: Array.isArray(r.mealTypes) ? r.mealTypes : [],
                     createdAt: r.createdAt || new Date().toISOString(),
+                    rating: r.rating,
                 };
             }).filter((r): r is Recipe => r !== null);
             setRecipes(cleanedRecipes);
@@ -246,6 +264,7 @@ const App: React.FC = () => {
                     recipe={modal.recipe} 
                     onClose={() => setModalState({ type: null })} 
                     onDelete={deleteRecipe} 
+                    onUpdateRating={updateRecipeRating}
                 />;
             }
             case 'IMPORT_RECIPE':

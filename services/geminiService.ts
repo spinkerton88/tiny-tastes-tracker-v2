@@ -50,12 +50,10 @@ export const importRecipeFromImage = async (file: File): Promise<Partial<Recipe>
       text: `You are a recipe parser. Extract the title, ingredients (as a bulleted list), and instructions (as a numbered list) from this image. Respond ONLY with a JSON object in the format {"title": "...", "ingredients": "...", "instructions": "..."}. If you cannot find one of the fields, return an empty string for it.`
     };
 
+    // FIX: Use an image model for multimodal inputs and remove unsupported config.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash-image',
         contents: { parts: [textPart, imagePart] },
-        config: {
-            responseMimeType: "application/json",
-        },
     });
     
     const text = response.text.trim();
