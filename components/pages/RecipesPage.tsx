@@ -33,6 +33,20 @@ const NoRecipesIllustration = () => (
     </svg>
 );
 
+const StarRatingDisplay: React.FC<{ rating: number }> = ({ rating }) => {
+    return (
+        <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
+            {[1, 2, 3, 4, 5].map((star) => (
+                <Icon
+                    key={star}
+                    name="star"
+                    className={`w-3 h-3 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
+                />
+            ))}
+        </div>
+    );
+};
+
 const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe) => void, onShowAddRecipe: () => void }> = ({ recipes, onViewRecipe, onShowAddRecipe }) => {
     const [filter, setFilter] = useState<RecipeFilter>('all');
 
@@ -45,20 +59,6 @@ const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe
     const getIngredientsPreview = (ingredients: string): string => {
         if (!ingredients) return 'No ingredients listed.';
         return ingredients.replace(/\n/g, ', ');
-    };
-
-    const StarRatingDisplay: React.FC<{ rating: number }> = ({ rating }) => {
-        return (
-            <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Icon
-                        key={star}
-                        name="star"
-                        className={`w-3 h-3 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
-                    />
-                ))}
-            </div>
-        );
     };
 
     return (

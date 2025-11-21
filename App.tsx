@@ -73,6 +73,7 @@ const App: React.FC = () => {
             ...recipeData,
             id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
+            rating: 0,
         };
         const updatedRecipes = [...recipes, newRecipe];
         localStorage.setItem(`tiny-tastes-tracker-recipes`, JSON.stringify(updatedRecipes));
@@ -105,7 +106,7 @@ const App: React.FC = () => {
         }
         setModalState({ type: null });
     };
-
+    
     const updateRecipeRating = async (recipeId: string, rating: number) => {
         let updatedRecipe: Recipe | undefined;
         const updatedRecipes = recipes.map(r => {
@@ -118,6 +119,7 @@ const App: React.FC = () => {
         localStorage.setItem(`tiny-tastes-tracker-recipes`, JSON.stringify(updatedRecipes));
         setRecipes(updatedRecipes);
 
+        // If the recipe is currently being viewed in the modal, update the modal state as well
         if (modalState.type === 'VIEW_RECIPE' && modalState.recipe.id === recipeId && updatedRecipe) {
             setModalState({ type: 'VIEW_RECIPE', recipe: updatedRecipe });
         }
@@ -181,7 +183,7 @@ const App: React.FC = () => {
                     tags: Array.isArray(r.tags) ? r.tags : [],
                     mealTypes: Array.isArray(r.mealTypes) ? r.mealTypes : [],
                     createdAt: r.createdAt || new Date().toISOString(),
-                    rating: r.rating,
+                    rating: r.rating || 0,
                 };
             }).filter((r): r is Recipe => r !== null);
             setRecipes(cleanedRecipes);

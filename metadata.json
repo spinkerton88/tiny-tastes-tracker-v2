@@ -1,6 +1,6 @@
 {
   "name": "tiny-tastes-tracker-v2",
-  "description": "An AI-enhanced PWA to track your baby's first 100 foods, manage recipes, and plan meals for Baby-Led Weaning. Features include AI recipe suggestions from ingredients, recipe import from photos, and AI-categorized shopping lists.",
+  "description": "An intelligent, AI-powered app to track your baby's first 100 foods. Features smart recipe suggestions, ingredient analysis, safe food substitutes, and comprehensive progress reporting for Baby-Led Weaning.",
   "requestFramePermissions": [
     "camera"
   ]

@@ -37,7 +37,7 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ recipe, onClose, onDe
 
     return (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-[500]">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-auto flex flex-col">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-auto flex flex-col max-h-[90vh]">
                 <div className="flex justify-between items-center border-b p-4">
                     <h2 className="text-xl font-semibold text-teal-600">{recipe.title}</h2>
                     <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
@@ -52,7 +52,7 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ recipe, onClose, onDe
                     <div className="mb-4 list-disc list-inside">{formatRecipeText(recipe.ingredients) || <p>No ingredients listed.</p>}</div>
                     <h3 className="text-lg font-medium text-gray-800">Instructions</h3>
                     <div className="list-decimal list-inside">{formatRecipeText(recipe.instructions) || <p>No instructions provided.</p>}</div>
-
+                    
                     <div className="mt-6 border-t pt-4">
                         <h3 className="text-lg font-medium text-gray-800 mb-2">Rate this Recipe</h3>
                         <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ recipe, onClose, onDe
                         </div>
                     </div>
                 </div>
-                <div className="flex justify-end space-x-3 p-4 border-t bg-gray-50 rounded-b-lg">
+                <div className="flex justify-end space-x-3 p-4 border-t bg-gray-50 rounded-b-lg mt-auto">
                     <button type="button" onClick={handleDelete} className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">Delete Recipe</button>
                 </div>
             </div>
