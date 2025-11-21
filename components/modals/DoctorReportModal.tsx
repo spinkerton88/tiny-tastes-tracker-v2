@@ -65,6 +65,13 @@ const DoctorReportModal: React.FC<DoctorReportModalProps> = ({ userProfile, trie
       <style>
         {`
             @media print {
+                @page {
+                    margin: 0.5in;
+                    size: auto;
+                }
+                body {
+                    background-color: white;
+                }
                 body * {
                     visibility: hidden;
                 }
@@ -76,14 +83,28 @@ const DoctorReportModal: React.FC<DoctorReportModalProps> = ({ userProfile, trie
                     left: 0;
                     top: 0;
                     width: 100%;
-                    height: auto;
+                    max-width: 100% !important;
                     margin: 0;
-                    padding: 20px;
+                    padding: 0;
                     background: white;
                     overflow: visible;
+                    box-shadow: none !important;
                 }
                 .no-print {
                     display: none !important;
+                }
+                /* Force background colors to print (important for allergy flags) */
+                * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                /* Prevent page breaks inside summary cards or table rows */
+                .avoid-break {
+                    break-inside: avoid;
+                    page-break-inside: avoid;
+                }
+                thead {
+                    display: table-header-group; 
                 }
             }
         `}
@@ -121,44 +142,44 @@ const DoctorReportModal: React.FC<DoctorReportModalProps> = ({ userProfile, trie
 
         {/* Report Preview - Scrollable */}
         <div className="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-8">
-            <div id="doctor-report-container" className="bg-white max-w-3xl mx-auto p-8 shadow-sm min-h-full print:shadow-none">
+            <div id="doctor-report-container" className="bg-white max-w-3xl mx-auto p-8 shadow-sm min-h-full print:shadow-none text-gray-900">
                 {/* Report Header */}
                 <div className="border-b-2 border-gray-800 pb-6 mb-6 flex justify-between items-start">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">Food Introduction Report</h1>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Food Introduction Report</h1>
                         <p className="text-sm text-gray-500">Generated on {new Date().toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                        <h2 className="text-xl font-bold text-teal-700">{userProfile?.babyName || "Baby"}</h2>
-                        {userProfile?.birthDate && <p className="text-sm text-gray-600">DOB: {userProfile.birthDate}</p>}
+                        <h2 className="text-2xl font-bold text-teal-700">{userProfile?.babyName || "Baby"}</h2>
+                        {userProfile?.birthDate && <p className="text-sm text-gray-600 mt-1">DOB: {userProfile.birthDate}</p>}
                     </div>
                 </div>
 
                 {/* Summary Stats Grid */}
                 <div className="grid grid-cols-3 gap-4 mb-8">
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 avoid-break">
                         <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Period</p>
-                        <p className="text-lg font-bold text-gray-800">
+                        <p className="text-lg font-bold text-gray-800 mt-1">
                             {dateRange === 'all' ? 'All Time' : `Last ${dateRange} Days`}
                         </p>
                     </div>
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 avoid-break">
                         <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">New Foods Tried</p>
-                        <p className="text-lg font-bold text-teal-600">{totalFoodsTried}</p>
+                        <p className="text-lg font-bold text-teal-600 mt-1">{totalFoodsTried}</p>
                     </div>
-                    <div className={`p-4 rounded-lg border ${flaggedLogs.length > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                    <div className={`p-4 rounded-lg border avoid-break ${flaggedLogs.length > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                         <p className={`text-xs uppercase tracking-wide font-semibold ${flaggedLogs.length > 0 ? 'text-red-600' : 'text-green-600'}`}>Reactions Flagged</p>
-                        <p className={`text-lg font-bold ${flaggedLogs.length > 0 ? 'text-red-700' : 'text-green-700'}`}>{flaggedLogs.length}</p>
+                        <p className={`text-lg font-bold mt-1 ${flaggedLogs.length > 0 ? 'text-red-700' : 'text-green-700'}`}>{flaggedLogs.length}</p>
                     </div>
                 </div>
 
                 {/* Known Allergies Section (if any) */}
                 {knownAllergies.length > 0 && (
-                    <div className="mb-8">
+                    <div className="mb-8 avoid-break">
                         <h3 className="text-sm font-bold text-gray-900 uppercase border-b border-gray-200 pb-2 mb-3">Known Allergies & Conditions</h3>
                         <div className="flex flex-wrap gap-2">
                             {knownAllergies.map(a => (
-                                <span key={a} className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-200">
+                                <span key={a} className="inline-block px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-800 border border-red-200">
                                     {a}
                                 </span>
                             ))}
@@ -174,17 +195,20 @@ const DoctorReportModal: React.FC<DoctorReportModalProps> = ({ userProfile, trie
                         </h3>
                         <div className="space-y-3">
                             {flaggedLogs.map((log, idx) => (
-                                <div key={idx} className="bg-red-50 border border-red-200 p-3 rounded-md">
-                                    <div className="flex justify-between font-bold text-red-800 mb-1">
-                                        <span>{getFoodEmoji(log.id)} {log.id}</span>
+                                <div key={idx} className="bg-red-50 border border-red-200 p-4 rounded-md avoid-break">
+                                    <div className="flex justify-between font-bold text-red-900 mb-2 border-b border-red-200 pb-2">
+                                        <span className="flex items-center gap-2 text-lg">
+                                            {getFoodEmoji(log.id)} {log.id}
+                                        </span>
                                         <span>{log.date}</span>
                                     </div>
-                                    <div className="text-sm text-red-700">
-                                        <span className="font-semibold">Reaction Type:</span> {log.allergyReaction}
+                                    <div className="text-sm text-red-800 mb-1">
+                                        <span className="font-bold uppercase text-xs mr-2">Reaction Type:</span> 
+                                        <span className="font-semibold text-base">{log.allergyReaction}</span>
                                     </div>
                                     {log.notes && (
-                                        <div className="text-sm text-red-700 mt-1 italic">
-                                            " {log.notes} "
+                                        <div className="text-sm text-red-800 mt-2 p-2 bg-white/50 rounded border border-red-100 italic">
+                                            "{log.notes}"
                                         </div>
                                     )}
                                 </div>
@@ -197,39 +221,46 @@ const DoctorReportModal: React.FC<DoctorReportModalProps> = ({ userProfile, trie
                 <div>
                     <h3 className="text-sm font-bold text-gray-900 uppercase border-b border-gray-200 pb-2 mb-4">Detailed Food Log</h3>
                     {filteredLogs.length > 0 ? (
-                        <table className="min-w-full text-left text-sm">
+                        <table className="min-w-full text-left text-sm border-collapse">
                             <thead>
-                                <tr className="border-b border-gray-200">
-                                    <th className="py-2 font-semibold text-gray-600 w-24">Date</th>
-                                    <th className="py-2 font-semibold text-gray-600 w-32">Food</th>
-                                    <th className="py-2 font-semibold text-gray-600 w-24">Reaction</th>
-                                    <th className="py-2 font-semibold text-gray-600">Notes</th>
+                                <tr className="border-b-2 border-gray-300">
+                                    <th className="py-3 font-bold text-gray-700 w-[15%]">Date</th>
+                                    <th className="py-3 font-bold text-gray-700 w-[25%]">Food</th>
+                                    <th className="py-3 font-bold text-gray-700 w-[15%]">Reaction</th>
+                                    <th className="py-3 font-bold text-gray-700 w-[45%]">Notes</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {filteredLogs.map((log, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-50">
-                                        <td className="py-2 text-gray-500 align-top">{log.date}</td>
-                                        <td className="py-2 font-medium text-gray-800 align-top">{getFoodEmoji(log.id)} {log.id}</td>
-                                        <td className="py-2 text-gray-600 align-top">
-                                            {log.reaction}/7
+                                    <tr key={idx} className="avoid-break hover:bg-gray-50">
+                                        <td className="py-3 pr-2 text-gray-600 align-top whitespace-nowrap">{log.date}</td>
+                                        <td className="py-3 pr-2 font-semibold text-gray-900 align-top">
+                                            <span className="mr-1.5 inline-block">{getFoodEmoji(log.id)}</span>
+                                            {log.id}
+                                        </td>
+                                        <td className="py-3 pr-2 align-top">
+                                            <div className="text-gray-700 font-medium">{log.reaction}/7</div>
                                             {log.allergyReaction && log.allergyReaction !== 'none' && (
-                                                <span className="block text-xs text-red-600 font-bold">{log.allergyReaction}</span>
+                                                <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 uppercase tracking-wider">
+                                                    {log.allergyReaction}
+                                                </span>
                                             )}
                                         </td>
-                                        <td className="py-2 text-gray-500 align-top italic">{log.notes || '-'}</td>
+                                        <td className="py-3 text-gray-600 align-top leading-relaxed">
+                                            {log.notes ? log.notes : <span className="text-gray-300 text-xs">-</span>}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     ) : (
-                        <p className="text-gray-500 italic text-center py-4">No logs found for this period.</p>
+                        <p className="text-gray-500 italic text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">No logs found for this period.</p>
                     )}
                 </div>
 
                 {/* Footer for Report */}
                 <div className="mt-12 pt-4 border-t border-gray-200 text-center">
-                    <p className="text-xs text-gray-400">Generated by Tiny Tastes Tracker</p>
+                    <p className="text-xs text-gray-400 uppercase tracking-widest">Generated by Tiny Tastes Tracker</p>
                 </div>
             </div>
         </div>

@@ -119,6 +119,11 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
       return foodAllergens.some(allergen => knownAllergens.includes(allergen));
   };
 
+  // Logic for Recently Tried
+  const recentLogs = [...triedFoods]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
   return (
     <>
       <h2 className="text-2xl font-semibold text-gray-800 mb-4">My 100 Foods Tracker</h2>
@@ -143,6 +148,43 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
             </button>
         )}
       </div>
+
+      {/* Recently Tried Section */}
+      {recentLogs.length > 0 && !searchQuery && filter === 'all' && (
+        <div className="mb-6">
+             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Recently Tried</h3>
+             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                {recentLogs.map(log => {
+                    // Find the category and full food details for styling
+                    let foundCategory: FoodCategory | undefined;
+                    let foundFood: Food | undefined;
+
+                    for (const cat of allFoods) {
+                        const f = cat.items.find(i => i.name === log.id);
+                        if (f) {
+                            foundFood = f;
+                            foundCategory = cat;
+                            break;
+                        }
+                    }
+
+                    if (!foundFood || !foundCategory) return null;
+
+                    return (
+                        <FoodCard
+                            key={`recent-${log.id}`}
+                            name={foundFood.name}
+                            emoji={foundFood.emoji}
+                            category={foundCategory}
+                            isTried={true}
+                            isAllergic={isFoodAllergic(foundFood.name)}
+                            onClick={() => onFoodClick(foundFood!)}
+                        />
+                    );
+                })}
+             </div>
+        </div>
+      )}
 
       <div className="flex space-x-2 mb-4">
         <FilterButton filter="all" currentFilter={filter} onClick={setFilter}>All</FilterButton>
