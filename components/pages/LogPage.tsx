@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserProfile, TriedFoodLog } from '../../types';
-import { allFoods } from '../../constants';
+import { allFoods, COMMON_ALLERGENS } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
@@ -46,7 +46,10 @@ const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
 const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (profile: UserProfile) => void, onResetData: () => void }> = ({ userProfile, onSaveProfile, onResetData }) => {
     const [name, setName] = useState(userProfile?.babyName || '');
     const [birthDate, setBirthDate] = useState(userProfile?.birthDate || '');
-    const [allergies, setAllergies] = useState(userProfile?.knownAllergies || '');
+    // Ensure allergies is an array, handling legacy string data if necessary
+    const [allergies, setAllergies] = useState<string[]>(
+        Array.isArray(userProfile?.knownAllergies) ? userProfile.knownAllergies : []
+    );
     const [showInfoModal, setShowInfoModal] = useState(false);
     
     const isSavePickerSupported = 'showSaveFilePicker' in window;
@@ -54,7 +57,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
     useEffect(() => {
         setName(userProfile?.babyName || '');
         setBirthDate(userProfile?.birthDate || '');
-        setAllergies(userProfile?.knownAllergies || '');
+        setAllergies(Array.isArray(userProfile?.knownAllergies) ? userProfile.knownAllergies : []);
     }, [userProfile]);
 
     const handleSave = () => {
@@ -65,6 +68,16 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
             knownAllergies: allergies,
         });
         alert("Profile saved!");
+    };
+
+    const toggleAllergy = (allergen: string) => {
+        setAllergies(prev => {
+            if (prev.includes(allergen)) {
+                return prev.filter(a => a !== allergen);
+            } else {
+                return [...prev, allergen];
+            }
+        });
     };
     
     const getBackupData = () => {
@@ -179,11 +192,35 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                         <input type="date" id="birth-date-input" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm" />
                     </div>
                 </div>
-                <div className="mt-4">
-                    <label htmlFor="known-allergies-input" className="block text-sm font-medium text-gray-700">Known Allergies:</label>
-                    <textarea id="known-allergies-input" value={allergies} onChange={e => setAllergies(e.target.value)} rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm" placeholder="e.g., Dairy, Soy (for your reference)"></textarea>
+                
+                <div className="mt-6">
+                    <div className="flex items-center mb-2">
+                        <Icon name="alert-triangle" className="w-4 h-4 text-orange-500 mr-2" />
+                        <label className="block text-sm font-medium text-gray-700">Known Allergies</label>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">Select any allergens your baby has been diagnosed with. These will be flagged across the app.</p>
+                    <div className="flex flex-wrap gap-2">
+                        {COMMON_ALLERGENS.map(allergen => {
+                            const isSelected = allergies.includes(allergen);
+                            return (
+                                <button
+                                    key={allergen}
+                                    onClick={() => toggleAllergy(allergen)}
+                                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                                        isSelected 
+                                        ? 'bg-red-50 border-red-200 text-red-700 shadow-sm' 
+                                        : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {isSelected && <Icon name="check" className="w-3 h-3 inline-block mr-1.5 -mt-0.5" />}
+                                    {allergen}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
-                <button onClick={handleSave} className="mt-4 w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+
+                <button onClick={handleSave} className="mt-6 w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
                     Save Profile
                 </button>
             </div>

@@ -162,6 +162,12 @@ const App: React.FC = () => {
         };
         
         const loadedProfile = getFromStorage<UserProfile | null>('profile', null);
+        
+        // Legacy data migration for allergies (string -> string[])
+        if (loadedProfile && typeof loadedProfile.knownAllergies === 'string') {
+            loadedProfile.knownAllergies = []; // Reset legacy string data to empty array to avoid type errors
+        }
+        
         setUserProfile(loadedProfile);
 
         if (loadedProfile) {
@@ -201,7 +207,7 @@ const App: React.FC = () => {
     const renderPage = () => {
         switch (currentPage) {
             case 'tracker':
-                return <TrackerPage triedFoods={triedFoods} onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} />;
+                return <TrackerPage triedFoods={triedFoods} onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} userProfile={userProfile} />;
             case 'recommendations':
                 return <RecommendationsPage
                     userProfile={userProfile} 
@@ -232,7 +238,7 @@ const App: React.FC = () => {
                     onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
                 />;
             default:
-                return <TrackerPage triedFoods={triedFoods} onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} />;
+                return <TrackerPage triedFoods={triedFoods} onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} userProfile={userProfile} />;
         }
     };
 

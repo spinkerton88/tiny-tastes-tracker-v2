@@ -1,13 +1,14 @@
 
 import React, { useState } from 'react';
-import { Food, TriedFoodLog, Filter, FoodCategory } from '../../types';
-import { allFoods, totalFoodCount } from '../../constants';
+import { Food, TriedFoodLog, Filter, FoodCategory, UserProfile } from '../../types';
+import { allFoods, totalFoodCount, FOOD_ALLERGY_MAPPING } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
 interface TrackerPageProps {
   triedFoods: TriedFoodLog[];
   onFoodClick: (food: Food) => void;
+  userProfile?: UserProfile | null; // Add userProfile prop
 }
 
 const FoodCard: React.FC<{
@@ -15,9 +16,11 @@ const FoodCard: React.FC<{
   emoji: string;
   category: FoodCategory;
   isTried: boolean;
+  isAllergic: boolean;
   onClick: () => void;
-}> = ({ name, emoji, category, isTried, onClick }) => {
+}> = ({ name, emoji, category, isTried, isAllergic, onClick }) => {
   const triedClass = isTried ? 'is-tried' : '';
+  
   return (
     <button
       onClick={onClick}
@@ -26,6 +29,13 @@ const FoodCard: React.FC<{
     >
       <span className="text-3xl">{emoji}</span>
       <span className="mt-1 text-center leading-tight">{name}</span>
+      
+      {isAllergic && !isTried && (
+        <div className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm" title="Contains known allergen">
+             <Icon name="alert-triangle" className="w-4 h-4 text-red-500 fill-red-50" />
+        </div>
+      )}
+
       <div className="check-overlay absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg pointer-events-none">
         <Icon name="check-circle-2" className="w-12 h-12 text-teal-600" />
       </div>
@@ -76,7 +86,7 @@ const NoResultsIllustration = () => (
     </svg>
 );
 
-const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick }) => {
+const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, userProfile }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
@@ -84,6 +94,8 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick }) =>
   const triedFoodSet = new Set(triedFoods.map(f => f.id));
   const triedCount = triedFoods.length;
   const progressPercent = (triedCount / totalFoodCount) * 100;
+  
+  const knownAllergens = Array.isArray(userProfile?.knownAllergies) ? userProfile?.knownAllergies : [];
 
   const filteredCategories = allFoods.map(category => {
       const items = category.items.filter(food => {
@@ -100,6 +112,12 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick }) =>
       });
       return { ...category, items };
   }).filter(category => category.items.length > 0);
+
+  const isFoodAllergic = (foodName: string) => {
+      const foodAllergens = FOOD_ALLERGY_MAPPING[foodName];
+      if (!foodAllergens) return false;
+      return foodAllergens.some(allergen => knownAllergens.includes(allergen));
+  };
 
   return (
     <>
@@ -171,6 +189,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick }) =>
                   emoji={food.emoji}
                   category={category}
                   isTried={triedFoodSet.has(food.name)}
+                  isAllergic={isFoodAllergic(food.name)}
                   onClick={() => onFoodClick(food)}
                 />
               ))}

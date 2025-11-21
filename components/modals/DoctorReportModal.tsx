@@ -58,6 +58,8 @@ const DoctorReportModal: React.FC<DoctorReportModalProps> = ({ userProfile, trie
     return food?.emoji || '';
   };
 
+  const knownAllergies = Array.isArray(userProfile?.knownAllergies) ? userProfile?.knownAllergies : [];
+
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-[500]">
       <style>
@@ -151,10 +153,16 @@ const DoctorReportModal: React.FC<DoctorReportModalProps> = ({ userProfile, trie
                 </div>
 
                 {/* Known Allergies Section (if any) */}
-                {userProfile?.knownAllergies && (
+                {knownAllergies.length > 0 && (
                     <div className="mb-8">
                         <h3 className="text-sm font-bold text-gray-900 uppercase border-b border-gray-200 pb-2 mb-3">Known Allergies & Conditions</h3>
-                        <p className="text-gray-700 bg-yellow-50 p-3 rounded border border-yellow-100">{userProfile.knownAllergies}</p>
+                        <div className="flex flex-wrap gap-2">
+                            {knownAllergies.map(a => (
+                                <span key={a} className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-200">
+                                    {a}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 )}
 

@@ -1,4 +1,67 @@
+
 import { FoodCategory } from './types';
+
+export const COMMON_ALLERGENS = [
+    "Cow's Milk",
+    "Egg",
+    "Peanut",
+    "Tree Nut",
+    "Soy",
+    "Wheat",
+    "Fish",
+    "Shellfish",
+    "Sesame"
+];
+
+// Map foods (UPPERCASE names matching allFoods) to their contained allergens
+export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
+    // Dairy
+    "YOGURT": ["Cow's Milk"],
+    "MOZZARELLA": ["Cow's Milk"],
+    "RICOTTA CHEESE": ["Cow's Milk"],
+    "COTTAGE CHEESE": ["Cow's Milk"],
+    
+    // Eggs
+    "EGGS": ["Egg"],
+    
+    // Wheat/Gluten (Simplified to Wheat for Top 9 tracking)
+    "KAMUT": ["Wheat"],
+    "PASTA": ["Wheat"],
+    "COUSCOUS": ["Wheat"],
+    "BREAD": ["Wheat"],
+    "FARRO": ["Wheat"],
+    "BULGUR": ["Wheat"],
+    "FREEKEH": ["Wheat"],
+    "WAFFLES": ["Wheat", "Egg", "Cow's Milk"], // Common ingredients assumed
+    "HEALTHY MUFFINS": ["Wheat", "Egg"], // Common ingredients assumed
+    "GNOCCHI": ["Wheat"],
+    "TORTILLA": ["Wheat"], // Often wheat, though corn exists. Flagging to be safe.
+    
+    // Soy
+    "TOFU": ["Soy"],
+    "EDAMAME": ["Soy"],
+    
+    // Peanuts
+    "PEANUTS": ["Peanut"],
+    "PEANUT BUTTER": ["Peanut"],
+    
+    // Tree Nuts
+    "ALMONDS": ["Tree Nut"],
+    "ALMOND BUTTER": ["Tree Nut"],
+    "COCONUT": ["Tree Nut"], // FDA classifies coconut as a tree nut
+    
+    // Fish
+    "FISH": ["Fish"],
+    "TUNA": ["Fish"],
+    "SARDINES": ["Fish"],
+    "SALMON": ["Fish"],
+    
+    // Shellfish
+    "SHRIMP": ["Shellfish"],
+    
+    // Sesame
+    "SEEDS": ["Sesame"], // Often includes sesame/tahini
+};
 
 export const allFoods: FoodCategory[] = [
     {

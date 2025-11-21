@@ -44,7 +44,7 @@ export interface Recipe {
 export interface UserProfile {
     babyName?: string;
     birthDate?: string;
-    knownAllergies?: string;
+    knownAllergies?: string[]; // Changed from string to string[]
     pediatricianApproved?: boolean;
 }
 

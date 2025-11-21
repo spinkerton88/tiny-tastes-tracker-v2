@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { UserProfile, TriedFoodLog, Food } from '../../types';
-import { recommendationData, allFoods } from '../../constants';
+import { recommendationData, allFoods, FOOD_ALLERGY_MAPPING } from '../../constants';
 import Accordion from '../ui/Accordion';
 import Icon from '../ui/Icon';
 
@@ -35,9 +36,10 @@ const calculateAge = (dateString: string) => {
 const FoodCard: React.FC<{ 
     food: Food; 
     isTried: boolean; 
+    isAllergic: boolean;
     onClick: () => void;
     onSubstitutesClick: () => void;
-}> = ({ food, isTried, onClick, onSubstitutesClick }) => {
+}> = ({ food, isTried, isAllergic, onClick, onSubstitutesClick }) => {
     const category = allFoods.find(cat => cat.items.some(item => item.name === food.name));
     if (!category) return null;
     const triedClass = isTried ? 'is-tried' : '';
@@ -53,6 +55,12 @@ const FoodCard: React.FC<{
               <span className="text-3xl">{food.emoji}</span>
               <span className="mt-1 text-center leading-tight">{food.name}</span>
             </button>
+
+            {isAllergic && !isTried && (
+                <div className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm z-10" title="Contains known allergen">
+                    <Icon name="alert-triangle" className="w-4 h-4 text-red-500 fill-red-50" />
+                </div>
+            )}
     
             {/* Added pointer-events-none so clicks pass through to the button underneath */}
             <div className="check-overlay absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg pointer-events-none">
@@ -90,6 +98,7 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
         }
 
         const { ageString, ageKey } = calculateAge(userProfile.birthDate);
+        const knownAllergens = Array.isArray(userProfile.knownAllergies) ? userProfile.knownAllergies : [];
         
         if (ageKey === 'too_young' && !pediatricianApproved) {
             return (
@@ -104,6 +113,12 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
 
         const triedFoodSet = new Set(triedFoods.map(f => f.id));
         const currentStageKey = (ageKey === 'too_young' && pediatricianApproved) ? '6_months' : ageKey;
+
+        const isFoodAllergic = (foodName: string) => {
+            const foodAllergens = FOOD_ALLERGY_MAPPING[foodName];
+            if (!foodAllergens) return false;
+            return foodAllergens.some(allergen => knownAllergens.includes(allergen));
+        };
 
         return (
             <>
@@ -126,7 +141,16 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
                                     <>
                                         <h4 className="text-md font-medium text-green-700 mb-3">New Foods to Try:</h4>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-                                            {toTryInStage.map(food => <FoodCard key={food.name} food={food} isTried={false} onClick={() => onFoodClick(food)} onSubstitutesClick={() => onShowSubstitutes(food)} />)}
+                                            {toTryInStage.map(food => (
+                                                <FoodCard 
+                                                    key={food.name} 
+                                                    food={food} 
+                                                    isTried={false} 
+                                                    isAllergic={isFoodAllergic(food.name)}
+                                                    onClick={() => onFoodClick(food)} 
+                                                    onSubstitutesClick={() => onShowSubstitutes(food)} 
+                                                />
+                                            ))}
                                         </div>
                                     </>
                                 )}
@@ -134,7 +158,16 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
                                      <>
                                         <h4 className="text-md font-medium text-gray-500 mt-6 mb-3">Foods Tried This Stage:</h4>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-                                            {triedInStage.map(food => <FoodCard key={food.name} food={food} isTried={true} onClick={() => onFoodClick(food)} onSubstitutesClick={() => onShowSubstitutes(food)} />)}
+                                            {triedInStage.map(food => (
+                                                <FoodCard 
+                                                    key={food.name} 
+                                                    food={food} 
+                                                    isTried={true} 
+                                                    isAllergic={isFoodAllergic(food.name)}
+                                                    onClick={() => onFoodClick(food)} 
+                                                    onSubstitutesClick={() => onShowSubstitutes(food)} 
+                                                />
+                                            ))}
                                         </div>
                                     </>
                                 )}
