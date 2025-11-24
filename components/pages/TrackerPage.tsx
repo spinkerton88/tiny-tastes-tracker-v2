@@ -90,6 +90,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
   const [filter, setFilter] = useState<Filter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
+  const [isRecentOpen, setIsRecentOpen] = useState(true);
 
   const triedFoodSet = new Set(triedFoods.map(f => f.id));
   const triedCount = triedFoods.length;
@@ -120,8 +121,13 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
   };
 
   // Logic for Recently Tried
+  // Safely sort by date, handling potential invalid dates
   const recentLogs = [...triedFoods]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+        const dateA = new Date(a.date).getTime() || 0;
+        const dateB = new Date(b.date).getTime() || 0;
+        return dateB - dateA;
+    })
     .slice(0, 5);
 
   return (
@@ -150,38 +156,51 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
       </div>
 
       {/* Recently Tried Section */}
-      {recentLogs.length > 0 && !searchQuery && filter === 'all' && (
+      {/* Show if: there are recent logs AND no search AND filter is not 'to_try' */}
+      {recentLogs.length > 0 && !searchQuery && filter !== 'to_try' && (
         <div className="mb-6">
-             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Recently Tried</h3>
-             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                {recentLogs.map(log => {
-                    // Find the category and full food details for styling
-                    let foundCategory: FoodCategory | undefined;
-                    let foundFood: Food | undefined;
+             <button 
+                onClick={() => setIsRecentOpen(!isRecentOpen)}
+                className="flex items-center justify-between w-full text-left mb-3 group focus:outline-none bg-gray-50 p-2 rounded-md hover:bg-gray-100 transition-colors border border-gray-100"
+             >
+                <div className="flex items-center gap-2">
+                    <Icon name="clock" className="w-4 h-4 text-teal-600" />
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider group-hover:text-teal-700">Recently Tried</h3>
+                </div>
+                <Icon name="chevron-down" className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${isRecentOpen ? 'rotate-180' : ''}`} />
+             </button>
+             
+             <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isRecentOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 pt-1">
+                    {recentLogs.map(log => {
+                        // Find the category and full food details for styling
+                        let foundCategory: FoodCategory | undefined;
+                        let foundFood: Food | undefined;
 
-                    for (const cat of allFoods) {
-                        const f = cat.items.find(i => i.name === log.id);
-                        if (f) {
-                            foundFood = f;
-                            foundCategory = cat;
-                            break;
+                        for (const cat of allFoods) {
+                            const f = cat.items.find(i => i.name === log.id);
+                            if (f) {
+                                foundFood = f;
+                                foundCategory = cat;
+                                break;
+                            }
                         }
-                    }
 
-                    if (!foundFood || !foundCategory) return null;
+                        if (!foundFood || !foundCategory) return null;
 
-                    return (
-                        <FoodCard
-                            key={`recent-${log.id}`}
-                            name={foundFood.name}
-                            emoji={foundFood.emoji}
-                            category={foundCategory}
-                            isTried={true}
-                            isAllergic={isFoodAllergic(foundFood.name)}
-                            onClick={() => onFoodClick(foundFood!)}
-                        />
-                    );
-                })}
+                        return (
+                            <FoodCard
+                                key={`recent-${log.id}`}
+                                name={foundFood.name}
+                                emoji={foundFood.emoji}
+                                category={foundCategory}
+                                isTried={true}
+                                isAllergic={isFoodAllergic(foundFood.name)}
+                                onClick={() => onFoodClick(foundFood!)}
+                            />
+                        );
+                    })}
+                </div>
              </div>
         </div>
       )}
