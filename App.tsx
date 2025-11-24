@@ -214,7 +214,12 @@ const App: React.FC = () => {
     const renderPage = () => {
         switch (currentPage) {
             case 'tracker':
-                return <TrackerPage triedFoods={triedFoods} onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} userProfile={userProfile} />;
+                return <TrackerPage 
+                    triedFoods={triedFoods} 
+                    onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} 
+                    userProfile={userProfile}
+                    onShowGuide={(food: Food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: false })}
+                />;
             case 'recommendations':
                 return <RecommendationsPage
                     userProfile={userProfile} 
@@ -245,7 +250,12 @@ const App: React.FC = () => {
                     onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
                 />;
             default:
-                return <TrackerPage triedFoods={triedFoods} onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} userProfile={userProfile} />;
+                return <TrackerPage 
+                    triedFoods={triedFoods} 
+                    onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} 
+                    userProfile={userProfile} 
+                    onShowGuide={(food: Food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: false })}
+                />;
         }
     };
 
@@ -261,13 +271,19 @@ const App: React.FC = () => {
                     onClose={() => setModalState({ type: null })} 
                     onSave={saveTriedFood}
                     onIncrementTry={incrementTryCount}
-                    onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food })}
+                    onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: true })}
                 />;
             }
             case 'HOW_TO_SERVE': {
                 return <HowToServeModal 
                     food={modal.food} 
-                    onClose={() => setModalState({ type: 'LOG_FOOD', food: modal.food })} 
+                    onClose={() => {
+                        if (modal.returnToLog) {
+                            setModalState({ type: 'LOG_FOOD', food: modal.food });
+                        } else {
+                            setModalState({ type: null });
+                        }
+                    }} 
                 />;
             }
             case 'ADD_RECIPE': {

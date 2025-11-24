@@ -8,7 +8,8 @@ import EmptyState from '../ui/EmptyState';
 interface TrackerPageProps {
   triedFoods: TriedFoodLog[];
   onFoodClick: (food: Food) => void;
-  userProfile?: UserProfile | null; // Add userProfile prop
+  userProfile?: UserProfile | null;
+  onShowGuide: (food: Food) => void;
 }
 
 const FoodCard: React.FC<{
@@ -18,29 +19,48 @@ const FoodCard: React.FC<{
   isTried: boolean;
   isAllergic: boolean;
   onClick: () => void;
-}> = ({ name, emoji, category, isTried, isAllergic, onClick }) => {
+  onInfoClick: (e: React.MouseEvent) => void;
+}> = ({ name, emoji, category, isTried, isAllergic, onClick, onInfoClick }) => {
   const triedClass = isTried ? 'is-tried' : '';
   
   return (
-    <button
-      onClick={onClick}
-      className={`food-card relative ${category.color} ${category.textColor} p-3 h-24 rounded-lg shadow-sm font-medium text-sm text-center flex flex-col items-center justify-center cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 border ${category.borderColor} ${triedClass}`}
-      type="button"
+    <div 
+        className={`food-card relative group ${category.color} ${category.textColor} h-28 rounded-lg shadow-sm border ${category.borderColor} ${triedClass} transition-all duration-200 hover:shadow-md hover:scale-105`}
     >
-      <span className="text-3xl">{emoji}</span>
-      <span className="mt-1 text-center leading-tight">{name}</span>
+      {/* Main Action - Covers the whole card */}
+      <button
+        onClick={onClick}
+        className="w-full h-full p-2 flex flex-col items-center justify-center cursor-pointer focus:outline-none rounded-lg"
+        type="button"
+      >
+        <span className="text-3xl mb-1">{emoji}</span>
+        <span className="text-sm font-medium text-center leading-tight line-clamp-2">{name}</span>
+      </button>
       
-      {/* Top Right: Allergy Warning */}
+      {/* Allergy Warning - Top Left */}
       {isAllergic && !isTried && (
-        <div className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm" title="Contains known allergen">
+        <div className="absolute top-1 left-1 bg-white rounded-full p-0.5 shadow-sm z-10" title="Contains known allergen">
              <Icon name="alert-triangle" className="w-4 h-4 text-red-500 fill-red-50" />
         </div>
       )}
 
-      <div className="check-overlay absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg pointer-events-none">
+      {/* Guide/Info Button - Top Right */}
+      <button
+        onClick={(e) => {
+            e.stopPropagation();
+            onInfoClick(e);
+        }}
+        className="absolute top-1 right-1 p-1.5 rounded-full bg-white/60 hover:bg-white text-teal-700 shadow-sm transition-colors opacity-80 hover:opacity-100 z-10"
+        title="How to Serve Guide"
+      >
+         <Icon name="chef-hat" className="w-3.5 h-3.5" />
+      </button>
+
+      {/* Check Overlay for Tried Foods */}
+      <div className="check-overlay absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg pointer-events-none z-0">
         <Icon name="check-circle-2" className="w-12 h-12 text-teal-600" />
       </div>
-    </button>
+    </div>
   );
 };
 
@@ -87,7 +107,7 @@ const NoResultsIllustration = () => (
     </svg>
 );
 
-const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, userProfile }) => {
+const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, userProfile, onShowGuide }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
@@ -122,7 +142,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
   };
   
   // Logic for Recently Tried
-  // Safely sort by date, handling potential invalid dates
   const recentLogs = [...triedFoods]
     .sort((a, b) => {
         const dateA = new Date(a.date).getTime() || 0;
@@ -157,7 +176,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
       </div>
 
       {/* Recently Tried Section */}
-      {/* Show if: there are recent logs AND no search AND filter is not 'to_try' */}
       {recentLogs.length > 0 && !searchQuery && filter !== 'to_try' && (
         <div className="mb-6">
              <button 
@@ -174,7 +192,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
              <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isRecentOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 pt-1">
                     {recentLogs.map(log => {
-                        // Find the category and full food details for styling
                         let foundCategory: FoodCategory | undefined;
                         let foundFood: Food | undefined;
 
@@ -198,6 +215,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
                                 isTried={true}
                                 isAllergic={isFoodAllergic(foundFood.name)}
                                 onClick={() => onFoodClick(foundFood!)}
+                                onInfoClick={(e) => { e.stopPropagation(); onShowGuide(foundFood!); }}
                             />
                         );
                     })}
@@ -253,6 +271,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
                   isTried={triedFoodSet.has(food.name)}
                   isAllergic={isFoodAllergic(food.name)}
                   onClick={() => onFoodClick(food)}
+                  onInfoClick={(e) => { e.stopPropagation(); onShowGuide(food); }}
                 />
               ))}
             </div>

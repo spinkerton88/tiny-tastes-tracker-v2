@@ -64,7 +64,7 @@ export interface FoodSubstitute {
 
 // Modal State Types
 type LogFoodModalState = { type: 'LOG_FOOD'; food: Food };
-type HowToServeModalState = { type: 'HOW_TO_SERVE'; food: Food };
+type HowToServeModalState = { type: 'HOW_TO_SERVE'; food: Food; returnToLog?: boolean };
 type AddRecipeModalState = { type: 'ADD_RECIPE'; recipeData?: Partial<Recipe> };
 type ViewRecipeModalState = { type: 'VIEW_RECIPE'; recipe: Recipe };
 type ImportRecipeModalState = { type: 'IMPORT_RECIPE' };

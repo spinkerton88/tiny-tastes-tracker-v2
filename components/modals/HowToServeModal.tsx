@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Food } from '../../types';
 import { foodGuideData, FOOD_NUTRIENT_MAPPING } from '../../constants';
 import Icon from '../ui/Icon';
@@ -12,52 +12,126 @@ interface HowToServeModalProps {
 const HowToServeModal: React.FC<HowToServeModalProps> = ({ food, onClose }) => {
   const guide = foodGuideData[food.name];
   const nutrients = FOOD_NUTRIENT_MAPPING[food.name] || [];
+  const [activeTab, setActiveTab] = useState<'6-8' | '9-12'>('6-8');
 
-  const renderRisk = (label: string, value: string) => {
-    const lowerValue = value.toLowerCase();
-    let colorClasses = 'bg-green-50 border-green-200';
-    if (lowerValue.includes('high')) {
-        colorClasses = 'bg-red-50 border-red-200';
-    } else if (lowerValue.includes('medium')) {
-        colorClasses = 'bg-yellow-50 border-yellow-200';
-    }
-    return <p className={`mb-4 p-3 border rounded-md ${colorClasses}`}><strong>{label}: {value}</strong></p>;
+  // Helper to determine risk styling
+  const getRiskStyle = (riskText: string) => {
+    const lower = riskText.toLowerCase();
+    if (lower.includes('high')) return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', icon: 'alert-octagon' };
+    if (lower.includes('medium')) return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-800', icon: 'alert-triangle' };
+    return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800', icon: 'shield-check' };
   };
-  
+
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-[501]">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto">
-        <div className="flex justify-between items-center border-b p-4">
-          <h2 className="text-xl font-semibold">How to Serve: <span className="text-teal-600">{food.emoji} {food.name}</span></h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto flex flex-col max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex justify-between items-start p-5 pb-0 bg-white">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="text-3xl">{food.emoji}</span> {food.name}
+            </h2>
+             {/* Nutrient Badges */}
+             {nutrients.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                    {nutrients.map(n => {
+                        if (n === 'Iron') return <span key={n} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-700 border border-red-100"><Icon name="battery-charging" className="w-3 h-3 mr-1" /> Iron</span>
+                        if (n === 'Vitamin C') return <span key={n} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-100"><Icon name="sun" className="w-3 h-3 mr-1" /> Vit C</span>
+                        if (n === 'Omega-3') return <span key={n} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100"><Icon name="fish" className="w-3 h-3 mr-1" /> Omega-3</span>
+                        return null;
+                    })}
+                </div>
+            )}
+          </div>
+          <button onClick={onClose} className="p-2 bg-gray-50 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"><Icon name="x" className="w-5 h-5" /></button>
         </div>
-        <div className="p-6 modal-scroll-content prose-static">
-            
-          {/* Nutritional Highlights */}
-          {nutrients.length > 0 && (
-            <div className="mb-6 flex gap-2">
-                {nutrients.map(n => {
-                    if (n === 'Iron') return <span key={n} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200"><Icon name="battery-charging" className="w-3 h-3 mr-1" /> Iron Rich</span>
-                    if (n === 'Vitamin C') return <span key={n} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200"><Icon name="sun" className="w-3 h-3 mr-1" /> High Vitamin C</span>
-                    if (n === 'Omega-3') return <span key={n} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"><Icon name="fish" className="w-3 h-3 mr-1" /> Omega-3</span>
-                    return null;
-                })}
+
+        <div className="p-0 modal-scroll-content bg-white flex-1 overflow-y-auto">
+          {guide ? (
+            <div className="p-5 space-y-6">
+               {/* Safety Profile Section */}
+               <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+                        <Icon name="shield" className="w-3 h-3" /> Safety Profile
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                        {[
+                            { label: 'Allergy', val: guide.allergyRisk },
+                            { label: 'Choking', val: guide.chokingRisk }
+                        ].map((risk, idx) => {
+                            const style = getRiskStyle(risk.val);
+                            return (
+                                <div key={idx} className={`p-3 rounded-xl border ${style.bg} ${style.border}`}>
+                                    <div className={`flex items-center gap-1.5 mb-1 ${style.text}`}>
+                                        <Icon name={style.icon} className="w-3.5 h-3.5" />
+                                        <span className="text-[10px] font-bold uppercase">{risk.label}</span>
+                                    </div>
+                                    <p className={`text-sm font-bold leading-tight ${style.text}`}>{risk.val}</p>
+                                </div>
+                            )
+                        })}
+                    </div>
+               </div>
+
+               {/* Preparation Guide */}
+               <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+                        <Icon name="chef-hat" className="w-3 h-3" /> Preparation Guide
+                    </h3>
+                    
+                    {/* Age Tabs */}
+                    <div className="flex p-1 bg-gray-100 rounded-xl mb-4">
+                        <button
+                            onClick={() => setActiveTab('6-8')}
+                            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                            activeTab === '6-8'
+                                ? 'bg-white text-teal-700 shadow-sm ring-1 ring-black/5'
+                                : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            6-8 Months
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('9-12')}
+                            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                            activeTab === '9-12'
+                                ? 'bg-white text-teal-700 shadow-sm ring-1 ring-black/5'
+                                : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            9-12 Months
+                        </button>
+                    </div>
+
+                    {/* Content Card */}
+                    <div className="prose-static bg-teal-50/60 p-5 rounded-xl border border-teal-100/60 text-gray-700 text-sm leading-relaxed">
+                        {/* 
+                           The raw HTML strings contain <h4> headers that duplicate our tabs.
+                           We use CSS to visually hide the first h4 in the content since we have tabs now.
+                           This keeps the UI clean without needing regex parsing.
+                        */}
+                         <style>{`
+                            .prose-static h4 { display: none; }
+                         `}</style>
+                         <div dangerouslySetInnerHTML={{ __html: activeTab === '6-8' ? guide.serve6to8 : guide.serve9to12 }} />
+                    </div>
+               </div>
+            </div>
+          ) : (
+             <div className="p-10 text-center flex flex-col items-center justify-center h-full">
+                <div className="bg-gray-100 p-4 rounded-full inline-block mb-4">
+                    <Icon name="clock" className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 font-medium">A detailed serving guide for this food is coming soon!</p>
             </div>
           )}
-
-          {guide ? (
-            <>
-              {renderRisk("Allergy Risk", guide.allergyRisk)}
-              {renderRisk("Choking Risk", guide.chokingRisk)}
-              <div dangerouslySetInnerHTML={{ __html: guide.serve6to8 }} />
-              <div dangerouslySetInnerHTML={{ __html: guide.serve9to12 }} />
-            </>
-          ) : (
-            <p className="text-center text-gray-500 py-6">A detailed "How to Serve" guide for this food is coming soon!</p>
-          )}
-          <p className="mt-6 text-xs text-gray-500 border-t pt-4">
-            <strong>Disclaimer:</strong> This is for informational purposes only. Consult with a pediatrician or feeding specialist for personalized advice. Always ensure food is soft-cooked and served in a safe, age-appropriate manner.
-          </p>
+        </div>
+        
+        {/* Footer */}
+        <div className="p-4 bg-gray-50 border-t border-gray-100 text-center">
+            <p className="text-[10px] text-gray-400">
+                Always consult your pediatrician. Ensure food is soft & safe.
+            </p>
         </div>
       </div>
     </div>
