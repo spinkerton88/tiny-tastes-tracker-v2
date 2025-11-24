@@ -64,6 +64,45 @@ export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
     "SEEDS": ["Sesame"], // Often includes sesame/tahini
 };
 
+export const FOOD_NUTRIENT_MAPPING: Record<string, string[]> = {
+    // Iron Rich (Heme & Non-Heme)
+    "BEEF, SLICED": ["Iron"],
+    "BEEF, GROUND": ["Iron"],
+    "LAMB": ["Iron"],
+    "CHICKEN": ["Iron"],
+    "TURKEY": ["Iron"],
+    "SARDINES": ["Iron", "Omega-3"],
+    "SALMON": ["Omega-3"],
+    "EGGS": ["Iron"],
+    "TOFU": ["Iron"],
+    "LENTILS": ["Iron"],
+    "WHITE BEANS": ["Iron"],
+    "BLACK BEANS": ["Iron"],
+    "KIDNEY BEANS": ["Iron"],
+    "CHICKPEAS": ["Iron"],
+    "EDAMAME": ["Iron"],
+    "OATMEAL": ["Iron"], // Fortified
+    "SPINACH": ["Iron"], // If added later
+
+    // Vitamin C Rich (Pair with Iron!)
+    "STRAWBERRIES": ["Vitamin C"],
+    "ORANGE": ["Vitamin C"],
+    "KIWIFRUIT": ["Vitamin C"],
+    "BROCCOLI": ["Vitamin C"],
+    "BELL PEPPERS": ["Vitamin C"],
+    "TOMATOES": ["Vitamin C"],
+    "CAULIFLOWER": ["Vitamin C"],
+    "MANGO": ["Vitamin C"],
+    "PAPAYA": ["Vitamin C"],
+    "PINEAPPLE": ["Vitamin C"],
+    "BRUSSELS SPROUTS": ["Vitamin C"],
+    "CANTALOUPE": ["Vitamin C"],
+    "HONEYDEW": ["Vitamin C"],
+    "RASPBERRIES": ["Vitamin C"],
+    "POTATOES": ["Vitamin C"], // Surprisingly good source
+    "SWEET POTATO": ["Vitamin C"],
+};
+
 export const allFoods: FoodCategory[] = [
     {
         category: "Vegetables",

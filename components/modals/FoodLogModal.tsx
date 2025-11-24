@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Food, TriedFoodLog, FoodLogData } from '../../types';
+import { FOOD_NUTRIENT_MAPPING } from '../../constants';
 import Icon from '../ui/Icon';
 
 interface FoodLogModalProps {
@@ -202,6 +203,7 @@ const LogSummaryView: React.FC<{
 
 const FoodLogModal: React.FC<FoodLogModalProps> = ({ food, existingLog, onClose, onSave, onShowGuide, onIncrementTry }) => {
     const [isEditing, setIsEditing] = useState(!existingLog);
+    const nutrients = FOOD_NUTRIENT_MAPPING[food.name] || [];
 
     const handleIncrement = () => {
         onIncrementTry(food.name);
@@ -212,7 +214,20 @@ const FoodLogModal: React.FC<FoodLogModalProps> = ({ food, existingLog, onClose,
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto">
                 <div className="flex justify-between items-center border-b p-4">
-                    <h2 className="text-xl font-semibold">Log Food: <span className="text-teal-600">{food.emoji} {food.name}</span></h2>
+                    <div className="flex flex-col">
+                        <h2 className="text-xl font-semibold">Log Food: <span className="text-teal-600">{food.emoji} {food.name}</span></h2>
+                         {/* Render Nutrient Badges Here */}
+                         {nutrients.length > 0 && (
+                            <div className="flex gap-1.5 mt-1.5">
+                                {nutrients.map(n => {
+                                    if (n === 'Iron') return <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">Fe Iron</span>
+                                    if (n === 'Vitamin C') return <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">Vit C</span>
+                                    if (n === 'Omega-3') return <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">Ω-3</span>
+                                    return null;
+                                })}
+                            </div>
+                        )}
+                    </div>
                     <div>
                         <button onClick={() => onShowGuide(food)} type="button" className="text-sm text-teal-600 font-medium inline-flex items-center gap-1 hover:text-teal-700">
                             <Icon name="help-circle" className="w-4 h-4" /> How to Serve

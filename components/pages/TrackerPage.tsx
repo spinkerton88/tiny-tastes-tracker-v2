@@ -30,6 +30,7 @@ const FoodCard: React.FC<{
       <span className="text-3xl">{emoji}</span>
       <span className="mt-1 text-center leading-tight">{name}</span>
       
+      {/* Top Right: Allergy Warning */}
       {isAllergic && !isTried && (
         <div className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm" title="Contains known allergen">
              <Icon name="alert-triangle" className="w-4 h-4 text-red-500 fill-red-50" />
@@ -119,7 +120,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
       if (!foodAllergens) return false;
       return foodAllergens.some(allergen => knownAllergens.includes(allergen));
   };
-
+  
   // Logic for Recently Tried
   // Safely sort by date, handling potential invalid dates
   const recentLogs = [...triedFoods]

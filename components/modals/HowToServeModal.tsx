@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Food } from '../../types';
-import { foodGuideData } from '../../constants';
+import { foodGuideData, FOOD_NUTRIENT_MAPPING } from '../../constants';
 import Icon from '../ui/Icon';
 
 interface HowToServeModalProps {
@@ -11,6 +11,7 @@ interface HowToServeModalProps {
 
 const HowToServeModal: React.FC<HowToServeModalProps> = ({ food, onClose }) => {
   const guide = foodGuideData[food.name];
+  const nutrients = FOOD_NUTRIENT_MAPPING[food.name] || [];
 
   const renderRisk = (label: string, value: string) => {
     const lowerValue = value.toLowerCase();
@@ -31,6 +32,19 @@ const HowToServeModal: React.FC<HowToServeModalProps> = ({ food, onClose }) => {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
         </div>
         <div className="p-6 modal-scroll-content prose-static">
+            
+          {/* Nutritional Highlights */}
+          {nutrients.length > 0 && (
+            <div className="mb-6 flex gap-2">
+                {nutrients.map(n => {
+                    if (n === 'Iron') return <span key={n} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200"><Icon name="battery-charging" className="w-3 h-3 mr-1" /> Iron Rich</span>
+                    if (n === 'Vitamin C') return <span key={n} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200"><Icon name="sun" className="w-3 h-3 mr-1" /> High Vitamin C</span>
+                    if (n === 'Omega-3') return <span key={n} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"><Icon name="fish" className="w-3 h-3 mr-1" /> Omega-3</span>
+                    return null;
+                })}
+            </div>
+          )}
+
           {guide ? (
             <>
               {renderRisk("Allergy Risk", guide.allergyRisk)}
