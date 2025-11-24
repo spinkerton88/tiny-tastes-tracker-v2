@@ -1,5 +1,5 @@
 
-import { FoodCategory } from './types';
+import { FoodCategory, Milestone } from './types';
 
 export const COMMON_ALLERGENS = [
     "Dairy",
@@ -12,6 +12,17 @@ export const COMMON_ALLERGENS = [
     "Fish",
     "Shellfish",
     "Sesame"
+];
+
+export const DEFAULT_MILESTONES: Milestone[] = [
+    { id: 'sit_unassisted', title: 'Sits Unassisted', icon: 'baby', description: 'Can sit in a high chair with minimal support.', isAchieved: false },
+    { id: 'first_taste', title: 'First Taste', icon: 'utensils', description: 'Tried their very first solid food.', isAchieved: false },
+    { id: 'bring_to_mouth', title: 'Self-Feeding', icon: 'hand', description: 'Successfully brought food to mouth independently.', isAchieved: false },
+    { id: 'pincer_grasp', title: 'Pincer Grasp', icon: 'fingerprint', description: 'Uses thumb and forefinger to pick up small pieces of food.', isAchieved: false },
+    { id: 'open_cup', title: 'Open Cup', icon: 'cup-soda', description: 'Took a sip from an open cup (even if messy!).', isAchieved: false },
+    { id: 'straw_cup', title: 'Straw Cup', icon: 'milk', description: 'Successfully drank from a straw.', isAchieved: false },
+    { id: 'spoon_feed', title: 'Spoon Master', icon: 'utensils-crossed', description: 'Loaded a spoon and brought it to mouth.', isAchieved: false },
+    { id: 'chew_swallow', title: 'Advanced Chewing', icon: 'apple', description: 'Chewed and swallowed a complex texture (like meat or bread).', isAchieved: false },
 ];
 
 // Map foods (UPPERCASE names matching allFoods) to their contained allergens

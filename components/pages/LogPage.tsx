@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, TriedFoodLog } from '../../types';
+import { UserProfile, TriedFoodLog, Milestone } from '../../types';
 import { allFoods, COMMON_ALLERGENS } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
@@ -8,9 +8,11 @@ import EmptyState from '../ui/EmptyState';
 interface ProfilePageProps {
   userProfile: UserProfile | null;
   triedFoods: TriedFoodLog[];
+  milestones: Milestone[];
   onSaveProfile: (profile: UserProfile) => void;
   onResetData: () => void;
   onShowDoctorReport: () => void;
+  onUpdateMilestone: (milestone: Milestone) => void;
 }
 
 const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
@@ -86,6 +88,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
             triedFoods: JSON.parse(localStorage.getItem(`tiny-tastes-tracker-triedFoods`) || '[]'),
             recipes: JSON.parse(localStorage.getItem(`tiny-tastes-tracker-recipes`) || '[]'),
             mealPlan: JSON.parse(localStorage.getItem(`tiny-tastes-tracker-mealPlan`) || '{}'),
+            milestones: JSON.parse(localStorage.getItem(`tiny-tastes-tracker-milestones`) || '[]'),
         };
     };
 
@@ -150,7 +153,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                 if (typeof text !== 'string') throw new Error("File is not readable");
                 const importedData = JSON.parse(text);
 
-                if (!('profile' in importedData && 'triedFoods' in importedData && 'recipes' in importedData && 'mealPlan' in importedData)) {
+                if (!('profile' in importedData && 'triedFoods' in importedData)) {
                     throw new Error("Invalid data file format. The file must be a valid export from Tiny Tastes Tracker.");
                 }
 
@@ -159,6 +162,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                     localStorage.setItem(`tiny-tastes-tracker-triedFoods`, JSON.stringify(importedData.triedFoods || []));
                     localStorage.setItem(`tiny-tastes-tracker-recipes`, JSON.stringify(importedData.recipes || []));
                     localStorage.setItem(`tiny-tastes-tracker-mealPlan`, JSON.stringify(importedData.mealPlan || {}));
+                    localStorage.setItem(`tiny-tastes-tracker-milestones`, JSON.stringify(importedData.milestones || []));
                     
                     alert("Data imported successfully! The app will now reload to apply the changes.");
                     window.location.reload();
@@ -354,10 +358,71 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowD
     );
 };
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, onSaveProfile, onResetData, onShowDoctorReport }) => {
-    const [activeTab, setActiveTab] = useState<'profile' | 'log'>('profile');
+const MilestonesView: React.FC<{ milestones: Milestone[]; onUpdate: (m: Milestone) => void }> = ({ milestones, onUpdate }) => {
+    return (
+        <div className="space-y-4">
+           {milestones.map(m => (
+              <div key={m.id} className={`p-4 rounded-lg border transition-all ${m.isAchieved ? 'bg-teal-50 border-teal-200 shadow-sm' : 'bg-white border-gray-200 shadow-sm'}`}>
+                 <div className="flex items-start gap-4">
+                    <div className={`flex-shrink-0 p-3 rounded-full flex items-center justify-center h-12 w-12 ${m.isAchieved ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-400'}`}>
+                       <Icon name={m.icon} className="w-6 h-6" />
+                    </div>
+                    <div className="flex-grow">
+                       <div className="flex justify-between items-start">
+                           <div>
+                                <h4 className={`font-semibold text-lg ${m.isAchieved ? 'text-teal-900' : 'text-gray-800'}`}>{m.title}</h4>
+                                <p className="text-sm text-gray-600 mt-1 leading-snug">{m.description}</p>
+                           </div>
+                           <input 
+                               type="checkbox" 
+                               checked={m.isAchieved} 
+                               onChange={(e) => {
+                                   const isChecked = e.target.checked;
+                                   onUpdate({
+                                       ...m, 
+                                       isAchieved: isChecked, 
+                                       dateAchieved: isChecked ? new Date().toISOString().split('T')[0] : undefined
+                                   })
+                               }}
+                               className="h-6 w-6 text-teal-600 rounded focus:ring-teal-500 border-gray-300 cursor-pointer ml-3 mt-1"
+                           />
+                       </div>
+                       
+                       {m.isAchieved && (
+                           <div className="mt-4 pt-4 border-t border-teal-100 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+                                <div>
+                                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Date Achieved</label>
+                                   <input 
+                                       type="date" 
+                                       value={m.dateAchieved || ''} 
+                                       onChange={(e) => onUpdate({...m, dateAchieved: e.target.value})}
+                                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm bg-white"
+                                   />
+                                </div>
+                                <div>
+                                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Notes / Memories</label>
+                                   <input 
+                                       type="text" 
+                                       value={m.notes || ''} 
+                                       onChange={(e) => onUpdate({...m, notes: e.target.value})}
+                                       placeholder="e.g. Grandma was watching!"
+                                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm bg-white"
+                                   />
+                                </div>
+                           </div>
+                       )}
+                    </div>
+                 </div>
+              </div>
+           ))}
+        </div>
+    )
+}
+
+const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, milestones, onSaveProfile, onResetData, onShowDoctorReport, onUpdateMilestone }) => {
+    const [activeTab, setActiveTab] = useState<'profile' | 'log' | 'milestones'>('profile');
     
-    const navButtonClasses = (tabName: 'profile' | 'log') => {
+    const navButtonClasses = (tabName: 'profile' | 'log' | 'milestones') => {
         const base = "recipe-sub-nav-btn";
         const active = "active";
         return `${base} ${activeTab === tabName ? active : ''}`;
@@ -366,19 +431,23 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, onSa
     return (
         <>
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Profile & Log</h2>
-            <div className="border-b border-gray-200 mb-6">
-                <nav className="flex -mb-px">
+            <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+                <nav className="flex -mb-px min-w-max sm:min-w-0">
                     <button onClick={() => setActiveTab('profile')} className={navButtonClasses('profile')}>
                         <Icon name="user-cog" className="w-4 h-4 inline-block -mt-1 mr-1" /> Profile Settings
                     </button>
                     <button onClick={() => setActiveTab('log')} className={navButtonClasses('log')}>
                         <Icon name="clipboard-list" className="w-4 h-4 inline-block -mt-1 mr-1" /> Food Log
                     </button>
+                    <button onClick={() => setActiveTab('milestones')} className={navButtonClasses('milestones')}>
+                        <Icon name="award" className="w-4 h-4 inline-block -mt-1 mr-1" /> Milestones
+                    </button>
                 </nav>
             </div>
             
             {activeTab === 'profile' && <ProfileView userProfile={userProfile} onSaveProfile={onSaveProfile} onResetData={onResetData} />}
             {activeTab === 'log' && <LogView triedFoods={triedFoods} babyName={userProfile?.babyName} onShowDoctorReport={onShowDoctorReport} />}
+            {activeTab === 'milestones' && <MilestonesView milestones={milestones} onUpdate={onUpdateMilestone} />}
         </>
     );
 };

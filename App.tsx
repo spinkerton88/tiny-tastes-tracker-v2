@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData } from './types';
-import { totalFoodCount } from './constants';
+import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone } from './types';
+import { totalFoodCount, DEFAULT_MILESTONES } from './constants';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
 import RecommendationsPage from './components/pages/IdeasPage';
@@ -27,6 +27,7 @@ const App: React.FC = () => {
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [mealPlan, setMealPlan] = useState<MealPlan>({});
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [milestones, setMilestones] = useState<Milestone[]>(DEFAULT_MILESTONES);
     const [loading, setLoading] = useState(true);
 
     const [modalState, setModalState] = useState<ModalState>({ type: null });
@@ -37,6 +38,7 @@ const App: React.FC = () => {
             localStorage.removeItem('tiny-tastes-tracker-triedFoods');
             localStorage.removeItem('tiny-tastes-tracker-recipes');
             localStorage.removeItem('tiny-tastes-tracker-mealPlan');
+            localStorage.removeItem('tiny-tastes-tracker-milestones');
             window.location.reload();
         }
     };
@@ -66,6 +68,12 @@ const App: React.FC = () => {
         });
         localStorage.setItem(`tiny-tastes-tracker-triedFoods`, JSON.stringify(updatedTriedFoods));
         setTriedFoods(updatedTriedFoods);
+    };
+
+    const updateMilestone = async (updatedMilestone: Milestone) => {
+        const newMilestones = milestones.map(m => m.id === updatedMilestone.id ? updatedMilestone : m);
+        localStorage.setItem(`tiny-tastes-tracker-milestones`, JSON.stringify(newMilestones));
+        setMilestones(newMilestones);
     };
 
     const addRecipe = async (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => {
@@ -202,6 +210,22 @@ const App: React.FC = () => {
             setRecipes(cleanedRecipes);
 
             setMealPlan(getFromStorage<MealPlan>('mealPlan', {}));
+
+            const storedMilestones = getFromStorage<Milestone[]>('milestones', []);
+            // Merge stored milestones with defaults to ensure any new default milestones are added
+            // and existing ones retain their status.
+            const mergedMilestones = DEFAULT_MILESTONES.map(def => {
+                const found = storedMilestones.find(m => m.id === def.id);
+                // Keep the dynamic state from storage (isAchieved, date, notes) 
+                // but use the static content from defaults (title, desc, icon) to allow for updates
+                return found ? { 
+                    ...def, 
+                    isAchieved: found.isAchieved, 
+                    dateAchieved: found.dateAchieved, 
+                    notes: found.notes 
+                } : def;
+            });
+            setMilestones(mergedMilestones);
         }
 
         setLoading(false);
@@ -245,9 +269,11 @@ const App: React.FC = () => {
                 return <ProfilePage 
                     userProfile={userProfile} 
                     triedFoods={triedFoods} 
+                    milestones={milestones}
                     onSaveProfile={saveProfile} 
                     onResetData={handleResetData} 
                     onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
+                    onUpdateMilestone={updateMilestone}
                 />;
             default:
                 return <TrackerPage 

@@ -62,6 +62,16 @@ export interface FoodSubstitute {
     reason: string;
 }
 
+export interface Milestone {
+    id: string;
+    title: string;
+    icon: string;
+    description: string;
+    isAchieved: boolean;
+    dateAchieved?: string;
+    notes?: string;
+}
+
 // Modal State Types
 type LogFoodModalState = { type: 'LOG_FOOD'; food: Food };
 type HowToServeModalState = { type: 'HOW_TO_SERVE'; food: Food; returnToLog?: boolean };
