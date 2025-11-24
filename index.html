@@ -9,20 +9,29 @@
       CUSTOM ICON INSTRUCTIONS:
       1. Save your custom icon image as 'app-icon.png'
       2. Drag and drop it into the 'public' folder on the left.
+      
+      NOTE: We added '?v=2' to the URLs to force browsers to re-fetch the image
+      in case a previous broken version was cached.
     -->
-    <link rel="icon" type="image/png" href="/app-icon.png">
+    
+    <!-- Standard Favicon -->
+    <link rel="icon" type="image/png" href="/app-icon.png?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="/app-icon.png?v=2">
+    <link rel="icon" type="image/png" sizes="16x16" href="/app-icon.png?v=2">
     
     <!-- iOS / Apple Mobile Web App Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tiny Tastes AI">
-    <link rel="apple-touch-icon" sizes="180x180" href="/app-icon.png">
+    
+    <!-- Apple Touch Icon (No transparency allowed for best results on iOS) -->
+    <link rel="apple-touch-icon" href="/app-icon.png?v=2">
     
     <!-- Android / Chrome Theme -->
     <meta name="theme-color" content="#0d9488">
     
     <!-- Manifest pointing to the local file in public/ folder -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/manifest.json?v=2">
 
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
