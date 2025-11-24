@@ -2,7 +2,7 @@
 <html lang="en" class="h-full bg-gray-50">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Tiny Tastes AI</title>
 
     <!-- 
@@ -11,15 +11,18 @@
       2. Drag and drop it into the 'public' folder on the left.
     -->
     <link rel="icon" type="image/png" href="/app-icon.png">
+    
+    <!-- iOS / Apple Mobile Web App Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tiny Tastes AI">
+    <link rel="apple-touch-icon" sizes="180x180" href="/app-icon.png">
+    
+    <!-- Android / Chrome Theme -->
     <meta name="theme-color" content="#0d9488">
     
     <!-- Manifest pointing to the local file in public/ folder -->
     <link rel="manifest" href="/manifest.json">
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Tiny Tastes AI">
-    <link rel="apple-touch-icon" href="/app-icon.png">
 
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,6 +35,8 @@
             font-family: 'Inter', sans-serif;
             padding-bottom: 80px; 
             -webkit-overflow-scrolling: touch;
+            /* Prevent pull-to-refresh on mobile which looks weird for apps */
+            overscroll-behavior-y: none; 
         }
         .food-card .check-overlay { opacity: 0; transition: opacity 0.2s ease-in-out; }
         .food-card.is-tried { filter: grayscale(40%); }
