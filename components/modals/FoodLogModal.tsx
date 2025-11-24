@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Food, TriedFoodLog, FoodLogData } from '../../types';
-import { FOOD_NUTRIENT_MAPPING } from '../../constants';
+import { FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
 import Icon from '../ui/Icon';
 
 interface FoodLogModalProps {
@@ -218,12 +218,14 @@ const FoodLogModal: React.FC<FoodLogModalProps> = ({ food, existingLog, onClose,
                         <h2 className="text-xl font-semibold">Log Food: <span className="text-teal-600">{food.emoji} {food.name}</span></h2>
                          {/* Render Nutrient Badges Here */}
                          {nutrients.length > 0 && (
-                            <div className="flex gap-1.5 mt-1.5">
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
                                 {nutrients.map(n => {
-                                    if (n === 'Iron') return <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">Fe Iron</span>
-                                    if (n === 'Vitamin C') return <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">Vit C</span>
-                                    if (n === 'Omega-3') return <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">Ω-3</span>
-                                    return null;
+                                    const style = NUTRIENT_STYLES[n] || { bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-200", icon: "star", label: n };
+                                    return (
+                                        <span key={n} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${style.bg} ${style.text} ${style.border}`}>
+                                            {style.label}
+                                        </span>
+                                    );
                                 })}
                             </div>
                         )}

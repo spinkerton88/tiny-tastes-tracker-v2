@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Food } from '../../types';
-import { foodGuideData, FOOD_NUTRIENT_MAPPING } from '../../constants';
+import { foodGuideData, FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
 import Icon from '../ui/Icon';
 
 interface HowToServeModalProps {
@@ -35,10 +35,12 @@ const HowToServeModal: React.FC<HowToServeModalProps> = ({ food, onClose }) => {
              {nutrients.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
                     {nutrients.map(n => {
-                        if (n === 'Iron') return <span key={n} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-700 border border-red-100"><Icon name="battery-charging" className="w-3 h-3 mr-1" /> Iron</span>
-                        if (n === 'Vitamin C') return <span key={n} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-100"><Icon name="sun" className="w-3 h-3 mr-1" /> Vit C</span>
-                        if (n === 'Omega-3') return <span key={n} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100"><Icon name="fish" className="w-3 h-3 mr-1" /> Omega-3</span>
-                        return null;
+                        const style = NUTRIENT_STYLES[n] || { bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-200", icon: "star", label: n };
+                        return (
+                            <span key={n} className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${style.bg} ${style.text} ${style.border}`}>
+                                <Icon name={style.icon} className="w-3 h-3 mr-1" /> {style.label}
+                            </span>
+                        );
                     })}
                 </div>
             )}
