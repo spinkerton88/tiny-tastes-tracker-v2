@@ -5,17 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tiny Tastes AI</title>
 
-    <!-- Icon: Brain (AI) background with Spoon and Food foreground -->
-    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyMCIgZmlsbD0iI2VjZmNjYiIvPjxwYXRoIGQ9Ik0xMzYgMTgwYzAtNjYgNTQtMTIwIDEyMC0xMjBzMTIwIDU0IDEyMCAxMjBjMCA0MC0yMCA3Ni01MCA5OHYzMmMwIDE1LTMwIDMwLTcwIDMwcy03MC0xNS03MC0zMHYtMzJjLTMwLTIyLTUwLTU4LTUwLTk4eiIgZmlsbD0iI2NjZmJmMSIgc3Ryb2tlPSIjMGQ5NDg4IiBzdHJva2Utd2lkdGg9IjIwIi8+PHBhdGggZD0iTTI1NiA2MHYyMjAiIHN0cm9rZT0iIzBkOTQ4OCIgc3Ryb2tlLXdpZHRoPSIxNSIvPjxjaXJjbGUgY3g9IjE5NiIgY3k9IjEzMCIgcj0iMTUiIGZpbGw9IiMwZDk0ODgiLz48Y2lyY2xlIGN4PSIzMTYiIGN5PSIxMzAiIHI9IjE1IiBmaWxsPSIjMGQ5NDg4Ii8+PHBhdGggZD0iTTM2MCA0NjBMMjAwIDMwMCIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48ZWxsaXBzZSBjeD0iMTcwIiBjeT0iMjcwIiByeD0iOTAiIHJ5PSI3MCIgZmlsbD0iI2Y4ZmFmYyIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjEwIiB0cmFuc2Zvcm09InJvdGF0ZSgtNDUgMTcwIDI3MCkiLz48Y2lyY2xlIGN4PSIxNjAiIGN5PSIyNjAiIHI9IjMwIiBmaWxsPSIjZjk3MzE2Ii8+PHBhdGggZD0iTTIwMCAyODAgTCAyMTAgMzAwIEwgMTkwIDMwMCBaIiBmaWxsPSIjMTY2NTM0Ii8+PGNpcmNsZSBjeD0iMTQwIiBjeT0iMjkwIiByPSIyMiIgZmlsbD0iIzI1NjNlYiIvPjwvc3ZnPg==">
+    <!-- 
+      CUSTOM ICON INSTRUCTIONS:
+      1. Save your custom icon image as 'app-icon.png'
+      2. Place it in the 'public' folder of your project.
+    -->
+    <link rel="icon" type="image/png" href="/app-icon.png">
     <meta name="theme-color" content="#0d9488">
     
-    <!-- Manifest with corrected icon -->
-    <link rel="manifest" href='data:application/json;charset=utf-8,%7B%22name%22%3A%22Tiny%20Tastes%20AI%22%2C%22short_name%22%3A%22Tiny%20Tastes%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%230d9488%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyMCIgZmlsbD0iI2VjZmNjYiIvPjxwYXRoIGQ9Ik0xMzYgMTgwYzAtNjYgNTQtMTIwIDEyMC0xMjBzMTIwIDU0IDEyMCAxMjBjMCA0MC0yMCA3Ni01MCA5OHYzMmMwIDE1LTMwIDMwLTcwIDMwcy03MC0xNS03MC0zMHYtMzJjLTMwLTIyLTUwLTU4LTUwLTk4eiIgZmlsbD0iI2NjZmJmMSIgc3Ryb2tlPSIjMGQ5NDg4IiBzdHJva2Utd2lkdGg9IjIwIi8%2BPHBhdGggZD0iTTI1NiA2MHYyMjAiIHN0cm9rZT0iIzBkOTQ4OCIgc3Ryb2tlLXdpZHRoPSIxNSIvPjxjaXJjbGUgY3g9IjE5NiIgY3k9IjEzMCIgcj0iMTUiIGZpbGw9IiMwZDk0ODgiLz48Y2lyY2xlIGN4PSIzMTYiIGN5PSIxMzAiIHI9IjE1IiBmaWxsPSIjMGQ5NDg4Ii8%2BPHBhdGggZD0iTTM2MCA0NjBMMjAwIDMwMCIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48ZWxsaXBzZSBjeD0iMTcwIiBjeT0iMjcwIiByeD0iOTAiIHJ5PSI3MCIgZmlsbD0iI2Y4ZmFmYyIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjEwIiB0cmFuc2Zvcm09InJvdGF0ZSgtNDUgMTcwIDI3MCkiLz48Y2lyY2xlIGN4PSIxNjAiIGN5PSIyNjAiIHI9IjMwIiBmaWxsPSIjZjk3MzE2Ii8%2BPHBhdGggZD0iTTIwMCAyODAgTCAyMTAgMzAwIEwgMTkwIDMwMCBaIiBmaWxsPSIjMTY2NTM0Ii8%2BPGNpcmNsZSBjeD0iMTQwIiBjeT0iMjkwIiByPSIyMiIgZmlsbD0iIzI1NjNlYiIvPjwvc3ZnPg%3D%3D%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D'>
+    <!-- Manifest pointing to the local file -->
+    <link rel="manifest" href='data:application/json;charset=utf-8,%7B%22name%22%3A%22Tiny%20Tastes%20AI%22%2C%22short_name%22%3A%22Tiny%20Tastes%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%230d9488%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22%2Fapp-icon.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D'>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tiny Tastes AI">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEyMCIgZmlsbD0iI2VjZmNjYiIvPjxwYXRoIGQ9Ik0xMzYgMTgwYzAtNjYgNTQtMTIwIDEyMC0xMjBzMTIwIDU0IDEyMCAxMjBjMCA0MC0yMCA3Ni01MCA5OHYzMmMwIDE1LTMwIDMwLTcwIDMwcy03MC0xNS03MC0zMHYtMzJjLTMwLTIyLTUwLTU4LTUwLTk4eiIgZmlsbD0iI2NjZmJmMSIgc3Ryb2tlPSIjMGQ5NDg4IiBzdHJva2Utd2lkdGg9IjIwIi8+PHBhdGggZD0iTTI1NiA2MHYyMjAiIHN0cm9rZT0iIzBkOTQ4OCIgc3Ryb2tlLXdpZHRoPSIxNSIvPjxjaXJjbGUgY3g9IjE5NiIgY3k9IjEzMCIgcj0iMTUiIGZpbGw9IiMwZDk0ODgiLz48Y2lyY2xlIGN4PSIzMTYiIGN5PSIxMzAiIHI9IjE1IiBmaWxsPSIjMGQ5NDg4Ii8+PHBhdGggZD0iTTM2MCA0NjBMMjAwIDMwMCIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48ZWxsaXBzZSBjeD0iMTcwIiBjeT0iMjcwIiByeD0iOTAiIHJ5PSI3MCIgZmlsbD0iI2Y4ZmFmYyIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjEwIiB0cmFuc2Zvcm09InJvdGF0ZSgtNDUgMTcwIDI3MCkiLz48Y2lyY2xlIGN4PSIxNjAiIGN5PSIyNjAiIHI9IjMwIiBmaWxsPSIjZjk3MzE2Ii8+PHBhdGggZD0iTTIwMCAyODAgTCAyMTAgMzAwIEwgMTkwIDMwMCBaIiBmaWxsPSIjMTY2NTM0Ii8+PGNpcmNsZSBjeD0iMTQwIiBjeT0iMjkwIiByPSIyMiIgZmlsbD0iIzI1NjNlYiIvPjwvc3ZnPg==">
+    <link rel="apple-touch-icon" href="/app-icon.png">
 
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
