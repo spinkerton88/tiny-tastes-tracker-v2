@@ -94,7 +94,9 @@ export const NUTRIENT_STYLES: Record<string, { bg: string, text: string, border:
     "Vitamin E": { bg: "bg-teal-100", text: "text-teal-800", border: "border-teal-200", icon: "droplet", label: "Vit E" },
     "Magnesium": { bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-200", icon: "layers", label: "Magnesium" },
     "Antioxidants": { bg: "bg-rose-100", text: "text-rose-800", border: "border-rose-200", icon: "heart", label: "Antioxidants" },
-    "Hydration": { bg: "bg-sky-100", text: "text-sky-800", border: "border-sky-200", icon: "glass-water", label: "Hydration" }
+    "Hydration": { bg: "bg-sky-100", text: "text-sky-800", border: "border-sky-200", icon: "glass-water", label: "Hydration" },
+    "Selenium": { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", icon: "sparkles", label: "Selenium" },
+    "Probiotics": { bg: "bg-cyan-50", text: "text-cyan-700", border: "border-cyan-200", icon: "biceps-flexed", label: "Probiotics" }
 };
 
 export const FOOD_NUTRIENT_MAPPING: Record<string, string[]> = {

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Food, TriedFoodLog, Filter, FoodCategory, UserProfile } from '../../types';
-import { allFoods, totalFoodCount, FOOD_ALLERGY_MAPPING } from '../../constants';
+import { allFoods, totalFoodCount, FOOD_ALLERGY_MAPPING, FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
@@ -22,19 +22,35 @@ const FoodCard: React.FC<{
   onInfoClick: (e: React.MouseEvent) => void;
 }> = ({ name, emoji, category, isTried, isAllergic, onClick, onInfoClick }) => {
   const triedClass = isTried ? 'is-tried' : '';
+  const nutrients = FOOD_NUTRIENT_MAPPING[name] || [];
   
   return (
     <div 
-        className={`food-card relative group ${category.color} ${category.textColor} h-28 rounded-lg shadow-sm border ${category.borderColor} ${triedClass} transition-all duration-200 hover:shadow-md hover:scale-105`}
+        className={`food-card relative group ${category.color} ${category.textColor} h-auto min-h-[8rem] rounded-lg shadow-sm border ${category.borderColor} ${triedClass} transition-all duration-200 hover:shadow-md hover:scale-105`}
     >
       {/* Main Action - Covers the whole card */}
       <button
         onClick={onClick}
-        className="w-full h-full p-2 flex flex-col items-center justify-center cursor-pointer focus:outline-none rounded-lg"
+        className="w-full h-full p-3 flex flex-col items-center justify-start cursor-pointer focus:outline-none rounded-lg"
         type="button"
       >
-        <span className="text-3xl mb-1">{emoji}</span>
+        <span className="text-3xl mb-1 mt-1">{emoji}</span>
         <span className="text-sm font-medium text-center leading-tight line-clamp-2">{name}</span>
+        
+        {/* Nutrient Highlights */}
+        <div className="flex flex-wrap justify-center gap-1 mt-2">
+            {nutrients.slice(0, 3).map(n => {
+                const style = NUTRIENT_STYLES[n] || { bg: "bg-gray-100", text: "text-gray-800", border: "border-gray-200", icon: "star", label: n };
+                return (
+                    <span 
+                        key={n} 
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold border bg-white/80 backdrop-blur-sm ${style.text} ${style.border}`}
+                    >
+                       {style.label}
+                    </span>
+                );
+            })}
+        </div>
       </button>
       
       {/* Allergy Warning - Top Left */}
@@ -190,7 +206,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
              </button>
              
              <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isRecentOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 pt-1">
                     {recentLogs.map(log => {
                         let foundCategory: FoodCategory | undefined;
                         let foundFood: Food | undefined;
