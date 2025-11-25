@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Recipe, FoodSubstitute } from '../types';
 
@@ -113,27 +114,54 @@ Ensure the 'name' of the substitute is just the food name (e.g., "Mashed Peas", 
     }
 };
 
-export const askResearchAssistant = async (question: string): Promise<{ answer: string; sources: any[] }> => {
+export const askResearchAssistant = async (history: { role: string; text: string }[], question: string): Promise<{ answer: string; sources: any[]; suggestedQuestions: string[] }> => {
   try {
     const systemInstruction = `You are a research assistant for parents, specializing in baby-led weaning and infant nutrition. Your answers must be based on information from peer-reviewed journals, scientific studies, and meta-analyses found via Google Search.
-Synthesize the findings into a clear, easy-to-understand answer for a non-scientific audience.
+Synthesize the findings into a CLEAR, CONCISE answer for a non-scientific audience. Avoid extra fluff or lengthy introductions. Keep the answer under 400 words if possible.
 Cite sources in the text using bracketed numbers, like [1], corresponding to the order of the sources found.
-If you absolutely must use a source that is not a peer-reviewed study (like a reputable health organization's website), you MUST explicitly flag it in the text, for example: ...according to the World Health Organization (source not peer-reviewed) [2].
-The final response should be in Markdown format.`;
+If you absolutely must use a source that is not a peer-reviewed study (like a reputable health organization's website), you MUST explicitly flag it in the text.
+
+At the very end of your response, strictly following the answer, add exactly this separator on a new line: "---SUGGESTED_QUESTIONS---"
+Then list 3 short, relevant follow-up questions that the user might want to ask next, one per line. Do not number them.`;
+
+    // Convert simple history object to Gemini Content format
+    const contents = history.map(msg => ({
+        role: msg.role,
+        parts: [{ text: msg.text }]
+    }));
+
+    // Add current question
+    contents.push({
+        role: 'user',
+        parts: [{ text: question }]
+    });
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: question,
+      contents: contents,
       config: {
         systemInstruction: systemInstruction,
         tools: [{googleSearch: {}}],
       },
     });
 
-    const answer = response.text;
+    let answer = response.text || "I couldn't generate an answer. Please try again.";
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
     
-    return { answer, sources };
+    let suggestedQuestions: string[] = [];
+    const separator = "---SUGGESTED_QUESTIONS---";
+
+    if (answer.includes(separator)) {
+        const parts = answer.split(separator);
+        answer = parts[0].trim();
+        const questionsRaw = parts[1].trim();
+        suggestedQuestions = questionsRaw.split('\n')
+            .map(q => q.trim().replace(/^\d+\.\s*/, '').replace(/^- \s*/, '')) // Remove bullets/numbers
+            .filter(q => q.length > 0)
+            .slice(0, 3);
+    }
+    
+    return { answer, sources, suggestedQuestions };
 
   } catch (error) {
     console.error("Error asking research assistant:", error);
