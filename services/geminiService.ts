@@ -117,7 +117,7 @@ Ensure the 'name' of the substitute is just the food name (e.g., "Mashed Peas", 
 export const askResearchAssistant = async (history: { role: string; text: string }[], question: string): Promise<{ answer: string; sources: any[]; suggestedQuestions: string[] }> => {
   try {
     const systemInstruction = `You are a research assistant for parents, specializing in baby-led weaning and infant nutrition. Your answers must be based on information from peer-reviewed journals, scientific studies, and meta-analyses found via Google Search.
-Synthesize the findings into a CLEAR, CONCISE answer for a non-scientific audience. Avoid extra fluff or lengthy introductions. Keep the answer under 400 words if possible.
+Synthesize the findings into a CLEAR, CONCISE answer for a non-scientific audience. Avoid extra fluff or lengthy introductions. Keep the answer under 250 words if possible.
 Cite sources in the text using bracketed numbers, like [1], corresponding to the order of the sources found.
 If you absolutely must use a source that is not a peer-reviewed study (like a reputable health organization's website), you MUST explicitly flag it in the text.
 

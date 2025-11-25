@@ -22,18 +22,78 @@ interface ChatMessage {
     suggestedQuestions?: string[];
 }
 
+const CollapsibleSources: React.FC<{ sources: any[] }> = ({ sources }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const validSources = sources.filter(source => source && source.web && source.web.uri);
+
+    if (validSources.length === 0) return null;
+
+    return (
+        <div className="mt-3 pt-2 border-t border-gray-200/50">
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-teal-600 transition-colors mb-1 focus:outline-none"
+            >
+                <Icon name={isOpen ? "chevron-down" : "chevron-right"} className="w-3.5 h-3.5" />
+                <span>{isOpen ? 'Hide Sources' : `Show Research Sources (${validSources.length})`}</span>
+            </button>
+
+            {isOpen && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {validSources.map((source, index) => (
+                        <a 
+                            key={`${source.web.uri}-${index}`} 
+                            id={`source-${index + 1}`}
+                            href={source.web.uri} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center gap-2 bg-white/80 border border-gray-200 hover:border-teal-400 hover:bg-white rounded-md px-2.5 py-1.5 transition-all text-left no-underline group max-w-full"
+                        >
+                            <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-teal-100 text-[9px] font-bold text-teal-700">
+                                {index + 1}
+                            </span>
+                            <span className="text-[11px] text-gray-600 truncate max-w-[180px] group-hover:text-teal-800 font-medium">
+                                {source.web.title || 'Source'}
+                            </span>
+                        </a>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const LearnPage: React.FC = () => {
     const [query, setQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
-    const scrollToBottom = () => {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
+    // Smart scrolling logic
     useEffect(() => {
-        scrollToBottom();
+        if (isLoading) {
+             // When loading, ensure the loading indicator is visible at the bottom
+             chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+             return;
+        }
+
+        if (messages.length === 0) return;
+        
+        const lastMsg = messages[messages.length - 1];
+
+        if (lastMsg.role === 'user') {
+            // If user just sent a message, scroll to bottom to see it
+            chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        } else if (lastMsg.role === 'model') {
+            // If AI just replied, scroll to the TOP of the response so the user can read from the start
+            // We use a slight timeout to ensure layout is stable
+            setTimeout(() => {
+                const msgElement = document.getElementById(`msg-${lastMsg.id}`);
+                if (msgElement) {
+                    msgElement.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            }, 100);
+        }
     }, [messages, isLoading]);
 
     const handleAskAI = async (overrideQuestion?: string) => {
@@ -99,7 +159,7 @@ const LearnPage: React.FC = () => {
                 </div>
 
                 {/* Chat Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white scroll-smooth">
                     {messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 p-8">
                             <Icon name="message-square" className="w-12 h-12 mb-3 opacity-20" />
@@ -109,7 +169,11 @@ const LearnPage: React.FC = () => {
                     )}
 
                     {messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div 
+                            key={msg.id} 
+                            id={`msg-${msg.id}`}
+                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
                             <div 
                                 className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm ${
                                     msg.role === 'user' 
@@ -126,31 +190,9 @@ const LearnPage: React.FC = () => {
                                             dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.text) }} 
                                         />
                                         
-                                        {/* Sources Chips */}
+                                        {/* Collapsible Sources */}
                                         {msg.sources && msg.sources.length > 0 && (
-                                            <div className="mt-3 pt-2 border-t border-gray-200/50">
-                                                <div className="flex flex-wrap gap-2">
-                                                    {msg.sources
-                                                        .filter(source => source && source.web && source.web.uri)
-                                                        .map((source, index) => (
-                                                        <a 
-                                                            key={`${source.web.uri}-${index}`} 
-                                                            id={`source-${index + 1}`}
-                                                            href={source.web.uri} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer" 
-                                                            className="inline-flex items-center gap-2 bg-white/80 border border-gray-200 hover:border-teal-400 hover:bg-white rounded-md px-2.5 py-1.5 transition-all text-left no-underline group max-w-full"
-                                                        >
-                                                            <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-teal-100 text-[9px] font-bold text-teal-700">
-                                                                {index + 1}
-                                                            </span>
-                                                            <span className="text-[11px] text-gray-600 truncate max-w-[180px] group-hover:text-teal-800 font-medium">
-                                                                {source.web.title || 'Source'}
-                                                            </span>
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                            <CollapsibleSources sources={msg.sources} />
                                         )}
 
                                         {/* Suggested Questions */}
