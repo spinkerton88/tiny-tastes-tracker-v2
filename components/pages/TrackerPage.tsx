@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Food, TriedFoodLog, Filter, FoodCategory, UserProfile } from '../../types';
+import { Food, TriedFoodLog, Filter, FoodCategory, UserProfile, CustomFood } from '../../types';
 import { allFoods, totalFoodCount, FOOD_ALLERGY_MAPPING, FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
 import { identifyFoodFromImage } from '../../services/geminiService';
 import Icon from '../ui/Icon';
@@ -8,9 +8,11 @@ import EmptyState from '../ui/EmptyState';
 
 interface TrackerPageProps {
   triedFoods: TriedFoodLog[];
+  customFoods?: CustomFood[];
   onFoodClick: (food: Food) => void;
   userProfile?: UserProfile | null;
   onShowGuide: (food: Food) => void;
+  onAddCustomFood?: (initialName: string) => void;
 }
 
 const FoodCard: React.FC<{
@@ -19,9 +21,10 @@ const FoodCard: React.FC<{
   category: FoodCategory;
   isTried: boolean;
   isAllergic: boolean;
+  isCustom?: boolean;
   onClick: () => void;
   onInfoClick: (e: React.MouseEvent) => void;
-}> = ({ name, emoji, category, isTried, isAllergic, onClick, onInfoClick }) => {
+}> = ({ name, emoji, category, isTried, isAllergic, isCustom, onClick, onInfoClick }) => {
   const triedClass = isTried ? 'is-tried' : '';
   const nutrients = FOOD_NUTRIENT_MAPPING[name] || [];
   
@@ -51,6 +54,11 @@ const FoodCard: React.FC<{
                     </span>
                 );
             })}
+            {isCustom && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold border bg-white/80 backdrop-blur-sm bg-violet-50 text-violet-700 border-violet-200">
+                    Custom
+                </span>
+            )}
         </div>
       </button>
       
@@ -96,7 +104,7 @@ const FilterButton: React.FC<{ filter: Filter, currentFilter: Filter, onClick: (
 
 const CategoryProgress: React.FC<{ category: FoodCategory, triedCount: number }> = ({ category, triedCount }) => {
     const total = category.items.length;
-    const percent = (triedCount / total) * 100;
+    const percent = total > 0 ? (triedCount / total) * 100 : 0;
     // Extract the base color name (e.g., 'green', 'red') from the tailwind class 'bg-green-100'
     const colorName = category.color.replace('bg-', '').replace('-100', '');
     const barColor = `bg-${colorName}-500`; 
@@ -124,7 +132,7 @@ const NoResultsIllustration = () => (
     </svg>
 );
 
-const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, userProfile, onShowGuide }) => {
+const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [], onFoodClick, userProfile, onShowGuide, onAddCustomFood }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
@@ -138,7 +146,22 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
   
   const knownAllergens = Array.isArray(userProfile?.knownAllergies) ? userProfile?.knownAllergies : [];
 
-  const filteredCategories = allFoods.map(category => {
+  // Merge Standard Foods with Custom Foods for display
+  let displayCategories = [...allFoods];
+  if (customFoods.length > 0) {
+      displayCategories = [
+          {
+              category: "My Custom Foods",
+              color: "bg-violet-100",
+              textColor: "text-violet-800",
+              borderColor: "border-violet-300",
+              items: customFoods
+          },
+          ...displayCategories
+      ];
+  }
+
+  const filteredCategories = displayCategories.map(category => {
       const items = category.items.filter(food => {
           const isTried = triedFoodSet.has(food.name);
           
@@ -184,7 +207,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
           if (identifiedFoodName) {
               // Find the food object in our list
               let foundFood: Food | undefined;
-              for (const cat of allFoods) {
+              for (const cat of displayCategories) {
                   const match = cat.items.find(item => item.name === identifiedFoodName);
                   if (match) {
                       foundFood = match;
@@ -281,7 +304,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
                         let foundCategory: FoodCategory | undefined;
                         let foundFood: Food | undefined;
 
-                        for (const cat of allFoods) {
+                        for (const cat of displayCategories) {
                             const f = cat.items.find(i => i.name === log.id);
                             if (f) {
                                 foundFood = f;
@@ -300,6 +323,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
                                 category={foundCategory}
                                 isTried={true}
                                 isAllergic={isFoodAllergic(foundFood.name)}
+                                isCustom={(foundFood as CustomFood).isCustom}
                                 onClick={() => onFoodClick(foundFood!)}
                                 onInfoClick={(e) => { e.stopPropagation(); onShowGuide(foundFood!); }}
                             />
@@ -319,7 +343,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
       <div className="bg-white p-4 rounded-lg shadow mb-6">
         <div className="flex justify-between items-center mb-2">
           <span className="text-lg font-semibold text-teal-700">Food Journey Progress</span>
-          <span className="text-lg font-bold text-teal-700">{triedCount} / {totalFoodCount}</span>
+          <span className="text-lg font-bold text-teal-700">{triedCount} / {totalFoodCount + customFoods.length}</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
           <div className="bg-teal-600 h-4 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
@@ -335,7 +359,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
             </button>
             
             <div className={`grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 transition-all duration-300 ease-in-out overflow-hidden ${isBreakdownOpen ? 'max-h-[1000px] opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
-                {allFoods.map(cat => {
+                {displayCategories.map(cat => {
                     const catTriedCount = cat.items.filter(item => triedFoodSet.has(item.name)).length;
                     return <CategoryProgress key={cat.category} category={cat} triedCount={catTriedCount} />;
                 })}
@@ -356,6 +380,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
                   category={category}
                   isTried={triedFoodSet.has(food.name)}
                   isAllergic={isFoodAllergic(food.name)}
+                  isCustom={(food as CustomFood).isCustom}
                   onClick={() => onFoodClick(food)}
                   onInfoClick={(e) => { e.stopPropagation(); onShowGuide(food); }}
                 />
@@ -367,8 +392,21 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
         <EmptyState
             illustration={<NoResultsIllustration />}
             title="No Foods Found"
-            message="There are no foods that match your current filter or search selection."
-        />
+            message={`We couldn't find "${searchQuery}" in our database.`}
+        >
+            {searchQuery && onAddCustomFood && (
+                <div className="mt-4">
+                    <button 
+                        onClick={() => onAddCustomFood(searchQuery)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-md shadow-md hover:bg-violet-700 transition-colors font-semibold"
+                    >
+                        <Icon name="plus-circle" className="w-4 h-4" />
+                        Add "{searchQuery}" Manually
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2">We'll use AI to generate safety & serving info!</p>
+                </div>
+            )}
+        </EmptyState>
       )}
     </>
   );

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Recipe, FoodSubstitute } from '../types';
+import { Recipe, FoodSubstitute, CustomFoodDetails } from '../types';
 import { flatFoodList } from '../constants';
 
 const API_KEY = process.env.API_KEY;
@@ -232,4 +232,30 @@ Then list 3 short, relevant follow-up questions that the user might want to ask 
     console.error("Error asking research assistant:", error);
     throw new Error("Failed to get an answer from the research assistant.");
   }
+};
+
+export const analyzeFoodWithGemini = async (foodName: string): Promise<CustomFoodDetails & { emoji: string }> => {
+    try {
+        const prompt = `Analyze the food "${foodName}" for a baby (6-12 months) starting solid foods (Baby Led Weaning). 
+        Respond ONLY with a JSON object with the following properties:
+        - "safety_rating": strictly one of "Safe", "Use Caution", or "Avoid".
+        - "allergen_info": string describing if it is a common allergen (Top 9) or "No common allergens".
+        - "texture_recommendation": one concise sentence on how to serve it safely (e.g., "Steam until soft" or "Serve as mash").
+        - "nutrition_highlight": one key vitamin or nutritional benefit (e.g., "High in Iron").
+        - "emoji": a single emoji representing this food.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [{ parts: [{ text: prompt }] }],
+            config: {
+                responseMimeType: "application/json",
+            },
+        });
+
+        const text = response.text.trim();
+        return JSON.parse(text);
+    } catch (error) {
+        console.error("Error analyzing food with Gemini:", error);
+        throw new Error("Failed to analyze food.");
+    }
 };

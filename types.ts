@@ -9,6 +9,18 @@ export interface Food {
     emoji: string;
 }
 
+export interface CustomFoodDetails {
+    safety_rating: "Safe" | "Use Caution" | "Avoid";
+    allergen_info: string;
+    texture_recommendation: string;
+    nutrition_highlight: string;
+}
+
+export interface CustomFood extends Food {
+    isCustom: true;
+    details: CustomFoodDetails;
+}
+
 export interface FoodCategory {
     category: string;
     color: string;
@@ -88,7 +100,7 @@ export interface Milestone {
 
 // Modal State Types
 type LogFoodModalState = { type: 'LOG_FOOD'; food: Food };
-type HowToServeModalState = { type: 'HOW_TO_SERVE'; food: Food; returnToLog?: boolean };
+type HowToServeModalState = { type: 'HOW_TO_SERVE'; food: Food; customDetails?: CustomFoodDetails; returnToLog?: boolean };
 type AddRecipeModalState = { type: 'ADD_RECIPE'; recipeData?: Partial<Recipe> };
 type ViewRecipeModalState = { type: 'VIEW_RECIPE'; recipe: Recipe };
 type ImportRecipeModalState = { type: 'IMPORT_RECIPE' };
@@ -101,6 +113,7 @@ type FlavorPairingModalState = { type: 'FLAVOR_PAIRING' };
 type AllergenAlertModalState = { type: 'ALLERGEN_ALERT'; foodName: string; allergens: string[] };
 type BadgeUnlockedModalState = { type: 'BADGE_UNLOCKED'; badge: Badge };
 type CertificateModalState = { type: 'CERTIFICATE'; babyName: string; date: string };
+type CustomFoodModalState = { type: 'ADD_CUSTOM_FOOD'; initialName?: string };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -118,4 +131,5 @@ export type ModalState =
   | AllergenAlertModalState
   | BadgeUnlockedModalState
   | CertificateModalState
+  | CustomFoodModalState
   | NullModalState;

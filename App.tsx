@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone, Badge } from './types';
+import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone, Badge, CustomFood } from './types';
 import { totalFoodCount, DEFAULT_MILESTONES, FOOD_ALLERGY_MAPPING, BADGES_LIST, allFoods, GREEN_VEGETABLES } from './constants';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
@@ -24,11 +24,13 @@ import FlavorPairingModal from './components/modals/FlavorPairingModal';
 import AllergenAlertModal from './components/modals/AllergenAlertModal';
 import BadgeUnlockedModal from './components/modals/BadgeUnlockedModal';
 import CertificateModal from './components/modals/CertificateModal';
+import CustomFoodModal from './components/modals/CustomFoodModal';
 
 
 const App: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>('tracker');
     const [triedFoods, setTriedFoods] = useState<TriedFoodLog[]>([]);
+    const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [mealPlan, setMealPlan] = useState<MealPlan>({});
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -41,6 +43,7 @@ const App: React.FC = () => {
         if (window.confirm("Are you sure you want to reset all app data? This action cannot be undone.")) {
             localStorage.removeItem('tiny-tastes-tracker-profile');
             localStorage.removeItem('tiny-tastes-tracker-triedFoods');
+            localStorage.removeItem('tiny-tastes-tracker-customFoods');
             localStorage.removeItem('tiny-tastes-tracker-recipes');
             localStorage.removeItem('tiny-tastes-tracker-mealPlan');
             localStorage.removeItem('tiny-tastes-tracker-milestones');
@@ -56,6 +59,13 @@ const App: React.FC = () => {
         };
         localStorage.setItem(`tiny-tastes-tracker-profile`, JSON.stringify(updatedProfile));
         setUserProfile(updatedProfile);
+    };
+
+    const addCustomFood = async (food: CustomFood) => {
+        const updatedCustomFoods = [...customFoods, food];
+        localStorage.setItem('tiny-tastes-tracker-customFoods', JSON.stringify(updatedCustomFoods));
+        setCustomFoods(updatedCustomFoods);
+        setModalState({ type: null });
     };
 
     const checkBadges = (currentTriedFoods: TriedFoodLog[], currentProfile: UserProfile): { updatedProfile: UserProfile, newBadge: Badge | null } => {
@@ -293,6 +303,10 @@ const App: React.FC = () => {
             }));
             setTriedFoods(loadedTriedFoods);
             
+            // Load Custom Foods
+            const loadedCustomFoods = getFromStorage<CustomFood[]>('customFoods', []);
+            setCustomFoods(loadedCustomFoods);
+
             const rawRecipes = getFromStorage<any[]>('recipes', []);
             const cleanedRecipes = rawRecipes.map((r): Recipe | null => {
                 if (!r || typeof r !== 'object') return null;
@@ -337,9 +351,11 @@ const App: React.FC = () => {
             case 'tracker':
                 return <TrackerPage 
                     triedFoods={triedFoods} 
+                    customFoods={customFoods}
                     onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} 
                     userProfile={userProfile}
                     onShowGuide={(food: Food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: false })}
+                    onAddCustomFood={(name) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName: name })}
                 />;
             case 'recommendations':
                 return <RecommendationsPage
@@ -492,6 +508,13 @@ const App: React.FC = () => {
                     onClose={() => setModalState({ type: null })}
                 />
             }
+            case 'ADD_CUSTOM_FOOD': {
+                return <CustomFoodModal
+                    initialName={modal.initialName}
+                    onClose={() => setModalState({ type: null })}
+                    onSave={addCustomFood}
+                />
+            }
             default:
                 return null;
         }
@@ -515,7 +538,7 @@ const App: React.FC = () => {
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 profile={userProfile}
-                progress={{ triedCount: triedFoods.length, totalCount: totalFoodCount }}
+                progress={{ triedCount: triedFoods.length, totalCount: totalFoodCount + customFoods.length }}
             >
                 {renderPage()}
             </Layout>
