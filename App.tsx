@@ -26,6 +26,64 @@ import BadgeUnlockedModal from './components/modals/BadgeUnlockedModal';
 import CertificateModal from './components/modals/CertificateModal';
 import CustomFoodModal from './components/modals/CustomFoodModal';
 
+// Helper function to calculate badges - defined outside component for reuse
+const calculateBadges = (currentTriedFoods: TriedFoodLog[], currentProfile: UserProfile): { updatedProfile: UserProfile, newBadge: Badge | null, badgesChanged: boolean } => {
+    let updatedBadges = currentProfile.badges ? [...currentProfile.badges] : [...BADGES_LIST];
+    let newBadge: Badge | null = null;
+    let badgesChanged = false;
+    
+    const triedSet = new Set(currentTriedFoods.map(f => f.id));
+    const triedCount = triedSet.size;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const tryUnlock = (id: string) => {
+        const badgeIndex = updatedBadges.findIndex(b => b.id === id);
+        if (badgeIndex !== -1 && !updatedBadges[badgeIndex].isUnlocked) {
+             updatedBadges[badgeIndex] = {
+                 ...updatedBadges[badgeIndex],
+                 isUnlocked: true,
+                 dateUnlocked: todayStr
+             };
+             newBadge = updatedBadges[badgeIndex]; 
+             badgesChanged = true;
+        }
+    };
+
+    // 1. Numeric Intervals (10-90)
+    for (let i = 10; i <= 90; i += 10) {
+        if (triedCount >= i) tryUnlock(`tried_${i}`);
+    }
+
+    // 2. The 100 Club
+    if (triedCount >= 100) tryUnlock('100_club');
+
+    // 3. Fruit Ninja (15 Fruits)
+    const fruitCategory = allFoods.find(c => c.category === 'Fruits');
+    if (fruitCategory) {
+         const fruitCount = fruitCategory.items.filter(item => triedSet.has(item.name)).length;
+         if (fruitCount >= 15) tryUnlock('fruit_ninja');
+    }
+
+    // 4. Green Machine (10 Green Veggies)
+    const greenCount = GREEN_VEGETABLES.filter(v => triedSet.has(v)).length;
+    if (greenCount >= 10) tryUnlock('green_machine');
+    
+    // 5. Protein Power (5 Proteins)
+    const proteinCategories = ['Meat', 'Plant Protein', 'Dairy & Eggs'];
+    let proteinCount = 0;
+    allFoods.forEach(cat => {
+        if(proteinCategories.includes(cat.category)) {
+            proteinCount += cat.items.filter(item => triedSet.has(item.name)).length;
+        }
+    });
+    if (proteinCount >= 5) tryUnlock('protein_power');
+
+    return {
+        updatedProfile: { ...currentProfile, badges: updatedBadges },
+        newBadge,
+        badgesChanged
+    };
+};
 
 const App: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>('tracker');
@@ -68,57 +126,6 @@ const App: React.FC = () => {
         setModalState({ type: null });
     };
 
-    const checkBadges = (currentTriedFoods: TriedFoodLog[], currentProfile: UserProfile): { updatedProfile: UserProfile, newBadge: Badge | null } => {
-        let updatedBadges = [...(currentProfile.badges || BADGES_LIST)];
-        let newBadge: Badge | null = null;
-        const triedSet = new Set(currentTriedFoods.map(f => f.id));
-        const triedCount = triedSet.size;
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        const tryUnlock = (id: string) => {
-            const badge = updatedBadges.find(b => b.id === id);
-            if (badge && !badge.isUnlocked) {
-                badge.isUnlocked = true;
-                badge.dateUnlocked = todayStr;
-                newBadge = badge; 
-            }
-        };
-
-        // 1. Numeric Intervals (10-90)
-        for (let i = 10; i <= 90; i += 10) {
-            if (triedCount >= i) tryUnlock(`tried_${i}`);
-        }
-
-        // 2. The 100 Club
-        if (triedCount >= 100) tryUnlock('100_club');
-
-        // 3. Fruit Ninja (15 Fruits)
-        const fruitCategory = allFoods.find(c => c.category === 'Fruits');
-        if (fruitCategory) {
-             const fruitCount = fruitCategory.items.filter(item => triedSet.has(item.name)).length;
-             if (fruitCount >= 15) tryUnlock('fruit_ninja');
-        }
-
-        // 4. Green Machine (10 Green Veggies)
-        const greenCount = GREEN_VEGETABLES.filter(v => triedSet.has(v)).length;
-        if (greenCount >= 10) tryUnlock('green_machine');
-        
-        // 5. Protein Power (5 Proteins)
-        const proteinCategories = ['Meat', 'Plant Protein', 'Dairy & Eggs'];
-        let proteinCount = 0;
-        allFoods.forEach(cat => {
-            if(proteinCategories.includes(cat.category)) {
-                proteinCount += cat.items.filter(item => triedSet.has(item.name)).length;
-            }
-        });
-        if (proteinCount >= 5) tryUnlock('protein_power');
-
-        return {
-            updatedProfile: { ...currentProfile, badges: updatedBadges },
-            newBadge
-        };
-    };
-
     const saveTriedFood = async (foodName: string, data: FoodLogData) => {
         const isFirstTime = !triedFoods.some(f => f.id === foodName);
         
@@ -133,7 +140,7 @@ const App: React.FC = () => {
         
         // Handle Badges logic if user profile exists
         if (userProfile) {
-            const { updatedProfile, newBadge } = checkBadges(newTriedFoods, userProfile);
+            const { updatedProfile, newBadge } = calculateBadges(newTriedFoods, userProfile);
             // If badges changed (simple check: if newBadge exists), save profile
             if (newBadge) {
                 await saveProfile(updatedProfile);
@@ -266,6 +273,10 @@ const App: React.FC = () => {
         };
         
         let loadedProfile = getFromStorage<UserProfile | null>('profile', null);
+        let loadedTriedFoods = getFromStorage<TriedFoodLog[]>('triedFoods', []).map(log => ({
+            ...log,
+            tryCount: log.tryCount || 1
+        }));
         
         // Legacy data migration for allergies (string -> string[])
         if (loadedProfile && typeof loadedProfile.knownAllergies === 'string') {
@@ -292,17 +303,21 @@ const App: React.FC = () => {
                 });
                 loadedProfile.badges = mergedBadges;
             }
+
+            // --- RETROACTIVE BADGE CHECK ---
+            // If the user has enough tried foods but badges are locked (e.g. from data import or old version), unlock them now.
+            const { updatedProfile, badgesChanged } = calculateBadges(loadedTriedFoods, loadedProfile);
+            if (badgesChanged) {
+                console.log("Retroactively unlocked badges based on history.");
+                loadedProfile = updatedProfile;
+                localStorage.setItem(`tiny-tastes-tracker-profile`, JSON.stringify(loadedProfile));
+            }
         }
         
         setUserProfile(loadedProfile);
+        setTriedFoods(loadedTriedFoods);
 
         if (loadedProfile) {
-            const loadedTriedFoods = getFromStorage<TriedFoodLog[]>('triedFoods', []).map(log => ({
-                ...log,
-                tryCount: log.tryCount || 1
-            }));
-            setTriedFoods(loadedTriedFoods);
-            
             // Load Custom Foods
             const loadedCustomFoods = getFromStorage<CustomFood[]>('customFoods', []);
             setCustomFoods(loadedCustomFoods);
