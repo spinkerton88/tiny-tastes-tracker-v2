@@ -1,8 +1,8 @@
 
-
 export type Page = 'tracker' | 'recommendations' | 'recipes' | 'learn' | 'profile';
 export type Filter = 'all' | 'to_try' | 'tried';
 export type RecipeFilter = 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type TextureStage = 'puree' | 'mashed' | 'finger_food';
 
 export interface Food {
     name: string;
@@ -47,6 +47,7 @@ export interface UserProfile {
     birthDate?: string;
     knownAllergies?: string[]; // Changed from string to string[]
     pediatricianApproved?: boolean;
+    currentTextureStage?: TextureStage;
 }
 
 export interface MealPlan {
@@ -85,6 +86,7 @@ type SelectRecipeModalState = { type: 'SELECT_RECIPE'; date: string; meal: strin
 type SubstitutesModalState = { type: 'SUBSTITUTES'; food: Food };
 type DoctorReportModalState = { type: 'DOCTOR_REPORT' };
 type FlavorPairingModalState = { type: 'FLAVOR_PAIRING' };
+type AllergenAlertModalState = { type: 'ALLERGEN_ALERT'; foodName: string; allergens: string[] };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -99,4 +101,5 @@ export type ModalState =
   | SubstitutesModalState
   | DoctorReportModalState
   | FlavorPairingModalState
+  | AllergenAlertModalState
   | NullModalState;

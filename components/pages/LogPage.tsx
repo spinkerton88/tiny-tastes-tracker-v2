@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, TriedFoodLog, Milestone } from '../../types';
-import { allFoods, COMMON_ALLERGENS } from '../../constants';
+import { UserProfile, TriedFoodLog, Milestone, TextureStage } from '../../types';
+import { allFoods, COMMON_ALLERGENS, TEXTURE_STAGES } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
@@ -48,10 +48,11 @@ const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
 const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (profile: UserProfile) => void, onResetData: () => void }> = ({ userProfile, onSaveProfile, onResetData }) => {
     const [name, setName] = useState(userProfile?.babyName || '');
     const [birthDate, setBirthDate] = useState(userProfile?.birthDate || '');
-    // Ensure allergies is an array, handling legacy string data if necessary
     const [allergies, setAllergies] = useState<string[]>(
         Array.isArray(userProfile?.knownAllergies) ? userProfile.knownAllergies : []
     );
+    // Texture tracker state
+    const [currentTexture, setCurrentTexture] = useState<TextureStage>(userProfile?.currentTextureStage || 'puree');
     const [showInfoModal, setShowInfoModal] = useState(false);
     
     const isSavePickerSupported = 'showSaveFilePicker' in window;
@@ -60,6 +61,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
         setName(userProfile?.babyName || '');
         setBirthDate(userProfile?.birthDate || '');
         setAllergies(Array.isArray(userProfile?.knownAllergies) ? userProfile.knownAllergies : []);
+        setCurrentTexture(userProfile?.currentTextureStage || 'puree');
     }, [userProfile]);
 
     const handleSave = () => {
@@ -68,6 +70,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
             babyName: name,
             birthDate: birthDate,
             knownAllergies: allergies,
+            currentTextureStage: currentTexture,
         });
         alert("Profile saved!");
     };
@@ -196,8 +199,46 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                         <input type="date" id="birth-date-input" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm" />
                     </div>
                 </div>
+
+                {/* Texture Tracker */}
+                <div className="mt-8 border-t pt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Current Texture Stage</label>
+                    <div className="relative flex justify-between">
+                         {/* Progress Bar Background */}
+                        <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -z-10 -translate-y-1/2 rounded"></div>
+                        
+                        {TEXTURE_STAGES.map((stage, index) => {
+                            const isSelected = currentTexture === stage.id;
+                            // Basic logic to determine if a stage is "passed" based on order in array
+                            const stageIndex = TEXTURE_STAGES.findIndex(s => s.id === currentTexture);
+                            const isPassed = index <= stageIndex;
+
+                            return (
+                                <button
+                                    key={stage.id}
+                                    onClick={() => setCurrentTexture(stage.id)}
+                                    className="group flex flex-col items-center focus:outline-none"
+                                >
+                                    <div className={`
+                                        w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
+                                        ${isPassed ? 'bg-teal-600 border-teal-600 text-white' : 'bg-white border-gray-300 text-gray-400'}
+                                        ${isSelected ? 'ring-4 ring-teal-100 scale-110' : ''}
+                                    `}>
+                                        <Icon name={stage.icon} className="w-5 h-5" />
+                                    </div>
+                                    <span className={`mt-2 text-xs font-semibold ${isSelected ? 'text-teal-700' : 'text-gray-500'}`}>
+                                        {stage.title}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="mt-3 text-center bg-gray-50 p-2 rounded text-xs text-gray-600 italic">
+                        {TEXTURE_STAGES.find(s => s.id === currentTexture)?.desc}
+                    </div>
+                </div>
                 
-                <div className="mt-6">
+                <div className="mt-8">
                     <div className="flex items-center mb-2">
                         <Icon name="alert-triangle" className="w-4 h-4 text-orange-500 mr-2" />
                         <label className="block text-sm font-medium text-gray-700">Known Allergies</label>

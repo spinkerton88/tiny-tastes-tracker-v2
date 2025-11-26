@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone } from './types';
-import { totalFoodCount, DEFAULT_MILESTONES } from './constants';
+import { totalFoodCount, DEFAULT_MILESTONES, FOOD_ALLERGY_MAPPING } from './constants';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
 import RecommendationsPage from './components/pages/IdeasPage';
@@ -21,6 +21,7 @@ import SubstitutesModal from './components/modals/SubstitutesModal';
 import TutorialModal from './components/modals/TutorialModal';
 import DoctorReportModal from './components/modals/DoctorReportModal';
 import FlavorPairingModal from './components/modals/FlavorPairingModal';
+import AllergenAlertModal from './components/modals/AllergenAlertModal';
 
 
 const App: React.FC = () => {
@@ -51,6 +52,8 @@ const App: React.FC = () => {
     };
 
     const saveTriedFood = async (foodName: string, data: FoodLogData) => {
+        const isFirstTime = !triedFoods.some(f => f.id === foodName);
+        
         const newLogData = {
             ...data,
             tryCount: data.tryCount || 1, 
@@ -58,7 +61,14 @@ const App: React.FC = () => {
         const newTriedFoods = [...triedFoods.filter(f => f.id !== foodName), { id: foodName, ...newLogData }];
         localStorage.setItem(`tiny-tastes-tracker-triedFoods`, JSON.stringify(newTriedFoods));
         setTriedFoods(newTriedFoods);
-        setModalState({ type: null });
+        
+        // Allergen Alert Logic
+        const allergens = FOOD_ALLERGY_MAPPING[foodName];
+        if (isFirstTime && allergens && allergens.length > 0) {
+            setModalState({ type: 'ALLERGEN_ALERT', foodName, allergens });
+        } else {
+            setModalState({ type: null });
+        }
     };
 
     const incrementTryCount = async (foodName: string) => {
@@ -373,6 +383,13 @@ const App: React.FC = () => {
             case 'FLAVOR_PAIRING': {
                 return <FlavorPairingModal
                     triedFoods={triedFoods}
+                    onClose={() => setModalState({ type: null })}
+                />
+            }
+            case 'ALLERGEN_ALERT': {
+                return <AllergenAlertModal
+                    foodName={modal.foodName}
+                    allergens={modal.allergens}
                     onClose={() => setModalState({ type: null })}
                 />
             }
