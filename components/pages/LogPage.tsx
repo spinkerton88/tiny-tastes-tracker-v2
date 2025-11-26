@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserProfile, TriedFoodLog, Milestone, TextureStage } from '../../types';
-import { allFoods, COMMON_ALLERGENS, TEXTURE_STAGES } from '../../constants';
+import { allFoods, COMMON_ALLERGENS, TEXTURE_STAGES, BADGES_LIST } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
@@ -13,6 +13,7 @@ interface ProfilePageProps {
   onResetData: () => void;
   onShowDoctorReport: () => void;
   onUpdateMilestone: (milestone: Milestone) => void;
+  onShowCertificate: () => void;
 }
 
 const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
@@ -322,7 +323,7 @@ const NoLogIllustration = () => (
 );
 
 
-const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowDoctorReport: () => void }> = ({ triedFoods, babyName, onShowDoctorReport }) => {
+const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowDoctorReport: () => void; }> = ({ triedFoods, babyName, onShowDoctorReport }) => {
     const getReactionDisplay = (reactionValue: number) => {
         if (reactionValue <= 2) return { emoji: '😩', text: 'Hated it' };
         if (reactionValue <= 4) return { emoji: '😒', text: 'Meh' };
@@ -388,6 +389,14 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowD
                                 {log.notes && (
                                     <div className="mt-3 pt-3 border-t">
                                         <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Notes:</span> {log.notes}</p>
+                                    </div>
+                                )}
+                                {log.messyFaceImage && (
+                                    <div className="mt-3 pt-3 border-t">
+                                        <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Messy Face Moment</p>
+                                        <div className="w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
+                                            <img src={log.messyFaceImage} alt="Messy Face" className="w-full h-full object-cover" />
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -460,28 +469,113 @@ const MilestonesView: React.FC<{ milestones: Milestone[]; onUpdate: (m: Mileston
     )
 }
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, milestones, onSaveProfile, onResetData, onShowDoctorReport, onUpdateMilestone }) => {
-    const [activeTab, setActiveTab] = useState<'profile' | 'log' | 'milestones'>('profile');
+const BadgesView: React.FC<{ userProfile: UserProfile | null; onShowCertificate: () => void }> = ({ userProfile, onShowCertificate }) => {
+    const badges = userProfile?.badges || BADGES_LIST;
+    const unlockedCount = badges.filter(b => b.isUnlocked).length;
+    const progress = (unlockedCount / badges.length) * 100;
     
-    const navButtonClasses = (tabName: 'profile' | 'log' | 'milestones') => {
-        const base = "recipe-sub-nav-btn";
-        const active = "active";
-        return `${base} ${activeTab === tabName ? active : ''}`;
+    // Check if 100 Club is unlocked to show certificate button
+    const is100ClubUnlocked = badges.find(b => b.id === '100_club')?.isUnlocked;
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow">
+                 <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-xl font-semibold text-gray-800">Trophy Case</h3>
+                    <span className="text-sm font-bold text-teal-600">{unlockedCount} / {badges.length} Unlocked</span>
+                 </div>
+                 <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                     <div className="bg-teal-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                     {badges.map(badge => (
+                         <div key={badge.id} className={`p-4 rounded-xl border flex flex-col items-center text-center transition-all ${badge.isUnlocked ? badge.color + ' shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-400 grayscale'}`}>
+                             <div className={`p-3 rounded-full mb-3 ${badge.isUnlocked ? 'bg-white bg-opacity-60' : 'bg-gray-200'}`}>
+                                 <Icon name={badge.icon} className="w-8 h-8" />
+                             </div>
+                             <h4 className="font-bold text-sm mb-1">{badge.title}</h4>
+                             <p className="text-xs opacity-90">{badge.description}</p>
+                             {badge.isUnlocked && badge.dateUnlocked && (
+                                 <span className="mt-2 text-[10px] font-mono opacity-70">Unlocked: {badge.dateUnlocked}</span>
+                             )}
+                         </div>
+                     ))}
+                 </div>
+
+                 {is100ClubUnlocked && (
+                     <div className="mt-6 text-center animate-bounce">
+                         <button onClick={onShowCertificate} className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold rounded-full shadow-lg hover:from-yellow-500 hover:to-yellow-700 transform transition hover:scale-105">
+                             <Icon name="award" className="w-6 h-6" />
+                             View Completion Certificate
+                         </button>
+                     </div>
+                 )}
+            </div>
+        </div>
+    );
+};
+
+const GalleryView: React.FC<{ triedFoods: TriedFoodLog[] }> = ({ triedFoods }) => {
+    const photos = triedFoods.filter(log => log.messyFaceImage);
+
+    return (
+        <div className="bg-white p-6 rounded-lg shadow min-h-[400px]">
+             <h3 className="text-xl font-semibold text-gray-800 mb-1">Messy Face Gallery</h3>
+             <p className="text-sm text-gray-500 mb-6">A collection of those precious first reactions.</p>
+             
+             {photos.length > 0 ? (
+                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                     {photos.map(log => (
+                         <div key={log.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
+                             <img src={log.messyFaceImage} alt={`${log.id} reaction`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
+                                 <p className="text-white font-bold text-sm">{log.id}</p>
+                                 <p className="text-white/80 text-xs">{log.date}</p>
+                             </div>
+                         </div>
+                     ))}
+                 </div>
+             ) : (
+                 <EmptyState
+                    illustration={<Icon name="camera-off" className="w-20 h-20 text-gray-300" />}
+                    title="No Photos Yet"
+                    message="Next time you log a food, tap the camera icon to snap a messy face!"
+                 />
+             )}
+        </div>
+    );
+};
+
+const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, milestones, onSaveProfile, onResetData, onShowDoctorReport, onUpdateMilestone, onShowCertificate }) => {
+    const [activeTab, setActiveTab] = useState<'profile' | 'log' | 'milestones' | 'badges' | 'gallery'>('profile');
+    
+    const navButtonClasses = (tabName: string) => {
+        const base = "flex-1 py-3 px-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap";
+        const active = "border-teal-600 text-teal-600";
+        const inactive = "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300";
+        return `${base} ${activeTab === tabName ? active : inactive}`;
     };
 
     return (
         <>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Profile & Log</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Profile & Memories</h2>
             <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-                <nav className="flex -mb-px min-w-max sm:min-w-0">
+                <nav className="flex min-w-max sm:min-w-0">
                     <button onClick={() => setActiveTab('profile')} className={navButtonClasses('profile')}>
-                        <Icon name="user-cog" className="w-4 h-4 inline-block -mt-1 mr-1" /> Profile Settings
+                        <Icon name="user-cog" className="w-4 h-4 inline-block -mt-1 mr-1" /> Profile
                     </button>
                     <button onClick={() => setActiveTab('log')} className={navButtonClasses('log')}>
-                        <Icon name="clipboard-list" className="w-4 h-4 inline-block -mt-1 mr-1" /> Food Log
+                        <Icon name="clipboard-list" className="w-4 h-4 inline-block -mt-1 mr-1" /> Log
                     </button>
                     <button onClick={() => setActiveTab('milestones')} className={navButtonClasses('milestones')}>
                         <Icon name="award" className="w-4 h-4 inline-block -mt-1 mr-1" /> Milestones
+                    </button>
+                    <button onClick={() => setActiveTab('badges')} className={navButtonClasses('badges')}>
+                        <Icon name="trophy" className="w-4 h-4 inline-block -mt-1 mr-1" /> Badges
+                    </button>
+                    <button onClick={() => setActiveTab('gallery')} className={navButtonClasses('gallery')}>
+                        <Icon name="image" className="w-4 h-4 inline-block -mt-1 mr-1" /> Gallery
                     </button>
                 </nav>
             </div>
@@ -489,6 +583,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, mile
             {activeTab === 'profile' && <ProfileView userProfile={userProfile} onSaveProfile={onSaveProfile} onResetData={onResetData} />}
             {activeTab === 'log' && <LogView triedFoods={triedFoods} babyName={userProfile?.babyName} onShowDoctorReport={onShowDoctorReport} />}
             {activeTab === 'milestones' && <MilestonesView milestones={milestones} onUpdate={onUpdateMilestone} />}
+            {activeTab === 'badges' && <BadgesView userProfile={userProfile} onShowCertificate={onShowCertificate} />}
+            {activeTab === 'gallery' && <GalleryView triedFoods={triedFoods} />}
         </>
     );
 };

@@ -25,6 +25,7 @@ export interface FoodLogData {
     allergyReaction: string;
     notes: string;
     tryCount: number;
+    messyFaceImage?: string; // Base64 string for the photo
 }
 
 export interface TriedFoodLog extends FoodLogData {
@@ -42,12 +43,23 @@ export interface Recipe {
     rating?: number;
 }
 
+export interface Badge {
+    id: string;
+    title: string;
+    description: string;
+    icon: string;
+    isUnlocked: boolean;
+    dateUnlocked?: string;
+    color: string;
+}
+
 export interface UserProfile {
     babyName?: string;
     birthDate?: string;
     knownAllergies?: string[]; // Changed from string to string[]
     pediatricianApproved?: boolean;
     currentTextureStage?: TextureStage;
+    badges?: Badge[];
 }
 
 export interface MealPlan {
@@ -87,6 +99,8 @@ type SubstitutesModalState = { type: 'SUBSTITUTES'; food: Food };
 type DoctorReportModalState = { type: 'DOCTOR_REPORT' };
 type FlavorPairingModalState = { type: 'FLAVOR_PAIRING' };
 type AllergenAlertModalState = { type: 'ALLERGEN_ALERT'; foodName: string; allergens: string[] };
+type BadgeUnlockedModalState = { type: 'BADGE_UNLOCKED'; badge: Badge };
+type CertificateModalState = { type: 'CERTIFICATE'; babyName: string; date: string };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -102,4 +116,6 @@ export type ModalState =
   | DoctorReportModalState
   | FlavorPairingModalState
   | AllergenAlertModalState
+  | BadgeUnlockedModalState
+  | CertificateModalState
   | NullModalState;

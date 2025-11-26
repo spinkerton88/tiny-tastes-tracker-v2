@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Food, TriedFoodLog, FoodLogData } from '../../types';
 import { FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
+import { resizeImage } from '../../utils';
 import Icon from '../ui/Icon';
 
 interface FoodLogModalProps {
@@ -46,6 +47,10 @@ const LogFormView: React.FC<{
     const [bite, setBite] = useState(existingLog ? (existingLog.moreThanOneBite ? 'yes' : 'no') : '');
     const [notes, setNotes] = useState(existingLog?.notes || '');
     const [tryCount, setTryCount] = useState(existingLog?.tryCount || 1);
+    const [photo, setPhoto] = useState<string | undefined>(existingLog?.messyFaceImage);
+    const [processingPhoto, setProcessingPhoto] = useState(false);
+    
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const hasAdverseReaction = allergy && allergy !== 'none';
 
@@ -58,6 +63,23 @@ const LogFormView: React.FC<{
             }
         }
         setBite(value);
+    };
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setProcessingPhoto(true);
+        try {
+            // Resize to save space in LocalStorage (max 300px width)
+            const base64 = await resizeImage(file, 300);
+            setPhoto(base64);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to process image. Try a smaller file.");
+        } finally {
+            setProcessingPhoto(false);
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -73,7 +95,8 @@ const LogFormView: React.FC<{
             date,
             moreThanOneBite: bite === 'yes',
             notes,
-            tryCount
+            tryCount,
+            messyFaceImage: photo
         });
     };
 
@@ -132,8 +155,50 @@ const LogFormView: React.FC<{
                     {biteButtons.map(b => <button key={b.value} type="button" onClick={() => handleBiteSelection(b.value)} className={`p-3 border border-gray-300 rounded-lg flex items-center justify-center gap-2 text-gray-600 hover:border-gray-400 ${bite === b.value ? 'modal-btn-selected' : ''}`}><Icon name={b.icon} className="w-5 h-5" /><span className="text-sm font-medium">{b.text}</span></button>)}
                 </div>
             </div>
+            
+            {/* Messy Face Photo Input */}
             <div>
-                <label htmlFor="notes-input" className="block text-sm font-medium text-gray-700">6. Notes (Optional):</label>
+                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                     <Icon name="camera" className="w-4 h-4 text-teal-600" /> "Messy Face" Photo (Optional)
+                 </label>
+                 <div className="flex items-center gap-4">
+                     {photo ? (
+                         <div className="relative w-20 h-20 rounded-md overflow-hidden border border-gray-300">
+                             <img src={photo} alt="Messy face" className="w-full h-full object-cover" />
+                             <button 
+                                type="button" 
+                                onClick={() => setPhoto(undefined)}
+                                className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-md"
+                             >
+                                 <Icon name="x" className="w-3 h-3" />
+                             </button>
+                         </div>
+                     ) : (
+                         <button 
+                            type="button" 
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={processingPhoto}
+                            className="w-20 h-20 bg-gray-50 border border-dashed border-gray-300 rounded-md flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+                         >
+                             {processingPhoto ? <div className="spinner w-4 h-4"></div> : <Icon name="plus" />}
+                         </button>
+                     )}
+                     <div className="flex-1">
+                         <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            accept="image/*" 
+                            capture="user" 
+                            onChange={handlePhotoUpload} 
+                            className="hidden" 
+                         />
+                         <p className="text-xs text-gray-500">Capture that funny first reaction! stored locally on this device.</p>
+                     </div>
+                 </div>
+            </div>
+
+            <div>
+                <label htmlFor="notes-input" className="block text-sm font-medium text-gray-700">7. Notes (Optional):</label>
                 <textarea id="notes-input" value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm" placeholder="e.g., Gagged a lot at first..."></textarea>
             </div>
 
@@ -181,6 +246,12 @@ const LogSummaryView: React.FC<{
                 <p className="text-sm text-gray-600">Reaction: <span className="font-medium text-gray-800">{reactionDisplay.emoji} {reactionDisplay.text}</span></p>
                 {existingLog.notes && <p className="text-sm text-gray-600 mt-2">Notes: <span className="italic">"{existingLog.notes}"</span></p>}
             </div>
+
+            {existingLog.messyFaceImage && (
+                <div className="flex justify-center">
+                    <img src={existingLog.messyFaceImage} alt="Messy Face" className="h-32 rounded-lg border border-gray-200 shadow-sm" />
+                </div>
+            )}
 
             <div className="text-center">
                 <p className="text-lg font-medium text-gray-700">Total Times Tried: <span className="font-bold text-teal-600">{existingLog.tryCount || 1}</span></p>

@@ -1,8 +1,8 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone } from './types';
-import { totalFoodCount, DEFAULT_MILESTONES, FOOD_ALLERGY_MAPPING } from './constants';
+import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone, Badge } from './types';
+import { totalFoodCount, DEFAULT_MILESTONES, FOOD_ALLERGY_MAPPING, BADGES_LIST, allFoods, GREEN_VEGETABLES } from './constants';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
 import RecommendationsPage from './components/pages/IdeasPage';
@@ -22,6 +22,8 @@ import TutorialModal from './components/modals/TutorialModal';
 import DoctorReportModal from './components/modals/DoctorReportModal';
 import FlavorPairingModal from './components/modals/FlavorPairingModal';
 import AllergenAlertModal from './components/modals/AllergenAlertModal';
+import BadgeUnlockedModal from './components/modals/BadgeUnlockedModal';
+import CertificateModal from './components/modals/CertificateModal';
 
 
 const App: React.FC = () => {
@@ -47,8 +49,64 @@ const App: React.FC = () => {
     };
 
     const saveProfile = async (profile: UserProfile) => {
-        localStorage.setItem(`tiny-tastes-tracker-profile`, JSON.stringify(profile));
-        setUserProfile(profile);
+        // Ensure badges are initialized if they don't exist in the profile update
+        const updatedProfile = {
+            ...profile,
+            badges: profile.badges || BADGES_LIST
+        };
+        localStorage.setItem(`tiny-tastes-tracker-profile`, JSON.stringify(updatedProfile));
+        setUserProfile(updatedProfile);
+    };
+
+    const checkBadges = (currentTriedFoods: TriedFoodLog[], currentProfile: UserProfile): { updatedProfile: UserProfile, newBadge: Badge | null } => {
+        let updatedBadges = [...(currentProfile.badges || BADGES_LIST)];
+        let newBadge: Badge | null = null;
+        const triedSet = new Set(currentTriedFoods.map(f => f.id));
+        const triedCount = triedSet.size;
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        const tryUnlock = (id: string) => {
+            const badge = updatedBadges.find(b => b.id === id);
+            if (badge && !badge.isUnlocked) {
+                badge.isUnlocked = true;
+                badge.dateUnlocked = todayStr;
+                newBadge = badge; 
+            }
+        };
+
+        // 1. Numeric Intervals (10-90)
+        for (let i = 10; i <= 90; i += 10) {
+            if (triedCount >= i) tryUnlock(`tried_${i}`);
+        }
+
+        // 2. The 100 Club
+        if (triedCount >= 100) tryUnlock('100_club');
+
+        // 3. Fruit Ninja (15 Fruits)
+        const fruitCategory = allFoods.find(c => c.category === 'Fruits');
+        if (fruitCategory) {
+             const fruitCount = fruitCategory.items.filter(item => triedSet.has(item.name)).length;
+             if (fruitCount >= 15) tryUnlock('fruit_ninja');
+        }
+
+        // 4. Green Machine (10 Green Veggies)
+        const greenCount = GREEN_VEGETABLES.filter(v => triedSet.has(v)).length;
+        if (greenCount >= 10) tryUnlock('green_machine');
+        
+        // 5. Protein Power (5 Proteins)
+        const proteinCategories = ['Meat', 'Plant Protein', 'Dairy & Eggs'];
+        let proteinCount = 0;
+        allFoods.forEach(cat => {
+            if(proteinCategories.includes(cat.category)) {
+                proteinCount += cat.items.filter(item => triedSet.has(item.name)).length;
+            }
+        });
+        if (proteinCount >= 5) tryUnlock('protein_power');
+
+        return {
+            updatedProfile: { ...currentProfile, badges: updatedBadges },
+            newBadge
+        };
     };
 
     const saveTriedFood = async (foodName: string, data: FoodLogData) => {
@@ -59,10 +117,26 @@ const App: React.FC = () => {
             tryCount: data.tryCount || 1, 
         };
         const newTriedFoods = [...triedFoods.filter(f => f.id !== foodName), { id: foodName, ...newLogData }];
+        
         localStorage.setItem(`tiny-tastes-tracker-triedFoods`, JSON.stringify(newTriedFoods));
         setTriedFoods(newTriedFoods);
         
-        // Allergen Alert Logic
+        // Handle Badges logic if user profile exists
+        if (userProfile) {
+            const { updatedProfile, newBadge } = checkBadges(newTriedFoods, userProfile);
+            // If badges changed (simple check: if newBadge exists), save profile
+            if (newBadge) {
+                await saveProfile(updatedProfile);
+            }
+            
+            // Priority: Badge Unlock Modal > Allergen Alert
+            if (newBadge) {
+                setModalState({ type: 'BADGE_UNLOCKED', badge: newBadge });
+                return;
+            }
+        }
+        
+        // Allergen Alert Logic (Only if no badge unlocked to avoid modal stacking issues)
         const allergens = FOOD_ALLERGY_MAPPING[foodName];
         if (isFirstTime && allergens && allergens.length > 0) {
             setModalState({ type: 'ALLERGEN_ALERT', foodName, allergens });
@@ -181,17 +255,32 @@ const App: React.FC = () => {
             }
         };
         
-        const loadedProfile = getFromStorage<UserProfile | null>('profile', null);
+        let loadedProfile = getFromStorage<UserProfile | null>('profile', null);
         
         // Legacy data migration for allergies (string -> string[])
         if (loadedProfile && typeof loadedProfile.knownAllergies === 'string') {
-            loadedProfile.knownAllergies = []; // Reset legacy string data to empty array to avoid type errors
+            loadedProfile.knownAllergies = []; 
         }
         
         // Migration: Rename "Cow's Milk" to "Dairy"
         if (loadedProfile && Array.isArray(loadedProfile.knownAllergies)) {
             if (loadedProfile.knownAllergies.includes("Cow's Milk")) {
                 loadedProfile.knownAllergies = loadedProfile.knownAllergies.map(a => a === "Cow's Milk" ? "Dairy" : a);
+            }
+        }
+
+        // Initialize badges if missing or merge new badges if existing ones are old
+        if (loadedProfile) {
+            if (!loadedProfile.badges) {
+                loadedProfile.badges = BADGES_LIST;
+            } else {
+                // Merge loaded badges with BADGES_LIST to ensure new badges (like tried_10, tried_20 etc) appear
+                const currentBadges = loadedProfile.badges;
+                const mergedBadges = BADGES_LIST.map(defBadge => {
+                    const existing = currentBadges.find(b => b.id === defBadge.id);
+                    return existing ? existing : defBadge;
+                });
+                loadedProfile.badges = mergedBadges;
             }
         }
         
@@ -224,12 +313,8 @@ const App: React.FC = () => {
             setMealPlan(getFromStorage<MealPlan>('mealPlan', {}));
 
             const storedMilestones = getFromStorage<Milestone[]>('milestones', []);
-            // Merge stored milestones with defaults to ensure any new default milestones are added
-            // and existing ones retain their status.
             const mergedMilestones = DEFAULT_MILESTONES.map(def => {
                 const found = storedMilestones.find(m => m.id === def.id);
-                // Keep the dynamic state from storage (isAchieved, date, notes) 
-                // but use the static content from defaults (title, desc, icon) to allow for updates
                 return found ? { 
                     ...def, 
                     isAchieved: found.isAchieved, 
@@ -287,6 +372,7 @@ const App: React.FC = () => {
                     onResetData={handleResetData} 
                     onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
                     onUpdateMilestone={updateMilestone}
+                    onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
                 />;
             default:
                 return <TrackerPage 
@@ -390,6 +476,19 @@ const App: React.FC = () => {
                 return <AllergenAlertModal
                     foodName={modal.foodName}
                     allergens={modal.allergens}
+                    onClose={() => setModalState({ type: null })}
+                />
+            }
+            case 'BADGE_UNLOCKED': {
+                return <BadgeUnlockedModal
+                    badge={modal.badge}
+                    onClose={() => setModalState({ type: null })}
+                />
+            }
+            case 'CERTIFICATE': {
+                return <CertificateModal
+                    babyName={modal.babyName}
+                    date={modal.date}
                     onClose={() => setModalState({ type: null })}
                 />
             }

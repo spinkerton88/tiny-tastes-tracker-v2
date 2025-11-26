@@ -1,5 +1,5 @@
 
-import { FoodCategory, Milestone, TextureStage } from './types';
+import { FoodCategory, Milestone, TextureStage, Badge } from './types';
 
 export const COMMON_ALLERGENS = [
     "Dairy",
@@ -12,6 +12,59 @@ export const COMMON_ALLERGENS = [
     "Fish",
     "Shellfish",
     "Sesame"
+];
+
+export const GREEN_VEGETABLES = [
+    "ASPARAGUS", "BROCCOLI", "ZUCCHINI", "CUCUMBER", "PEAS", "SNAP PEAS", 
+    "KALE", "SPINACH", "AVOCADO", "BRUSSELS SPROUTS", "CELERY", "PARSLEY", "CILANTRO",
+    "ARTICHOKE", "GREEN BEANS", "EDAMAME"
+];
+
+export const BADGES_LIST: Badge[] = [
+    // Category Specific
+    { 
+        id: 'green_machine', 
+        title: 'The Green Machine', 
+        description: 'Tried 10 green vegetables.', 
+        icon: 'leaf', 
+        isUnlocked: false,
+        color: 'text-green-600 bg-green-100 border-green-200'
+    },
+    { 
+        id: 'fruit_ninja', 
+        title: 'Fruit Ninja', 
+        description: 'Tried 15 different fruits.', 
+        icon: 'citrus', 
+        isUnlocked: false,
+        color: 'text-orange-600 bg-orange-100 border-orange-200'
+    },
+    {
+        id: 'protein_power',
+        title: 'Protein Power',
+        description: 'Tried 5 different protein sources.',
+        icon: 'dumbbell',
+        isUnlocked: false,
+        color: 'text-blue-600 bg-blue-100 border-blue-200'
+    },
+    // Numeric Milestones
+    { id: 'tried_10', title: '10 Foods Down!', description: 'You are off to a great start.', icon: 'star', isUnlocked: false, color: 'text-teal-600 bg-teal-100 border-teal-200' },
+    { id: 'tried_20', title: '20 Foods Tried', description: 'Building that palate!', icon: 'utensils', isUnlocked: false, color: 'text-indigo-600 bg-indigo-100 border-indigo-200' },
+    { id: 'tried_30', title: '30 Foods Milestone', description: 'Getting adventurous.', icon: 'compass', isUnlocked: false, color: 'text-violet-600 bg-violet-100 border-violet-200' },
+    { id: 'tried_40', title: '40 Foods', description: 'Almost halfway there!', icon: 'sandwich', isUnlocked: false, color: 'text-pink-600 bg-pink-100 border-pink-200' },
+    { id: 'tried_50', title: 'Halfway Hero', description: '50 foods tried! Amazing progress.', icon: 'award', isUnlocked: false, color: 'text-purple-600 bg-purple-100 border-purple-200' },
+    { id: 'tried_60', title: '60 Foods', description: 'Exploring new flavors.', icon: 'carrot', isUnlocked: false, color: 'text-fuchsia-600 bg-fuchsia-100 border-fuchsia-200' },
+    { id: 'tried_70', title: '70 Foods', description: 'Serious foodie in the making.', icon: 'chef-hat', isUnlocked: false, color: 'text-rose-600 bg-rose-100 border-rose-200' },
+    { id: 'tried_80', title: '80 Foods', description: 'Only 20 to go!', icon: 'flame', isUnlocked: false, color: 'text-orange-600 bg-orange-100 border-orange-200' },
+    { id: 'tried_90', title: '90 Foods', description: 'The finish line is in sight.', icon: 'zap', isUnlocked: false, color: 'text-yellow-600 bg-yellow-100 border-yellow-200' },
+    // Completion
+    { 
+        id: '100_club', 
+        title: 'The 100 Club', 
+        description: 'Tried all 100 foods!', 
+        icon: 'trophy', 
+        isUnlocked: false,
+        color: 'text-yellow-600 bg-yellow-100 border-yellow-200'
+    },
 ];
 
 export const TEXTURE_STAGES: { id: TextureStage; title: string; desc: string; icon: string }[] = [
