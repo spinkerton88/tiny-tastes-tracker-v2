@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { Recipe, FoodSubstitute } from '../types';
+import { flatFoodList } from '../constants';
 
 const API_KEY = process.env.API_KEY;
 
@@ -51,13 +52,19 @@ export const importRecipeFromImage = async (file: File): Promise<Partial<Recipe>
       text: `You are a recipe parser. Extract the title, ingredients (as a bulleted list), and instructions (as a numbered list) from this image. Respond ONLY with a JSON object in the format {"title": "...", "ingredients": "...", "instructions": "..."}. If you cannot find one of the fields, return an empty string for it.`
     };
 
-    // FIX: Use an image model for multimodal inputs and remove unsupported config.
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [textPart, imagePart] },
     });
     
-    const text = response.text.trim();
+    // Clean up potential markdown code blocks
+    let text = response.text.trim();
+    if (text.startsWith('```json')) {
+        text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (text.startsWith('```')) {
+        text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+
     return JSON.parse(text);
 
   } catch (error) {
@@ -65,6 +72,64 @@ export const importRecipeFromImage = async (file: File): Promise<Partial<Recipe>
     throw new Error("Failed to parse recipe from image.");
   }
 };
+
+export const identifyFoodFromImage = async (file: File): Promise<string | null> => {
+    try {
+        const imagePart = await fileToGenerativePart(file);
+        const foodListString = flatFoodList.join(', ');
+        
+        const prompt = `Identify the single main food item in this image. 
+        Check if it closely matches any of these specific foods: [${foodListString}].
+        If it matches one of those exactly, return ONLY a JSON object with the "foodName" property matching the list item exactly. 
+        Example: {"foodName": "AVOCADO"}.
+        If it is a food not on the list, return {"foodName": null}.
+        Do not include markdown formatting.`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [{ text: prompt }, imagePart] },
+        });
+
+        let text = response.text.trim();
+        // Clean up potential markdown code blocks
+        if (text.startsWith('```json')) {
+            text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (text.startsWith('```')) {
+            text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        const json = JSON.parse(text);
+        return json.foodName;
+    } catch (error) {
+        console.error("Error identifying food:", error);
+        return null;
+    }
+}
+
+export const getFlavorPairingSuggestions = async (triedFoods: string[]): Promise<{pairings: {title: string, description: string, ingredients: string[]}[]}> => {
+    try {
+        const triedString = triedFoods.length > 0 ? triedFoods.join(', ') : "common baby starter foods like Avocado, Banana, and Sweet Potato";
+        
+        const prompt = `You are "Sage", a flavor sommelier for babies.
+        The baby has successfully tried these foods: ${triedString}.
+        Suggest 3 creative but simple 2-3 ingredient food pairings or mini-recipes using PRIMARILY these tried foods.
+        You can include one common safe staple (like yogurt, oatmeal, or olive oil) even if not listed.
+        Focus on interesting texture and flavor compliments (e.g. "Creamy & Sweet", "Savory Mash").
+        Respond ONLY with a JSON object: { "pairings": [{ "title": "...", "description": "...", "ingredients": ["...", "..."] }] }`;
+
+         const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [{ parts: [{ text: prompt }] }],
+            config: { responseMimeType: "application/json" }
+        });
+
+        const text = response.text.trim();
+        return JSON.parse(text);
+    } catch (error) {
+         console.error("Error generating pairings:", error);
+         throw new Error("Failed to generate pairings.");
+    }
+}
 
 export const categorizeShoppingList = async (ingredients: string[]): Promise<Record<string, string[]>> => {
     try {

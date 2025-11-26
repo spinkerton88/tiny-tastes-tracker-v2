@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Food, TriedFoodLog, Filter, FoodCategory, UserProfile } from '../../types';
 import { allFoods, totalFoodCount, FOOD_ALLERGY_MAPPING, FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
+import { identifyFoodFromImage } from '../../services/geminiService';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
@@ -128,6 +129,8 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
   const [searchQuery, setSearchQuery] = useState('');
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const [isRecentOpen, setIsRecentOpen] = useState(true);
+  const [isIdentifying, setIsIdentifying] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const triedFoodSet = new Set(triedFoods.map(f => f.id));
   const triedCount = triedFoods.length;
@@ -166,29 +169,96 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, onFoodClick, user
     })
     .slice(0, 5);
 
+  const handleCameraClick = () => {
+      fileInputRef.current?.click();
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setIsIdentifying(true);
+      try {
+          const identifiedFoodName = await identifyFoodFromImage(file);
+          
+          if (identifiedFoodName) {
+              // Find the food object in our list
+              let foundFood: Food | undefined;
+              for (const cat of allFoods) {
+                  const match = cat.items.find(item => item.name === identifiedFoodName);
+                  if (match) {
+                      foundFood = match;
+                      break;
+                  }
+              }
+
+              if (foundFood) {
+                  onFoodClick(foundFood);
+              } else {
+                  alert(`AI identified this as "${identifiedFoodName}", but it's not in our tracked 100 foods list yet.`);
+              }
+          } else {
+              alert("Could not identify a tracked food in this image. Try taking a closer photo.");
+          }
+      } catch (error) {
+          console.error(error);
+          alert("Error analyzing image.");
+      } finally {
+          setIsIdentifying(false);
+          // Reset input
+          if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+  };
+
   return (
     <>
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">My 100 Foods Tracker</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold text-gray-800">My 100 Foods</h2>
+        {/* Hidden File Input */}
+        <input 
+            type="file" 
+            accept="image/*" 
+            ref={fileInputRef} 
+            onChange={handleImageUpload} 
+            className="hidden" 
+            capture="environment"
+        />
+      </div>
 
-      <div className="mb-4 relative sticky top-0 z-20">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Icon name="search" className="h-5 w-5 text-gray-400" />
+      <div className="mb-4 flex gap-2">
+          <div className="relative flex-grow">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Icon name="search" className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+                type="text"
+                placeholder="Search foods..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 sm:text-sm transition duration-150 ease-in-out shadow-sm"
+            />
+            {searchQuery && (
+                <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                >
+                    <Icon name="x" className="h-4 w-4" />
+                </button>
+            )}
           </div>
-          <input
-              type="text"
-              placeholder="Search foods..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 sm:text-sm transition duration-150 ease-in-out shadow-sm"
-          />
-           {searchQuery && (
-             <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-            >
-                <Icon name="x" className="h-4 w-4" />
-            </button>
-        )}
+          
+          <button 
+            onClick={handleCameraClick}
+            disabled={isIdentifying}
+            className="flex-shrink-0 bg-teal-600 text-white p-2 rounded-md shadow-sm hover:bg-teal-700 disabled:opacity-50 transition-colors"
+            title="Identify food from photo"
+          >
+              {isIdentifying ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                  <Icon name="camera" className="h-5 w-5" />
+              )}
+          </button>
       </div>
 
       {/* Recently Tried Section */}

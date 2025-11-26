@@ -1,4 +1,5 @@
 
+
 export type Page = 'tracker' | 'recommendations' | 'recipes' | 'learn' | 'profile';
 export type Filter = 'all' | 'to_try' | 'tried';
 export type RecipeFilter = 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -83,6 +84,7 @@ type ShoppingListModalState = { type: 'SHOPPING_LIST' };
 type SelectRecipeModalState = { type: 'SELECT_RECIPE'; date: string; meal: string; };
 type SubstitutesModalState = { type: 'SUBSTITUTES'; food: Food };
 type DoctorReportModalState = { type: 'DOCTOR_REPORT' };
+type FlavorPairingModalState = { type: 'FLAVOR_PAIRING' };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -96,4 +98,5 @@ export type ModalState =
   | SelectRecipeModalState
   | SubstitutesModalState
   | DoctorReportModalState
+  | FlavorPairingModalState
   | NullModalState;

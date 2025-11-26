@@ -11,6 +11,7 @@ interface RecommendationsPageProps {
   onSaveProfile: (profile: UserProfile) => void;
   onFoodClick: (food: Food) => void;
   onShowSubstitutes: (food: Food) => void;
+  onShowFlavorPairing: () => void;
 }
 
 const calculateAge = (dateString: string) => {
@@ -84,7 +85,7 @@ const FoodCard: React.FC<{
     );
 };
 
-const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, triedFoods, onSaveProfile, onFoodClick, onShowSubstitutes }) => {
+const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, triedFoods, onSaveProfile, onFoodClick, onShowSubstitutes, onShowFlavorPairing }) => {
     const [pediatricianApproved, setPediatricianApproved] = useState(userProfile?.pediatricianApproved || false);
 
     const handleApproveEarlyStart = () => {
@@ -127,6 +128,31 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
                         <span className="font-normal">{userProfile.babyName ? `${userProfile.babyName}'s Age:` : "Baby's Age:"}</span> <span className="font-bold">{ageString}</span>
                     </p>
                 </div>
+                
+                {/* Sage Pairing CTA */}
+                {triedFoods.length > 2 && (
+                    <div className="mt-4 p-5 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-100 flex items-center justify-between shadow-sm relative overflow-hidden group">
+                        <div className="relative z-10">
+                            <h3 className="text-lg font-bold text-violet-800 flex items-center gap-2">
+                                <Icon name="sparkles" className="w-5 h-5 text-violet-600" />
+                                Sage's Flavor Sommelier
+                            </h3>
+                            <p className="text-sm text-violet-700 mt-1 max-w-sm">
+                                You've tried {triedFoods.length} foods! Tap to get custom pairing ideas from "Sage" based on what {userProfile.babyName || 'baby'} likes.
+                            </p>
+                            <button 
+                                onClick={onShowFlavorPairing}
+                                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-white text-violet-700 text-xs font-bold rounded-full shadow hover:bg-violet-50 transition-colors border border-violet-200"
+                            >
+                                Get Pairing Ideas <Icon name="arrow-right" className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                        <div className="absolute right-[-10px] top-[-10px] text-violet-200 opacity-20 transform rotate-12 group-hover:scale-110 transition-transform">
+                             <Icon name="chef-hat" className="w-40 h-40" />
+                        </div>
+                    </div>
+                )}
+
                 <div className="mt-6 space-y-3">
                     {Object.keys(recommendationData).filter(k => k !== 'too_young').map(key => {
                         const stage = recommendationData[key];

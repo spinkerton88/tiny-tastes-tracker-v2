@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone } from './types';
 import { totalFoodCount, DEFAULT_MILESTONES } from './constants';
@@ -19,6 +20,7 @@ import SelectRecipeModal from './components/modals/SelectRecipeModal';
 import SubstitutesModal from './components/modals/SubstitutesModal';
 import TutorialModal from './components/modals/TutorialModal';
 import DoctorReportModal from './components/modals/DoctorReportModal';
+import FlavorPairingModal from './components/modals/FlavorPairingModal';
 
 
 const App: React.FC = () => {
@@ -251,6 +253,7 @@ const App: React.FC = () => {
                     onSaveProfile={saveProfile} 
                     onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })}
                     onShowSubstitutes={(food: Food) => setModalState({ type: 'SUBSTITUTES', food })}
+                    onShowFlavorPairing={() => setModalState({ type: 'FLAVOR_PAIRING' })}
                 />;
             case 'recipes':
                 return <RecipesPage 
@@ -363,6 +366,12 @@ const App: React.FC = () => {
             case 'DOCTOR_REPORT': {
                 return <DoctorReportModal
                     userProfile={userProfile}
+                    triedFoods={triedFoods}
+                    onClose={() => setModalState({ type: null })}
+                />
+            }
+            case 'FLAVOR_PAIRING': {
+                return <FlavorPairingModal
                     triedFoods={triedFoods}
                     onClose={() => setModalState({ type: null })}
                 />
