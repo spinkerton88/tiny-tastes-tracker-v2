@@ -15,6 +15,7 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
     const [name, setName] = useState(initialName);
     const [loading, setLoading] = useState(false);
     const [analyzedData, setAnalyzedData] = useState<(CustomFoodDetails & { emoji: string }) | null>(null);
+    const [customEmoji, setCustomEmoji] = useState('');
     const [error, setError] = useState<string | null>(null);
 
     const handleAnalyze = async () => {
@@ -25,6 +26,7 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
         try {
             const result = await analyzeFoodWithGemini(name);
             setAnalyzedData(result);
+            setCustomEmoji(result.emoji);
         } catch (err) {
             setError("Could not analyze food. Please try again or check your internet.");
         } finally {
@@ -37,7 +39,7 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
 
         const newFood: CustomFood = {
             name: name.trim().toUpperCase(),
-            emoji: analyzedData.emoji,
+            emoji: customEmoji || analyzedData.emoji,
             isCustom: true,
             details: {
                 safety_rating: analyzedData.safety_rating,
@@ -84,6 +86,7 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
                                         type="text" 
                                         value={name} 
                                         onChange={(e) => setName(e.target.value)} 
+                                        onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
                                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500"
                                         placeholder="e.g., Dragonfruit"
                                         autoFocus
@@ -106,9 +109,20 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
                         </div>
                     ) : (
                         <div className="space-y-5 animate-fadeIn">
-                            <div className="text-center">
-                                <span className="text-6xl">{analyzedData.emoji}</span>
-                                <h3 className="text-2xl font-bold text-gray-900 mt-2">{name}</h3>
+                            <div className="flex flex-col items-center">
+                                <div className="relative group">
+                                    <input 
+                                        type="text" 
+                                        value={customEmoji} 
+                                        onChange={(e) => setCustomEmoji(e.target.value)}
+                                        className="text-6xl text-center border-none focus:ring-0 bg-transparent w-32 p-0 cursor-pointer hover:scale-110 transition-transform bg-gray-50 rounded-xl"
+                                        maxLength={5} 
+                                    />
+                                    <div className="absolute -bottom-5 left-0 right-0 text-center">
+                                        <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold bg-white px-2">Tap to Edit</span>
+                                    </div>
+                                </div>
+                                <h3 className="text-2xl font-bold text-gray-900 mt-6">{name}</h3>
                             </div>
 
                             {/* Safety Card */}

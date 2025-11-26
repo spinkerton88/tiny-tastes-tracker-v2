@@ -270,6 +270,17 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
             )}
           </div>
           
+          {onAddCustomFood && (
+            <button 
+                onClick={() => onAddCustomFood('')}
+                className="flex-shrink-0 bg-violet-600 text-white p-2 rounded-md shadow-sm hover:bg-violet-700 transition-colors flex items-center justify-center gap-1 min-w-[2.5rem]"
+                title="Add Custom Food"
+            >
+                <Icon name="plus" className="h-5 w-5" />
+                <span className="hidden sm:inline text-sm font-medium pr-1">Add</span>
+            </button>
+          )}
+
           <button 
             onClick={handleCameraClick}
             disabled={isIdentifying}
