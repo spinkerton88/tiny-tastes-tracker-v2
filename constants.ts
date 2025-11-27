@@ -20,6 +20,23 @@ export const GREEN_VEGETABLES = [
     "ARTICHOKE", "GREEN BEANS", "EDAMAME"
 ];
 
+export const FOOD_COLORS: Record<string, string> = {
+    // RED
+    "TOMATOES": "red", "STRAWBERRIES": "red", "RASPBERRIES": "red", "APPLES": "red", "WATERMELON": "red", "RED PEPPER": "red", "CHERRIES": "red", "POMEGRANATE": "red", "BEETS": "red", // Beets can be red/purple, usually distinct but red fits rainbow often
+    
+    // ORANGE
+    "CARROTS": "orange", "SWEET POTATO": "orange", "ORANGE": "orange", "MANGO": "orange", "PEACHES": "orange", "CANTALOUPE": "orange", "PAPAYA": "orange", "PUMPKIN": "orange", "BUTTERNUT SQUASH": "orange", "APRICOT": "orange",
+    
+    // YELLOW
+    "BANANA": "yellow", "CORN": "yellow", "PINEAPPLE": "yellow", "LEMON & LIME": "yellow", "STARFRUIT": "yellow", "SQUASH": "yellow", "YELLOW PEPPER": "yellow",
+    
+    // GREEN
+    "SPINACH": "green", "BROCCOLI": "green", "KALE": "green", "PEAS": "green", "AVOCADO": "green", "KIWIFRUIT": "green", "ASPARAGUS": "green", "ZUCCHINI": "green", "GREEN BEANS": "green", "CUCUMBER": "green", "CELERY": "green", "BRUSSELS SPROUTS": "green", "EDAMAME": "green", "HONEYDEW": "green", "PEARS": "green",
+    
+    // PURPLE / BLUE
+    "BLUEBERRIES": "purple", "EGGPLANT": "purple", "GRAPES": "purple", "BLACKBERRIES": "purple", "PLUMS": "purple", "FIGS": "purple", "PURPLE CABBAGE": "purple"
+};
+
 export const BADGES_LIST: Badge[] = [
     // Category Specific
     { 

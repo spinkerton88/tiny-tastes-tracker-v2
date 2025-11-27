@@ -434,7 +434,7 @@ const App: React.FC = () => {
                         onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
                     />;
                 case 'balance':
-                     return <BalanceDashboard />;
+                     return <BalanceDashboard triedFoods={triedFoods} />;
                 default:
                      return <ToddlerPickyEater />;
             }

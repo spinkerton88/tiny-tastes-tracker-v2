@@ -2,19 +2,12 @@
 import React, { useMemo, useState } from 'react';
 import Icon from '../ui/Icon';
 import { getNutrientGapSuggestions } from '../../services/geminiService';
+import { TriedFoodLog } from '../../types';
+import { allFoods, FOOD_COLORS, FOOD_NUTRIENT_MAPPING } from '../../constants';
 
-// Mock Data simulating last 7 days
-const MOCK_WEEKLY_DATA = {
-  totalMeals: 21,
-  distribution: {
-    Carbs: 12,    // 57%
-    Protein: 4,   // 19%
-    FruitVeg: 3,  // 14%
-    Dairy: 2      // 10%
-  },
-  colorsEaten: ['red', 'orange', 'green'], // Missing yellow, purple
-  missingNutrient: 'Iron'
-};
+interface BalanceDashboardProps {
+    triedFoods: TriedFoodLog[];
+}
 
 const COLORS = {
   Carbs: '#fcd34d',    // amber-300
@@ -23,18 +16,84 @@ const COLORS = {
   Dairy: '#60a5fa'     // blue-400
 };
 
-export const BalanceDashboard = () => {
+const CRITICAL_NUTRIENTS = ['Iron', 'Calcium', 'Vitamin C', 'Omega-3', 'Protein'];
+
+export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods }) => {
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<any>(null);
 
+  const weeklyData = useMemo(() => {
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+      
+      const recentLogs = triedFoods.filter(log => new Date(log.date) >= sevenDaysAgo);
+      const totalMeals = recentLogs.length;
+      
+      const distribution = {
+          Carbs: 0,
+          Protein: 0,
+          FruitVeg: 0,
+          Dairy: 0
+      };
+      
+      const colorsEaten = new Set<string>();
+      const nutrientsConsumed = new Set<string>();
+      
+      // Map Categories to Buckets
+      const bucketMap: Record<string, keyof typeof distribution> = {
+          "Vegetables": "FruitVeg",
+          "Fruits": "FruitVeg",
+          "Grains": "Carbs",
+          "Meat": "Protein",
+          "Plant Protein": "Protein",
+          "Dairy & Eggs": "Dairy",
+          "Other": "Carbs" // Defaulting 'Other' to carbs/treats bucket for simplicity
+      };
+
+      recentLogs.forEach(log => {
+          // Find food category
+          const foodName = log.id;
+          let foodCategoryName = "Other";
+          
+          for (const cat of allFoods) {
+              if (cat.items.some(item => item.name === foodName)) {
+                  foodCategoryName = cat.category;
+                  break;
+              }
+          }
+          
+          const bucket = bucketMap[foodCategoryName];
+          if (bucket) distribution[bucket]++;
+          
+          // Find Food Color
+          const color = FOOD_COLORS[foodName];
+          if (color) colorsEaten.add(color);
+          
+          // Find Nutrients
+          const nutrients = FOOD_NUTRIENT_MAPPING[foodName] || [];
+          nutrients.forEach(n => nutrientsConsumed.add(n));
+      });
+      
+      // Find first missing critical nutrient
+      const missingNutrient = CRITICAL_NUTRIENTS.find(n => !nutrientsConsumed.has(n)) || 'None';
+
+      return {
+          totalMeals,
+          distribution,
+          colorsEaten: Array.from(colorsEaten),
+          missingNutrient
+      };
+  }, [triedFoods]);
+
   // Calculate percentages for the donut chart
   const chartData = useMemo(() => {
-    const total = Object.values(MOCK_WEEKLY_DATA.distribution).reduce((a, b) => a + b, 0);
+    const total = Math.max(1, (Object.values(weeklyData.distribution) as number[]).reduce((a, b) => a + b, 0));
     let startDeg = 0;
     
-    return Object.entries(MOCK_WEEKLY_DATA.distribution).map(([category, count]) => {
-      const pct = (count / total) * 100;
-      const deg = (count / total) * 360;
+    return Object.entries(weeklyData.distribution).map(([category, count]) => {
+      const val = count as number;
+      const pct = (val / total) * 100;
+      const deg = (val / total) * 360;
       const segment = {
         category,
         pct: Math.round(pct),
@@ -45,7 +104,7 @@ export const BalanceDashboard = () => {
       startDeg += deg;
       return segment;
     });
-  }, []);
+  }, [weeklyData]);
 
   // CSS Conic Gradient for the Chart
   const gradientString = chartData
@@ -55,7 +114,16 @@ export const BalanceDashboard = () => {
   const handleAskSage = async () => {
       setLoading(true);
       try {
-          const result = await getNutrientGapSuggestions(MOCK_WEEKLY_DATA.missingNutrient, "Toddler picky eater, mostly carbs");
+          // Calculate a simple diet trend description string for the AI
+          const trendDesc = Object.entries(weeklyData.distribution)
+            .sort(([, a], [, b]) => (b as number) - (a as number))
+            .map(([k, v]) => `${k} (${v})`)
+            .join(', ');
+
+          const result = await getNutrientGapSuggestions(
+              weeklyData.missingNutrient === 'None' ? 'Iron' : weeklyData.missingNutrient, 
+              `Toddler eating mostly: ${trendDesc}`
+          );
           setSuggestions(result);
       } catch (e) {
           alert("Sage is busy right now.");
@@ -77,10 +145,10 @@ export const BalanceDashboard = () => {
           {/* CSS-Only Donut Chart */}
           <div 
             className="w-48 h-48 rounded-full relative flex items-center justify-center shadow-inner"
-            style={{ background: `conic-gradient(${gradientString})` }}
+            style={{ background: weeklyData.totalMeals > 0 ? `conic-gradient(${gradientString})` : '#f3f4f6' }}
           >
             <div className="w-32 h-32 bg-white rounded-full flex flex-col items-center justify-center shadow-sm z-10">
-              <span className="text-3xl font-black text-gray-800">21</span>
+              <span className="text-3xl font-black text-gray-800">{weeklyData.totalMeals}</span>
               <span className="text-xs text-gray-400 uppercase tracking-wide">Meals Logged</span>
             </div>
           </div>
@@ -116,7 +184,7 @@ export const BalanceDashboard = () => {
             { color: 'green', label: 'Grn', bg: 'bg-green-500' },
             { color: 'purple', label: 'Pur', bg: 'bg-purple-500' },
           ].map((item) => {
-            const isUnlocked = MOCK_WEEKLY_DATA.colorsEaten.includes(item.color);
+            const isUnlocked = weeklyData.colorsEaten.includes(item.color);
             return (
               <div key={item.color} className="flex flex-col items-center gap-2">
                 <div className={`w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center transition-all ${isUnlocked ? item.bg : 'bg-gray-200 grayscale'}`}>
@@ -136,9 +204,15 @@ export const BalanceDashboard = () => {
                 <Icon name="zap" className="w-6 h-6 text-teal-600" />
             </div>
             <div className="flex-1">
-                <h3 className="font-bold text-teal-900 text-sm">Nutrient Gap: {MOCK_WEEKLY_DATA.missingNutrient}</h3>
+                <h3 className="font-bold text-teal-900 text-sm">
+                    {weeklyData.missingNutrient !== 'None' 
+                        ? `Nutrient Gap: ${weeklyData.missingNutrient}` 
+                        : "Looking Good!"}
+                </h3>
                 <p className="text-xs text-teal-700 mt-1 mb-3">
-                    Looks like protein is a bit low this week. Need quick ideas?
+                    {weeklyData.missingNutrient !== 'None' 
+                        ? `We haven't seen much ${weeklyData.missingNutrient} this week. Need quick ideas?`
+                        : "Your weekly log covers the main nutrient groups well! Ask Sage for more fun snack ideas anytime."}
                 </p>
                 
                 {!suggestions && (
@@ -153,7 +227,7 @@ export const BalanceDashboard = () => {
                                 Asking Sage...
                             </>
                         ) : (
-                            `Ask Sage for ${MOCK_WEEKLY_DATA.missingNutrient} Snacks`
+                            `Ask Sage for ${weeklyData.missingNutrient !== 'None' ? weeklyData.missingNutrient : 'Snack'} Ideas`
                         )}
                     </button>
                 )}
