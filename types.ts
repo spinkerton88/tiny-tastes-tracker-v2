@@ -83,6 +83,7 @@ export interface UserProfile {
     pediatricianApproved?: boolean;
     currentTextureStage?: TextureStage;
     badges?: Badge[];
+    preferredMode?: AppMode;
 }
 
 export interface MealPlan {

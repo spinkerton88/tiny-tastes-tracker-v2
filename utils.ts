@@ -49,12 +49,24 @@ export const resizeImage = (file: File, maxWidth: number = 300): Promise<string>
     });
 };
 
-export const getAppMode = (birthDate: string | undefined): AppMode => {
+export const getAppMode = (userProfile: UserProfile | null): AppMode => {
+    // 1. Check for Manual Override
+    if (userProfile?.preferredMode) {
+        return userProfile.preferredMode;
+    }
+
+    const birthDate = userProfile?.birthDate;
     // If no birthdate is set, default to EXPLORER so they can use the main app
     if (!birthDate) return 'EXPLORER';
     
     const ageInMonths = calculateAgeInMonths(birthDate);
     
+    // 2. Check for Pediatrician Approval (Allows <6m to use Explorer)
+    if (ageInMonths < 6 && userProfile?.pediatricianApproved) {
+        return 'EXPLORER';
+    }
+    
+    // 3. Default Age-Based Logic
     if (ageInMonths < 6) return 'NEWBORN';
     if (ageInMonths >= 12) return 'TODDLER';
     return 'EXPLORER';

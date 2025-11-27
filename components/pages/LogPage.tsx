@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, TriedFoodLog, Milestone, TextureStage } from '../../types';
+import { UserProfile, TriedFoodLog, Milestone, TextureStage, AppMode } from '../../types';
 import { allFoods, COMMON_ALLERGENS, TEXTURE_STAGES, BADGES_LIST } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
@@ -54,6 +54,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
     );
     // Texture tracker state
     const [currentTexture, setCurrentTexture] = useState<TextureStage>(userProfile?.currentTextureStage || 'puree');
+    const [appMode, setAppMode] = useState<AppMode | 'AUTO'>(userProfile?.preferredMode || 'AUTO');
     const [showInfoModal, setShowInfoModal] = useState(false);
     
     const isSavePickerSupported = 'showSaveFilePicker' in window;
@@ -63,6 +64,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
         setBirthDate(userProfile?.birthDate || '');
         setAllergies(Array.isArray(userProfile?.knownAllergies) ? userProfile.knownAllergies : []);
         setCurrentTexture(userProfile?.currentTextureStage || 'puree');
+        setAppMode(userProfile?.preferredMode || 'AUTO');
     }, [userProfile]);
 
     const handleSave = () => {
@@ -72,6 +74,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
             birthDate: birthDate,
             knownAllergies: allergies,
             currentTextureStage: currentTexture,
+            preferredMode: appMode === 'AUTO' ? undefined : appMode,
         });
         alert("Profile saved!");
     };
@@ -199,6 +202,27 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                         <label htmlFor="birth-date-input" className="block text-sm font-medium text-gray-700">Baby's Birth Date:</label>
                         <input type="date" id="birth-date-input" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm" />
                     </div>
+                </div>
+
+                {/* App Mode Selector */}
+                <div className="mt-4">
+                    <label htmlFor="app-mode-select" className="block text-sm font-medium text-gray-700 mb-1">App Experience Mode</label>
+                    <select 
+                        id="app-mode-select" 
+                        value={appMode} 
+                        onChange={(e) => setAppMode(e.target.value as AppMode | 'AUTO')}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+                    >
+                        <option value="AUTO">Auto (Based on Age)</option>
+                        <option value="NEWBORN">Newborn Mode (0-6m)</option>
+                        <option value="EXPLORER">Explorer Mode (Solids Tracking)</option>
+                        <option value="TODDLER">Toddler Mode (Recipes & Balance)</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                        {appMode === 'AUTO' 
+                            ? "Automatically adjusts based on birth date or doctor approval." 
+                            : "Manually overrides the default experience."}
+                    </p>
                 </div>
 
                 {/* Texture Tracker */}
