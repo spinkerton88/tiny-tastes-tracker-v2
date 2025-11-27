@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone, Badge, CustomFood } from './types';
 import { totalFoodCount, DEFAULT_MILESTONES, FOOD_ALLERGY_MAPPING, BADGES_LIST, allFoods, GREEN_VEGETABLES } from './constants';
@@ -127,6 +126,11 @@ const App: React.FC = () => {
     };
 
     const saveTriedFood = async (foodName: string, data: FoodLogData) => {
+        // Haptic Feedback: Confirm action with a subtle vibration
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+
         const isFirstTime = !triedFoods.some(f => f.id === foodName);
         
         const newLogData = {
@@ -163,6 +167,11 @@ const App: React.FC = () => {
     };
 
     const incrementTryCount = async (foodName: string) => {
+        // Haptic Feedback
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+
         const updatedTriedFoods = triedFoods.map(food => {
             if (food.id === foodName) {
                 return { ...food, tryCount: (food.tryCount || 1) + 1 };
