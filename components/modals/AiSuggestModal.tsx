@@ -57,6 +57,12 @@ const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed
                     <button onClick={handleSubmit} disabled={loading} className="w-full inline-flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50">
                          {loading ? <div className="spinner h-5 w-5 border-2"></div> : 'Generate Recipe Idea'}
                     </button>
+                    
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                         <p className="text-xs text-gray-500 text-center">
+                            <strong>Disclaimer:</strong> AI recipes may not be perfect. Always ensure textures are age-appropriate and safe for your baby.
+                         </p>
+                    </div>
                 </div>
             </div>
         </div>
