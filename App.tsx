@@ -2,12 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone, Badge, CustomFood } from './types';
 import { totalFoodCount, DEFAULT_MILESTONES, FOOD_ALLERGY_MAPPING, BADGES_LIST, allFoods, GREEN_VEGETABLES } from './constants';
+import { useAppMode } from './hooks/useAppMode';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
 import RecommendationsPage from './components/pages/IdeasPage';
 import RecipesPage from './components/pages/RecipesPage';
 import LearnPage from './components/pages/LearnPage';
 import ProfilePage from './components/pages/LogPage';
+import ToddlerPickyEater from './components/pages/ToddlerPickyEater';
+import BalanceDashboard from './components/pages/BalanceDashboard';
 import FoodLogModal from './components/modals/FoodLogModal';
 import HowToServeModal from './components/modals/HowToServeModal';
 import RecipeModal from './components/modals/RecipeModal';
@@ -24,6 +27,7 @@ import AllergenAlertModal from './components/modals/AllergenAlertModal';
 import BadgeUnlockedModal from './components/modals/BadgeUnlockedModal';
 import CertificateModal from './components/modals/CertificateModal';
 import CustomFoodModal from './components/modals/CustomFoodModal';
+import Icon from './components/ui/Icon';
 
 // Helper function to calculate badges - defined outside component for reuse
 const calculateBadges = (currentTriedFoods: TriedFoodLog[], currentProfile: UserProfile): { updatedProfile: UserProfile, newBadge: Badge | null, badgesChanged: boolean } => {
@@ -85,7 +89,7 @@ const calculateBadges = (currentTriedFoods: TriedFoodLog[], currentProfile: User
 };
 
 const App: React.FC = () => {
-    const [currentPage, setCurrentPage] = useState<Page>('tracker');
+    const [currentPage, setCurrentPage] = useState<Page | string>('tracker');
     const [triedFoods, setTriedFoods] = useState<TriedFoodLog[]>([]);
     const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
     const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -95,6 +99,18 @@ const App: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     const [modalState, setModalState] = useState<ModalState>({ type: null });
+
+    const { mode, config, isExplorer } = useAppMode(userProfile);
+
+    // Ensure currentPage is valid for the current mode on mode switch
+    useEffect(() => {
+        if (config && config.navItems.length > 0) {
+            const validIds = config.navItems.map(i => i.id);
+            if (!validIds.includes(currentPage as string)) {
+                setCurrentPage(validIds[0]);
+            }
+        }
+    }, [mode, config]);
 
     const handleResetData = () => {
         if (window.confirm("Are you sure you want to reset all app data? This action cannot be undone.")) {
@@ -370,7 +386,61 @@ const App: React.FC = () => {
         await saveProfile(profile);
     };
 
-    const renderPage = () => {
+    const renderContent = () => {
+        // Special Modes
+        if (mode === 'NEWBORN' && currentPage !== 'profile') {
+            return (
+                <div className="flex flex-col items-center justify-center h-[60vh] text-center px-6 animate-fadeIn">
+                    <div className="bg-rose-100 p-8 rounded-full mb-6 shadow-sm">
+                        <Icon name="baby" className="w-20 h-20 text-rose-500" />
+                    </div>
+                    <h2 className="text-3xl font-bold text-gray-700 mb-2">Newborn Essentials</h2>
+                    <p className="text-gray-500 max-w-xs mx-auto text-lg">
+                        Milk, Diaper, and Sleep tracking features are coming soon for babies under 6 months!
+                    </p>
+                    <div className="mt-8 p-4 bg-white rounded-xl border border-rose-100 shadow-sm w-full max-w-xs">
+                        <p className="text-sm font-medium text-rose-600">Current Focus:</p>
+                        <p className="text-gray-700 font-bold">Bonding & Recovery</p>
+                    </div>
+                </div>
+            );
+        }
+
+        if (mode === 'TODDLER') {
+            switch (currentPage) {
+                case 'picky_eater':
+                    return <ToddlerPickyEater />;
+                case 'recipes':
+                    // RecipesPage handles meal planning and recipe list
+                    return <RecipesPage 
+                        recipes={recipes} 
+                        mealPlan={mealPlan}
+                        onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
+                        onShowImportRecipe={() => setModalState({ type: 'IMPORT_RECIPE' })}
+                        onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
+                        onViewRecipe={(recipe) => setModalState({ type: 'VIEW_RECIPE', recipe })}
+                        onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
+                        onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
+                    />;
+                case 'profile':
+                    return <ProfilePage 
+                        userProfile={userProfile} 
+                        triedFoods={triedFoods} 
+                        milestones={milestones}
+                        onSaveProfile={saveProfile} 
+                        onResetData={handleResetData} 
+                        onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
+                        onUpdateMilestone={updateMilestone}
+                        onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
+                    />;
+                case 'balance':
+                     return <BalanceDashboard />;
+                default:
+                     return <ToddlerPickyEater />;
+            }
+        }
+
+        // Default Explorer / Standard Views
         switch (currentPage) {
             case 'tracker':
                 return <TrackerPage 
@@ -559,12 +629,14 @@ const App: React.FC = () => {
     return (
         <>
             <Layout
-                currentPage={currentPage}
+                currentPage={currentPage as string}
                 setCurrentPage={setCurrentPage}
                 profile={userProfile}
                 progress={{ triedCount: triedFoods.length, totalCount: totalFoodCount + customFoods.length }}
+                mode={mode}
+                config={config}
             >
-                {renderPage()}
+                {renderContent()}
             </Layout>
             {renderModals()}
         </>

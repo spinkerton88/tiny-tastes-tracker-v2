@@ -4,6 +4,17 @@ export type Filter = 'all' | 'to_try' | 'tried';
 export type RecipeFilter = 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type TextureStage = 'puree' | 'mashed' | 'finger_food';
 
+export type AppMode = 'NEWBORN' | 'EXPLORER' | 'TODDLER';
+
+export interface AppModeConfig {
+    themeColor: string; // Tailwind class for background (e.g., 'bg-teal-600')
+    textColor: string;  // Tailwind class for text (e.g., 'text-teal-600')
+    borderColor: string; // Tailwind class for borders
+    navItems: { id: string; label: string; icon: string }[];
+    homeTitle: string;
+    showFoodTracker: boolean;
+}
+
 export interface Food {
     name: string;
     emoji: string;

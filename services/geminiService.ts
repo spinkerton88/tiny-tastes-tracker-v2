@@ -259,3 +259,118 @@ export const analyzeFoodWithGemini = async (foodName: string): Promise<CustomFoo
         throw new Error("Failed to analyze food.");
     }
 };
+
+export const generatePickyEaterStrategies = async (targetFood: string, safeFoods: string, ickFactor: string = "Unknown"): Promise<any> => {
+  try {
+    const systemInstruction = `System Role:
+You are "Sage," an expert pediatric nutritionist and creative chef specializing in reversing picky eating in toddlers (ages 12 months to 4 years). Your goal is to reduce mealtime stress and gradually expand the child's palate using evidence-based strategies like "Food Bridging" and "Repeated Exposure."
+
+The Input:
+You will receive:
+1. Target Food: The ingredient the child is refusing.
+2. Safe Foods: Foods the child currently loves.
+3. The "Ick" Factor: Why the parent thinks they hate it.
+
+Your Task:
+Generate 3 distinct approaches to serve the Target Food. Return the response in strictly valid JSON format.
+
+The 3 Approaches:
+1. The "Bridge" (Look-Alike): Create a version of the Target Food that mimics the texture/flavor of a Safe Food.
+2. The "Hidden" (Nutrient Boost): A recipe that makes the Target Food invisible or undetectable, blended into a favorite.
+3. The "Play" (No Pressure): A serving suggestion that focuses on fun or sensory play, not eating.
+
+JSON Structure:
+{
+  "strategies": [
+    {
+      "type": "The Bridge",
+      "title": "Name of the dish",
+      "why_it_works": "One sentence explaining the psychology.",
+      "ingredients": ["Item 1", "Item 2"],
+      "instructions": "Brief preparation steps (max 3 sentences)."
+    },
+    {
+      "type": "The Stealth Mode",
+      "title": "Name of the dish",
+      "why_it_works": "One sentence explaining why.",
+      "ingredients": ["Item 1", "Item 2"],
+      "instructions": "Brief preparation steps."
+    },
+    {
+      "type": "The Fun Factor",
+      "title": "Name of the activity",
+      "why_it_works": "One sentence explaining why.",
+      "ingredients": ["Item 1", "Item 2"],
+      "instructions": "Brief preparation steps."
+    }
+  ],
+  "parent_tip": "A short, empathetic encouraging tip for the parent dealing with rejection."
+}
+
+Constraints:
+- Keep recipes simple (under 5 ingredients if possible).
+- Avoid choking hazards for toddlers (no whole nuts, whole grapes, or popcorn).
+- Tone should be encouraging, not judgmental.`;
+
+    const prompt = `Target Food: ${targetFood}\nSafe Foods: ${safeFoods}\nThe "Ick" Factor: ${ickFactor}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const text = response.text.trim();
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Error generating picky eater strategies:", error);
+    throw new Error("Failed to generate strategies.");
+  }
+};
+
+export const getNutrientGapSuggestions = async (missingNutrient: string, currentDietTrend: string = "Balanced"): Promise<any> => {
+  try {
+    const systemInstruction = `System Role: You are a pediatric nutritionist helping a parent fill nutritional gaps for a toddler.
+
+Input:
+- Missing Nutrient: The nutrient that is lacking.
+- Current Diet Trend: General description of what they are eating.
+
+Task:
+Suggest 3 specific, simple "Gap Filler" snacks or meal add-ons.
+Do NOT suggest supplements. Focus on whole foods.
+
+Output JSON:
+{
+  "gap": "Nutrient Name",
+  "suggestions": [
+    {
+      "food": "Name of food",
+      "why": "Reason why it helps.",
+      "prep_time": "Preparation time"
+    }
+  ],
+  "quick_tip": "A short tip for absorption or serving."
+}`;
+
+    const prompt = `Missing Nutrient: ${missingNutrient}\nCurrent Diet Trend: ${currentDietTrend}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const text = response.text.trim();
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Error getting nutrient gap suggestions:", error);
+    throw new Error("Failed to get suggestions.");
+  }
+};
