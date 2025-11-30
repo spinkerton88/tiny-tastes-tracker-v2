@@ -126,6 +126,7 @@ type AllergenAlertModalState = { type: 'ALLERGEN_ALERT'; foodName: string; aller
 type BadgeUnlockedModalState = { type: 'BADGE_UNLOCKED'; badge: Badge };
 type CertificateModalState = { type: 'CERTIFICATE'; babyName: string; date: string };
 type CustomFoodModalState = { type: 'ADD_CUSTOM_FOOD'; initialName?: string };
+type LogMealModalState = { type: 'LOG_MEAL' };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -144,4 +145,5 @@ export type ModalState =
   | BadgeUnlockedModalState
   | CertificateModalState
   | CustomFoodModalState
+  | LogMealModalState
   | NullModalState;

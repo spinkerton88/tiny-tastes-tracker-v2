@@ -95,7 +95,7 @@ export const getModeConfig = (mode: AppMode): AppModeConfig => {
                 textColor: 'text-indigo-600',
                 borderColor: 'border-indigo-200',
                 navItems: [
-                    { id: 'recipes', label: 'Meal Plan', icon: 'calendar' },
+                    { id: 'recipes', label: 'Meal', icon: 'utensils' },
                     { id: 'picky_eater', label: 'Picky Eater', icon: 'frown' },
                     { id: 'balance', label: 'Balance', icon: 'scale' },
                     { id: 'learn', label: 'Learn', icon: 'book-open' },

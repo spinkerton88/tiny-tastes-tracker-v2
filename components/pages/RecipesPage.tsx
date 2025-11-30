@@ -1,18 +1,21 @@
 
 import React, { useState } from 'react';
-import { Recipe, RecipeFilter, MealPlan } from '../../types';
+import { Recipe, RecipeFilter, MealPlan, TriedFoodLog } from '../../types';
+import { flatFoodList, allFoods } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
 interface RecipesPageProps {
     recipes: Recipe[];
     mealPlan: MealPlan;
+    triedFoods?: TriedFoodLog[];
     onShowAddRecipe: () => void;
     onShowImportRecipe: () => void;
     onShowSuggestRecipe: () => void;
     onViewRecipe: (recipe: Recipe) => void;
     onAddToPlan: (date: string, meal: string) => void;
     onShowShoppingList: () => void;
+    onBatchLog?: (foodNames: string[], date: string, meal: string) => void;
     baseColor?: string;
 }
 
@@ -44,6 +47,218 @@ const StarRatingDisplay: React.FC<{ rating: number }> = ({ rating }) => {
                     className={`w-3 h-3 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
                 />
             ))}
+        </div>
+    );
+};
+
+const LogMealView: React.FC<{ 
+    recipes: Recipe[], 
+    triedFoods: TriedFoodLog[],
+    onSave: (foodNames: string[], date: string, meal: string) => void, 
+    baseColor: string 
+}> = ({ recipes, triedFoods, onSave, baseColor }) => {
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [meal, setMeal] = useState<RecipeFilter>('lunch');
+    const [activeTab, setActiveTab] = useState<'foods' | 'recipe'>('foods');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set());
+    const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
+
+    const filteredFoods = flatFoodList.filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    // Get log history for current week relative to selected date
+    const selectedDateObj = new Date(date);
+    const startOfWeek = getStartOfWeek(selectedDateObj);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+    const weeklyLogs = triedFoods.filter(log => {
+        const logDate = new Date(log.date);
+        return logDate >= startOfWeek && logDate <= endOfWeek;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Group logs by date and meal for display
+    const historyGrouped: Record<string, Record<string, string[]>> = {};
+    weeklyLogs.forEach(log => {
+        if (!historyGrouped[log.date]) historyGrouped[log.date] = {};
+        if (!historyGrouped[log.date][log.meal]) historyGrouped[log.date][log.meal] = [];
+        historyGrouped[log.date][log.meal].push(log.id);
+    });
+
+    const toggleFood = (food: string) => {
+        const newSet = new Set(selectedFoods);
+        if (newSet.has(food)) newSet.delete(food);
+        else newSet.add(food);
+        setSelectedFoods(newSet);
+    };
+
+    const handleSaveLog = () => {
+        let foodsToLog: string[] = [];
+
+        if (activeTab === 'foods') {
+            foodsToLog = Array.from(selectedFoods);
+        } else {
+            const recipe = recipes.find(r => r.id === selectedRecipeId);
+            if (recipe) {
+                const combinedText = (recipe.title + ' ' + recipe.ingredients).toUpperCase();
+                flatFoodList.forEach(food => {
+                    if (combinedText.includes(food) || combinedText.includes(food.slice(0, -1))) {
+                         foodsToLog.push(food);
+                    }
+                });
+                
+                if (foodsToLog.length === 0) {
+                    alert("We couldn't automatically match ingredients to our food list. Please log individual foods using the 'Select Foods' tab for accurate tracking.");
+                    return;
+                }
+            }
+        }
+
+        if (foodsToLog.length === 0) {
+            alert("Please select at least one food to log.");
+            return;
+        }
+
+        onSave(foodsToLog, date, meal);
+        setSelectedFoods(new Set());
+        setSelectedRecipeId('');
+        alert("Meal logged!");
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-4 bg-gray-50 border-b grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Date</label>
+                        <input 
+                            type="date" 
+                            value={date} 
+                            onChange={(e) => setDate(e.target.value)} 
+                            className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meal</label>
+                        <select 
+                            value={meal} 
+                            onChange={(e) => setMeal(e.target.value as RecipeFilter)}
+                            className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm capitalize`}
+                        >
+                            {['breakfast', 'lunch', 'dinner', 'snack'].map(m => (
+                                <option key={m} value={m}>{m}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="flex border-b">
+                    <button 
+                        className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'foods' ? `border-b-2 border-${baseColor}-600 text-${baseColor}-600 bg-white` : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}
+                        onClick={() => setActiveTab('foods')}
+                    >
+                        Select Foods
+                    </button>
+                    <button 
+                        className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'recipe' ? `border-b-2 border-${baseColor}-600 text-${baseColor}-600 bg-white` : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}
+                        onClick={() => setActiveTab('recipe')}
+                    >
+                        From Recipe
+                    </button>
+                </div>
+
+                <div className="p-4 h-64 overflow-y-auto">
+                    {activeTab === 'foods' ? (
+                        <>
+                            <div className="relative mb-3">
+                                <Icon name="search" className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search foods..." 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className={`w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {filteredFoods.map(food => {
+                                    const foodObj = allFoods.flatMap(c => c.items).find(f => f.name === food);
+                                    const isSelected = selectedFoods.has(food);
+                                    return (
+                                        <button 
+                                            key={food} 
+                                            onClick={() => toggleFood(food)}
+                                            className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${isSelected ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-200 hover:border-gray-300'}`}
+                                        >
+                                            <span className="text-xl">{foodObj?.emoji || '🍽️'}</span>
+                                            <span className={`text-sm font-medium truncate ${isSelected ? `text-${baseColor}-900` : 'text-gray-700'}`}>{food}</span>
+                                            {isSelected && <Icon name="check" className={`ml-auto w-4 h-4 text-${baseColor}-600`} />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="space-y-3">
+                            {recipes.length > 0 ? recipes.map(recipe => (
+                                <button 
+                                    key={recipe.id}
+                                    onClick={() => setSelectedRecipeId(recipe.id)}
+                                    className={`w-full text-left p-3 rounded-lg border transition-all ${selectedRecipeId === recipe.id ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-200 hover:border-gray-300'}`}
+                                >
+                                    <h4 className={`font-semibold ${selectedRecipeId === recipe.id ? `text-${baseColor}-900` : 'text-gray-800'}`}>{recipe.title}</h4>
+                                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{recipe.ingredients.replace(/\n/g, ', ')}</p>
+                                </button>
+                            )) : (
+                                <p className="text-center text-gray-500 py-8">No recipes saved yet.</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-4 border-t bg-gray-50">
+                    <button 
+                        onClick={handleSaveLog}
+                        className={`w-full py-2 px-4 rounded-md shadow-sm text-sm font-bold text-white bg-${baseColor}-600 hover:bg-${baseColor}-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${baseColor}-500`}
+                    >
+                        Log {activeTab === 'foods' ? `${selectedFoods.size} Foods` : 'Meal'}
+                    </button>
+                </div>
+            </div>
+
+            {/* History Section */}
+            <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Meal History (Week of {startOfWeek.toLocaleDateString()})</h3>
+                {Object.keys(historyGrouped).length > 0 ? (
+                    <div className="space-y-4">
+                        {Object.entries(historyGrouped).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()).map(([logDate, meals]) => (
+                            <div key={logDate} className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+                                <h4 className={`font-bold text-${baseColor}-800 border-b border-gray-100 pb-2 mb-2`}>
+                                    {new Date(logDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                                </h4>
+                                <div className="space-y-3">
+                                    {Object.entries(meals).map(([mealType, foods]) => (
+                                        <div key={mealType} className="flex gap-3">
+                                            <div className="w-20 font-medium text-gray-500 text-sm capitalize pt-1">{mealType}</div>
+                                            <div className="flex-1 flex flex-wrap gap-1.5">
+                                                {foods.map((food, idx) => (
+                                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                                        {food}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-gray-500 text-sm">
+                        No meals logged for this week yet.
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -184,14 +399,17 @@ const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddTo
 };
 
 const RecipesPage: React.FC<RecipesPageProps> = (props) => {
-    const [subPage, setSubPage] = useState<'my-recipes' | 'meal-planner'>('my-recipes');
+    // Set default subpage to 'log-meal' if log feature is enabled, otherwise 'my-recipes'
+    const [subPage, setSubPage] = useState<'log-meal' | 'my-recipes' | 'meal-planner'>(props.onBatchLog ? 'log-meal' : 'my-recipes');
     const baseColor = props.baseColor || 'teal';
 
     return (
         <>
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-                <h2 className="text-2xl font-semibold text-gray-800">Recipes & Planner</h2>
-                <div className="flex-shrink-0 flex gap-2">
+                <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-semibold text-gray-800">Recipes & Meals</h2>
+                </div>
+                <div className="flex-shrink-0 flex flex-wrap gap-2">
                     <button onClick={props.onShowSuggestRecipe} className="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-violet-600 hover:bg-violet-700">
                         <Icon name="sparkles" className="w-4 h-4" /> Suggest
                     </button>
@@ -205,22 +423,38 @@ const RecipesPage: React.FC<RecipesPageProps> = (props) => {
             </div>
 
             <div className="border-b border-gray-200 mb-4">
-                <nav className="flex -mb-px">
+                <nav className="flex -mb-px overflow-x-auto">
+                    {props.onBatchLog && (
+                        <button 
+                            onClick={() => setSubPage('log-meal')} 
+                            className={`recipe-sub-nav-btn whitespace-nowrap ${subPage === 'log-meal' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        >
+                            <Icon name="utensils" className="w-4 h-4 inline-block -mt-1 mr-1" /> Log Meal
+                        </button>
+                    )}
                     <button 
                         onClick={() => setSubPage('my-recipes')} 
-                        className={`recipe-sub-nav-btn ${subPage === 'my-recipes' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        className={`recipe-sub-nav-btn whitespace-nowrap ${subPage === 'my-recipes' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
                     >
                         <Icon name="notebook-pen" className="w-4 h-4 inline-block -mt-1 mr-1" /> My Recipes
                     </button>
                     <button 
                         onClick={() => setSubPage('meal-planner')} 
-                        className={`recipe-sub-nav-btn ${subPage === 'meal-planner' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        className={`recipe-sub-nav-btn whitespace-nowrap ${subPage === 'meal-planner' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
                     >
                         <Icon name="calendar-days" className="w-4 h-4 inline-block -mt-1 mr-1" /> Meal Planner
                     </button>
                 </nav>
             </div>
             
+            {subPage === 'log-meal' && props.onBatchLog && (
+                <LogMealView 
+                    recipes={props.recipes} 
+                    triedFoods={props.triedFoods || []}
+                    onSave={props.onBatchLog} 
+                    baseColor={baseColor} 
+                />
+            )}
             {subPage === 'my-recipes' && <MyRecipesView recipes={props.recipes} onViewRecipe={props.onViewRecipe} onShowAddRecipe={props.onShowAddRecipe} baseColor={baseColor} />}
             {subPage === 'meal-planner' && <MealPlannerView mealPlan={props.mealPlan} recipes={props.recipes} onAddToPlan={props.onAddToPlan} onShowShoppingList={props.onShowShoppingList} baseColor={baseColor} />}
         </>

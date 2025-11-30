@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import Icon from '../ui/Icon';
 import { getNutrientGapSuggestions } from '../../services/geminiService';
 import { TriedFoodLog } from '../../types';
-import { allFoods, FOOD_COLORS, FOOD_NUTRIENT_MAPPING } from '../../constants';
+import { allFoods, FOOD_COLORS, FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
 
 interface BalanceDashboardProps {
     triedFoods: TriedFoodLog[];
@@ -28,7 +28,10 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods, 
       const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
       
       const recentLogs = triedFoods.filter(log => new Date(log.date) >= sevenDaysAgo);
-      const totalMeals = recentLogs.length;
+      
+      // Calculate Total Unique Meals (Date + Meal Type)
+      const uniqueMeals = new Set(recentLogs.map(log => `${log.date}-${log.meal}`));
+      const totalMeals = uniqueMeals.size;
       
       const distribution = {
           Carbs: 0,
@@ -82,6 +85,7 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods, 
           totalMeals,
           distribution,
           colorsEaten: Array.from(colorsEaten),
+          nutrientsConsumed,
           missingNutrient
       };
   }, [triedFoods]);
@@ -145,7 +149,7 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods, 
         <div className="flex flex-col items-center">
           {/* CSS-Only Donut Chart */}
           <div 
-            className="w-48 h-48 rounded-full relative flex items-center justify-center shadow-inner"
+            className="w-48 h-48 rounded-full relative flex items-center justify-center shadow-inner mb-6"
             style={{ background: weeklyData.totalMeals > 0 ? `conic-gradient(${gradientString})` : '#f3f4f6' }}
           >
             <div className="w-32 h-32 bg-white rounded-full flex flex-col items-center justify-center shadow-sm z-10">
@@ -154,8 +158,27 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods, 
             </div>
           </div>
 
+          {/* Critical Nutrient Checklist */}
+          <div className="w-full bg-gray-50 rounded-xl p-4 mb-6">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 text-center">Critical Nutrients</h3>
+              <div className="flex justify-between px-2">
+                  {CRITICAL_NUTRIENTS.map(nutrient => {
+                      const isMet = weeklyData.nutrientsConsumed.has(nutrient);
+                      const style = NUTRIENT_STYLES[nutrient] || { icon: 'star', text: 'text-gray-600', bg: 'bg-gray-100' };
+                      return (
+                          <div key={nutrient} className="flex flex-col items-center gap-1" title={nutrient}>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isMet ? `bg-${baseColor}-100 border-${baseColor}-200` : 'bg-white border-gray-200 grayscale opacity-50'}`}>
+                                  <Icon name={style.icon} className={`w-4 h-4 ${isMet ? `text-${baseColor}-600` : 'text-gray-300'}`} />
+                              </div>
+                              <span className={`text-[9px] font-bold ${isMet ? 'text-gray-700' : 'text-gray-300'}`}>{nutrient.split(' ')[0]}</span>
+                          </div>
+                      )
+                  })}
+              </div>
+          </div>
+
           {/* Legend */}
-          <div className="grid grid-cols-2 gap-4 mt-8 w-full">
+          <div className="grid grid-cols-2 gap-4 w-full">
             {chartData.map((seg) => (
               <div key={seg.category} className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: seg.color }} />

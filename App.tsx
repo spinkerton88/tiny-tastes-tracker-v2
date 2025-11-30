@@ -27,6 +27,7 @@ import AllergenAlertModal from './components/modals/AllergenAlertModal';
 import BadgeUnlockedModal from './components/modals/BadgeUnlockedModal';
 import CertificateModal from './components/modals/CertificateModal';
 import CustomFoodModal from './components/modals/CustomFoodModal';
+import LogMealModal from './components/modals/LogMealModal';
 import Icon from './components/ui/Icon';
 
 // Helper function to calculate badges - defined outside component for reuse
@@ -183,6 +184,29 @@ const App: React.FC = () => {
         } else {
             setModalState({ type: null });
         }
+    };
+
+    const handleBatchLog = async (foodNames: string[], date: string, meal: string) => {
+        // Haptic Feedback
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate(20);
+        }
+
+        const newLogs: TriedFoodLog[] = foodNames.map(foodName => ({
+            id: foodName,
+            date: date,
+            meal: meal,
+            reaction: 5, // Default to 'Liked it' for batch logs
+            moreThanOneBite: true,
+            allergyReaction: 'none',
+            notes: '',
+            tryCount: 1, // We don't track incremental counts strictly in batch mode for simplicity
+        }));
+
+        // Append to existing logs (allowing duplicates for history tracking in Toddler mode)
+        const updatedTriedFoods = [...triedFoods, ...newLogs];
+        localStorage.setItem(`tiny-tastes-tracker-triedFoods`, JSON.stringify(updatedTriedFoods));
+        setTriedFoods(updatedTriedFoods);
     };
 
     const incrementTryCount = async (foodName: string) => {
@@ -422,12 +446,14 @@ const App: React.FC = () => {
                     return <RecipesPage 
                         recipes={recipes} 
                         mealPlan={mealPlan}
+                        triedFoods={triedFoods}
                         onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
                         onShowImportRecipe={() => setModalState({ type: 'IMPORT_RECIPE' })}
                         onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
                         onViewRecipe={(recipe) => setModalState({ type: 'VIEW_RECIPE', recipe })}
                         onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
                         onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
+                        onBatchLog={handleBatchLog}
                         baseColor={baseColor}
                     />;
                 case 'profile':
@@ -624,6 +650,14 @@ const App: React.FC = () => {
                     initialName={modal.initialName}
                     onClose={() => setModalState({ type: null })}
                     onSave={addCustomFood}
+                />
+            }
+            case 'LOG_MEAL': {
+                return <LogMealModal
+                    recipes={recipes}
+                    onClose={() => setModalState({ type: null })}
+                    onSave={handleBatchLog}
+                    baseColor={baseColor}
                 />
             }
             default:
