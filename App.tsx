@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
@@ -172,18 +173,34 @@ const App: React.FC = () => {
       }
   };
 
-  const handleBatchLogMeal = (foodNames: string[], date: string, meal: string, photo?: string, notes?: string) => {
-      const newLogs: TriedFoodLog[] = foodNames.map(name => ({
-          id: name,
-          date,
-          meal,
-          reaction: 0, // Default
-          moreThanOneBite: true,
-          allergyReaction: 'none',
-          notes: notes || 'Batch logged from meal',
-          tryCount: 1,
-          messyFaceImage: photo
-      }));
+  const handleBatchLogMeal = (foodNames: string[], date: string, meal: string, photo?: string, notes?: string, foodStatuses?: Record<string, string>) => {
+      const newLogs: TriedFoodLog[] = foodNames.map(name => {
+          let reaction = 0; // 0 = no rating/neutral
+          let moreThanOneBite = true;
+          
+          if (foodStatuses) {
+              const status = foodStatuses[name];
+              if (status === 'refused') {
+                  reaction = 1; // 1 = Hated it / Refused
+                  moreThanOneBite = false;
+              } else if (status === 'touched') {
+                  moreThanOneBite = false;
+                  // Reaction remains 0 (neutral/no info)
+              }
+          }
+
+          return {
+              id: name,
+              date,
+              meal,
+              reaction, 
+              moreThanOneBite,
+              allergyReaction: 'none',
+              notes: notes || 'Batch logged from meal',
+              tryCount: 1,
+              messyFaceImage: photo
+          };
+      });
       
       // Filter out duplicates for same day/meal if exists, or append?
       // For simplicity, we append but could be smarter.
