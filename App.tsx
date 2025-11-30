@@ -388,7 +388,7 @@ const App: React.FC = () => {
 
     const renderContent = () => {
         // Special Modes
-        if (mode === 'NEWBORN' && currentPage !== 'profile') {
+        if (mode === 'NEWBORN' && currentPage !== 'profile' && currentPage !== 'learn') {
             return (
                 <div className="flex flex-col items-center justify-center h-[60vh] text-center px-6 animate-fadeIn">
                     <div className="bg-rose-100 p-8 rounded-full mb-6 shadow-sm">
@@ -404,6 +404,10 @@ const App: React.FC = () => {
                     </div>
                 </div>
             );
+        }
+
+        if (mode === 'NEWBORN' && currentPage === 'learn') {
+            return <LearnPage mode={mode} />;
         }
 
         if (mode === 'TODDLER') {
@@ -435,6 +439,8 @@ const App: React.FC = () => {
                     />;
                 case 'balance':
                      return <BalanceDashboard triedFoods={triedFoods} />;
+                case 'learn':
+                     return <LearnPage mode={mode} />;
                 default:
                      return <ToddlerPickyEater />;
             }
@@ -472,7 +478,7 @@ const App: React.FC = () => {
                     onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
                 />;
             case 'learn':
-                return <LearnPage />;
+                return <LearnPage mode={mode} />;
             case 'profile':
                 return <ProfilePage 
                     userProfile={userProfile} 

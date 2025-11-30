@@ -379,36 +379,96 @@ export const foodGuideData: { [key: string]: { allergyRisk: string; chokingRisk:
     "ASPARAGUS": { allergyRisk: "Low", chokingRisk: "Low (when soft-cooked)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Steam or roast whole asparagus spears until very tender. Offer the whole spear for baby to gnaw on. The fibrous end is tough to chew through, reducing risk.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving whole, soft-cooked spears. As pincer grasp develops, you can chop the soft-cooked tips and stems into small, bite-sized pieces.</p>" },
 };
 
-export const guidesData = [
-    { 
-        title: "How Many Meals a Day?", 
-        icon: "utensils-crossed",
-        content: `<p>Follow your baby's lead! This is a general guide, but every baby is different. Focus on exploration, not volume.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>~6 Months:</strong> Start with <strong>1 meal</strong> a day. This is just for practice. Timing doesn't matter, just pick a time when baby is happy, rested, and not starving.</li><li><strong>~7-8 Months:</strong> When baby seems to be getting the hang of it, you can move to <strong>2 meals</strong> a day.</li><li><strong>~9-11 Months:</strong> Baby is likely a pro by now and can handle <strong>3 meals</strong> a day, often at the same time as the family (breakfast, lunch, dinner).</li></ul><p class="mt-2"><strong>Remember:</strong> Breastmilk or formula is still their primary source of nutrition until age 1.</p>`
+export const LEARNING_RESOURCES = {
+    NEWBORN: {
+        guides: [
+            {
+                title: "Feeding Basics (0-6m)",
+                icon: "milk",
+                content: `<p><strong>Breast or Formula?</strong> Both are excellent. "Fed is best." Newborns eat every 2-3 hours. Watch for hunger cues like rooting (turning head) or sucking on hands, rather than waiting for crying.</p><p><strong>Burping:</strong> Essential to prevent gas. Try burping mid-feed and after.</p>`
+            },
+            {
+                title: "Sleep & Routine",
+                icon: "moon",
+                content: `<p>Newborns don't have a circadian rhythm yet. They sleep 14-17 hours a day in short bursts.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Day/Night Reversal:</strong> Keep days bright/noisy and nights dark/quiet to help them adjust.</li><li><strong>Safe Sleep:</strong> Always on their back, on a firm surface, with no loose bedding or toys (AAP Guidelines).</li></ul>`
+            }
+        ],
+        research: [
+            {
+                title: "Vitamin D Drops",
+                icon: "sun",
+                content: `<p>The AAP recommends <strong>400 IU of Vitamin D daily</strong> for all breastfed infants starting shortly after birth, as breast milk alone often doesn't provide enough to prevent rickets.</p>`
+            },
+            {
+                title: "Growth Spurts",
+                icon: "trending-up",
+                content: `<p>Expect frequent "cluster feeding" (eating every hour) around <strong>3 weeks, 6 weeks, and 3 months</strong>. This signals the body to produce more milk for a growing baby.</p>`
+            }
+        ]
+    },
+    EXPLORER: {
+        guides: [
+            { 
+                title: "How Many Meals a Day?", 
+                icon: "utensils-crossed",
+                content: `<p>Follow your baby's lead! This is a general guide, but every baby is different. Focus on exploration, not volume.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>~6 Months:</strong> Start with <strong>1 meal</strong> a day. This is just for practice. Timing doesn't matter, just pick a time when baby is happy, rested, and not starving.</li><li><strong>~7-8 Months:</strong> When baby seems to be getting the hang of it, you can move to <strong>2 meals</strong> a day.</li><li><strong>~9-11 Months:</strong> Baby is likely a pro by now and can handle <strong>3 meals</strong> a day, often at the same time as the family (breakfast, lunch, dinner).</li></ul><p class="mt-2"><strong>Remember:</strong> Breastmilk or formula is still their primary source of nutrition until age 1.</p>`
+            }
+        ],
+        research: [
+            { 
+                title: "1. Key Signs of Readiness", 
+                icon: "clipboard-check",
+                content: `<p>Age alone isn't the only factor. Before starting any solids (purées or BLW), your baby should meet <strong>all</strong> of these milestones, which typically happen around 6 months:</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Sits Independently:</strong> Baby can sit in a high chair unassisted or with minimal support and has good head and neck control. This is crucial for safely managing food and swallowing.</li><li><strong>Lost Tongue-Thrust Reflex:</strong> Baby no longer automatically pushes food out of their mouth with their tongue. You can test this by offering a (safe) empty spoon; if they push it out, they're likely not ready.</li><li><strong>Interest in Food:</strong> Baby watches you eat with interest, leans forward, and may try to grab food from your plate.</li><li><strong>Can Grab and Hold:</strong> Baby has developed the motor skills to pick up pieces of food and bring them to their mouth.</li></ul>`
+            },
+            {
+                title: "2. Introducing Top Allergens",
+                icon: "bean",
+                content: `<p>Current guidelines have changed: experts now recommend introducing top allergenic foods <strong>early and often</strong> (after 6 months and once a few other foods have been tolerated) to help *prevent* allergies.</p><p>The top 9 allergens account for ~90% of food allergies:</p><ol class="list-decimal list-outside space-y-2 pl-5"><li>Cow's Milk (e.g., in yogurt, cheese)</li><li>Egg (fully cooked, e.g., scrambled or in a muffin)</li><li>Peanuts (NEVER whole. Offer as a thin paste on toast or watered down.)</li><li>Tree Nuts (e.g., almond, walnut. Offer as nut butter, same as peanuts.)</li><li>Fish (e.g., soft, flaky salmon)</li><li>Shellfish (e.g., minced shrimp)</li><li>Soy (e.g., tofu, edamame)</li><li>Wheat (e.g., toast, pasta)</li><li>Sesame (e.g., tahini swirled into yogurt)</li></ol><p><strong>SafetyProtocol:</strong> Introduce one allergen at a time. Wait 3-5 days before introducing another new allergen to watch for any reaction (hives, vomiting, swelling, wheezing). Once an allergen is successfully introduced, keep offering it regularly (e.g., 2-3 times a week) to maintain tolerance.</p>`
+            },
+            {
+                title: "3. The Importance of Iron",
+                icon: "beef",
+                content: `<p>This is a common concern with BLW. At 6 months, a baby's natural iron stores (which they built up in the womb) begin to deplete. Breast milk is naturally low in iron. While formula and iron-fortified cereals are packed with it, BLW babies may not consume large quantities of cereal.</p><p>It is <strong>essential</strong> to offer iron-rich foods at every meal.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Heme Iron (Easily Absorbed):</strong> Beef (slow-cooked strips, ground beef), chicken (dark meat), turkey (dark meat), salmon, sardines.</li><li><strong>Non-Heme Iron:</strong> Lentils, tofu, chickpeas, black beans, edamame, eggs, iron-fortified oatmeal/cereal (can be used in muffins or pancakes).</li></ul><p><strong>Pro-Tip:</strong> Pair non-heme iron foods with a food high in Vitamin C to dramatically boost absorption! (e.g., lentils with tomatoes, tofu with bell peppers, oatmeal with strawberries).</p>`
+            },
+            {
+                title: "4. Reputable Sources",
+                icon: "book-text",
+                content: `<p>For more detailed information, you can look up guidelines from these trusted organizations:</p><ul class="list-disc list-outside space-y-2 pl-5"><li>American Academy of Pediatrics (AAP)</li><li>Centers for Disease Control and Prevention (CDC)</li><li>World Health Organization (WHO)</li><li>Solid Starts (A popular, comprehensive app and website)</li></ul>`
+            }
+        ]
+    },
+    TODDLER: {
+        guides: [
+            {
+                title: "Saying Goodbye to Bottles",
+                icon: "milk-off",
+                content: `<p><strong>Goal:</strong> Wean off bottles by 12-15 months to protect teeth and speech development.</p><p><strong>Strategy:</strong> Transition to open cups or straw cups with meals. You can start by diluting milk in the bottle with water, while offering full-strength milk in a cup.</p>`
+            },
+            {
+                title: "Taming Tantrums",
+                icon: "frown",
+                content: `<p>Toddlers often have "big feelings" but limited vocabulary. Tantrums are normal.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Validation:</strong> "I see you are mad the banana broke."</li><li><strong>Choices:</strong> "Do you want the red plate or blue plate?" gives them a sense of control.</li></ul>`
+            },
+            {
+                title: "Portion Sizes",
+                icon: "pie-chart",
+                content: `<p>Toddlers eat less than you think! Their growth slows down after age 1. A serving size is roughly <strong>1 tablespoon per year of age</strong> (e.g., 1 tbsp of peas for a 1-year-old). Trust their hunger cues.</p>`
+            }
+        ],
+        research: [
+            {
+                title: "Sugar Guidelines (AHA)",
+                icon: "candy-off",
+                content: `<p>The American Heart Association recommends <strong>zero added sugars</strong> for children under age 2. This helps shape their taste preferences away from overly sweet foods early on.</p>`
+            },
+            {
+                title: "Cow's Milk Limit",
+                icon: "milk",
+                content: `<p>While whole milk is great for fats and calcium, limit it to <strong>16-24 oz per day</strong>. Too much milk can fill them up, leading to "milk anemia" because they aren't eating enough iron-rich solid foods.</p>`
+            }
+        ]
     }
-];
-
-export const researchData = [
-    { 
-        title: "1. Key Signs of Readiness", 
-        icon: "clipboard-check",
-        content: `<p>Age alone isn't the only factor. Before starting any solids (purées or BLW), your baby should meet <strong>all</strong> of these milestones, which typically happen around 6 months:</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Sits Independently:</strong> Baby can sit in a high chair unassisted or with minimal support and has good head and neck control. This is crucial for safely managing food and swallowing.</li><li><strong>Lost Tongue-Thrust Reflex:</strong> Baby no longer automatically pushes food out of their mouth with their tongue. You can test this by offering a (safe) empty spoon; if they push it out, they're likely not ready.</li><li><strong>Interest in Food:</strong> Baby watches you eat with interest, leans forward, and may try to grab food from your plate.</li><li><strong>Can Grab and Hold:</strong> Baby has developed the motor skills to pick up pieces of food and bring them to their mouth.</li></ul>`
-    },
-    {
-        title: "2. Introducing Top Allergens",
-        icon: "bean",
-        content: `<p>Current guidelines have changed: experts now recommend introducing top allergenic foods <strong>early and often</strong> (after 6 months and once a few other foods have been tolerated) to help *prevent* allergies.</p><p>The top 9 allergens account for ~90% of food allergies:</p><ol class="list-decimal list-outside space-y-2 pl-5"><li>Cow's Milk (e.g., in yogurt, cheese)</li><li>Egg (fully cooked, e.g., scrambled or in a muffin)</li><li>Peanuts (NEVER whole. Offer as a thin paste on toast or watered down.)</li><li>Tree Nuts (e.g., almond, walnut. Offer as nut butter, same as peanuts.)</li><li>Fish (e.g., soft, flaky salmon)</li><li>Shellfish (e.g., minced shrimp)</li><li>Soy (e.g., tofu, edamame)</li><li>Wheat (e.g., toast, pasta)</li><li>Sesame (e.g., tahini swirled into yogurt)</li></ol><p><strong>SafetyProtocol:</strong> Introduce one allergen at a time. Wait 3-5 days before introducing another new allergen to watch for any reaction (hives, vomiting, swelling, wheezing). Once an allergen is successfully introduced, keep offering it regularly (e.g., 2-3 times a week) to maintain tolerance.</p>`
-    },
-    {
-        title: "3. The Importance of Iron",
-        icon: "beef",
-        content: `<p>This is a common concern with BLW. At 6 months, a baby's natural iron stores (which they built up in the womb) begin to deplete. Breast milk is naturally low in iron. While formula and iron-fortified cereals are packed with it, BLW babies may not consume large quantities of cereal.</p><p>It is <strong>essential</strong> to offer iron-rich foods at every meal.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Heme Iron (Easily Absorbed):</strong> Beef (slow-cooked strips, ground beef), chicken (dark meat), turkey (dark meat), salmon, sardines.</li><li><strong>Non-Heme Iron:</strong> Lentils, tofu, chickpeas, black beans, edamame, eggs, iron-fortified oatmeal/cereal (can be used in muffins or pancakes).</li></ul><p><strong>Pro-Tip:</strong> Pair non-heme iron foods with a food high in Vitamin C to dramatically boost absorption! (e.g., lentils with tomatoes, tofu with bell peppers, oatmeal with strawberries).</p>`
-    },
-    {
-        title: "4. Reputable Sources",
-        icon: "book-text",
-        content: `<p>For more detailed information, you can look up guidelines from these trusted organizations:</p><ul class="list-disc list-outside space-y-2 pl-5"><li>American Academy of Pediatrics (AAP)</li><li>Centers for Disease Control and Prevention (CDC)</li><li>World Health Organization (WHO)</li><li>Solid Starts (A popular, comprehensive app and website)</li></ul>`
-    }
-];
+};
 
 export const recommendationData: Record<string, { title: string; message: string; foods: string[] }> = {
     "too_young": {

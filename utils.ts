@@ -83,6 +83,7 @@ export const getModeConfig = (mode: AppMode): AppModeConfig => {
                     { id: 'feed', label: 'Log Feed', icon: 'milk' },
                     { id: 'diapers', label: 'Diapers', icon: 'baby' },
                     { id: 'growth', label: 'Growth', icon: 'ruler' },
+                    { id: 'learn', label: 'Learn', icon: 'book-open' },
                     { id: 'profile', label: 'Profile', icon: 'user' }
                 ],
                 homeTitle: "Newborn Log",
@@ -97,6 +98,7 @@ export const getModeConfig = (mode: AppMode): AppModeConfig => {
                     { id: 'recipes', label: 'Meal Plan', icon: 'calendar' },
                     { id: 'picky_eater', label: 'Picky Eater', icon: 'frown' },
                     { id: 'balance', label: 'Balance', icon: 'scale' },
+                    { id: 'learn', label: 'Learn', icon: 'book-open' },
                     { id: 'profile', label: 'Profile', icon: 'user' }
                 ],
                 homeTitle: "Toddler Table",

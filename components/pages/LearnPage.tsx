@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { guidesData, researchData } from '../../constants';
+import { LEARNING_RESOURCES } from '../../constants';
 import { askResearchAssistant } from '../../services/geminiService';
+import { AppMode } from '../../types';
 import Accordion from '../ui/Accordion';
 import Icon from '../ui/Icon';
 
@@ -20,6 +21,10 @@ interface ChatMessage {
     text: string;
     sources?: any[];
     suggestedQuestions?: string[];
+}
+
+interface LearnPageProps {
+    mode: AppMode;
 }
 
 const CollapsibleSources: React.FC<{ sources: any[] }> = ({ sources }) => {
@@ -63,11 +68,13 @@ const CollapsibleSources: React.FC<{ sources: any[] }> = ({ sources }) => {
     );
 };
 
-const LearnPage: React.FC = () => {
+const LearnPage: React.FC<LearnPageProps> = ({ mode }) => {
     const [query, setQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    const content = LEARNING_RESOURCES[mode];
 
     // Smart scrolling logic
     useEffect(() => {
@@ -154,7 +161,7 @@ const LearnPage: React.FC = () => {
                         </div>
                         <div>
                             <h2 className="text-lg font-semibold text-gray-800">Ask Sage</h2>
-                            <p className="text-xs text-gray-500">Get instant answers about BLW, safety, and nutrition.</p>
+                            <p className="text-xs text-gray-500">Get instant answers about feeding, safety, and development.</p>
                         </div>
                     </div>
 
@@ -163,8 +170,12 @@ const LearnPage: React.FC = () => {
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 p-8">
                                 <Icon name="message-square" className="w-12 h-12 mb-3 opacity-20" />
-                                <p className="text-sm font-medium text-gray-500">I'm Sage, here to help with your food journey!</p>
-                                <p className="text-xs mt-2 max-w-xs mx-auto">Try asking: "What foods are high in iron?" or "How do I serve steak safely?"</p>
+                                <p className="text-sm font-medium text-gray-500">I'm Sage, your research assistant.</p>
+                                <p className="text-xs mt-2 max-w-xs mx-auto">
+                                    {mode === 'NEWBORN' ? 'Try asking: "How many wet diapers per day?" or "Signs of growth spurt?"' : 
+                                     mode === 'TODDLER' ? 'Try asking: "Healthy snack ideas" or "How to handle food throwing?"' :
+                                     'Try asking: "What foods are high in iron?" or "How do I serve steak safely?"'}
+                                </p>
                             </div>
                         )}
 
@@ -257,18 +268,18 @@ const LearnPage: React.FC = () => {
             <div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <Icon name="book-open" className="w-5 h-5 text-teal-600" />
-                    Common Questions & Resources
+                    Common Questions & Resources ({mode === 'EXPLORER' ? '6-12m' : mode.charAt(0) + mode.slice(1).toLowerCase()})
                 </h3>
                 <div className="space-y-3">
-                    {/* General Guides */}
-                    {guidesData.map((guide, index) => (
+                    {/* Mode Specific Guides */}
+                    {content.guides.map((guide, index) => (
                         <Accordion key={`guide-${index}`} title={guide.title} icon={guide.icon} defaultOpen={false}>
                             <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: guide.content }}></div>
                         </Accordion>
                     ))}
                     
-                    {/* Research Data */}
-                    {researchData.map((item, index) => (
+                    {/* Mode Specific Research Data */}
+                    {content.research.map((item, index) => (
                         <Accordion key={`research-${index}`} title={item.title} icon={item.icon} defaultOpen={false}>
                             <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: item.content }} />
                         </Accordion>
