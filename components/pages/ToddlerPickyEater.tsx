@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { generatePickyEaterStrategies } from '../../services/geminiService';
 import Icon from '../ui/Icon';
 
-export const ToddlerPickyEater = () => {
+export const ToddlerPickyEater = ({ baseColor = 'indigo' }: { baseColor?: string }) => {
   const [targetFood, setTargetFood] = useState('');
   const [safeFood, setSafeFood] = useState('');
   const [ickFactor, setIckFactor] = useState('');
@@ -31,15 +31,15 @@ export const ToddlerPickyEater = () => {
   return (
     <div className="space-y-6">
       {/* Hero / Input Section */}
-      <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-xl shadow-sm">
+      <div className={`bg-${baseColor}-50 border border-${baseColor}-100 p-5 rounded-xl shadow-sm`}>
         <div className="flex items-center gap-3 mb-3">
-            <div className="bg-indigo-100 p-2 rounded-full">
-                <Icon name="chef-hat" className="w-6 h-6 text-indigo-600" />
+            <div className={`bg-${baseColor}-100 p-2 rounded-full`}>
+                <Icon name="chef-hat" className={`w-6 h-6 text-${baseColor}-600`} />
             </div>
-            <h2 className="text-lg font-bold text-indigo-900">Picky Eater Rescue</h2>
+            <h2 className={`text-lg font-bold text-${baseColor}-900`}>Picky Eater Rescue</h2>
         </div>
-        <p className="text-sm text-indigo-700 mb-5 leading-relaxed">
-          Tell Sage what they <strong className="text-indigo-900">refuse to eat</strong> and what they <strong className="text-indigo-900">love</strong>. 
+        <p className={`text-sm text-${baseColor}-700 mb-5 leading-relaxed`}>
+          Tell Sage what they <strong className={`text-${baseColor}-900`}>refuse to eat</strong> and what they <strong className={`text-${baseColor}-900`}>love</strong>. 
           We'll find a way to bridge the gap.
         </p>
         
@@ -48,7 +48,7 @@ export const ToddlerPickyEater = () => {
               <div>
                 <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">The "Enemy" (Refused Food)</label>
                 <input 
-                  className="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm py-2.5"
+                  className={`w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-${baseColor}-500 focus:border-${baseColor}-500 text-sm py-2.5`}
                   placeholder="e.g. Broccoli"
                   value={targetFood}
                   onChange={e => setTargetFood(e.target.value)}
@@ -57,7 +57,7 @@ export const ToddlerPickyEater = () => {
               <div>
                 <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">The "Safe" Food (Loves It)</label>
                 <input 
-                  className="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm py-2.5"
+                  className={`w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-${baseColor}-500 focus:border-${baseColor}-500 text-sm py-2.5`}
                   placeholder="e.g. Chicken Nuggets"
                   value={safeFood}
                   onChange={e => setSafeFood(e.target.value)}
@@ -68,7 +68,7 @@ export const ToddlerPickyEater = () => {
           <div>
             <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Why do they hate it? (Optional)</label>
             <input 
-                className="w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm py-2.5"
+                className={`w-full mt-1 border-gray-300 rounded-lg shadow-sm focus:ring-${baseColor}-500 focus:border-${baseColor}-500 text-sm py-2.5`}
                 placeholder="e.g. Too slimy, green color, texture..."
                 value={ickFactor}
                 onChange={e => setIckFactor(e.target.value)}
@@ -80,7 +80,7 @@ export const ToddlerPickyEater = () => {
           <button 
             onClick={handleAskSage}
             disabled={loading || !targetFood}
-            className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className={`w-full bg-${baseColor}-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-${baseColor}-700 active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
           >
             {loading ? (
                 <>
@@ -115,7 +115,7 @@ export const ToddlerPickyEater = () => {
                     </div>
                     <div className="p-5">
                         <h3 className="text-xl font-bold text-gray-800 mb-1">{strat.title}</h3>
-                        <p className="text-xs font-medium text-indigo-600 bg-indigo-50 inline-block px-2 py-1 rounded mb-4">
+                        <p className={`text-xs font-medium text-${baseColor}-600 bg-${baseColor}-50 inline-block px-2 py-1 rounded mb-4`}>
                             Why: {strat.why_it_works}
                         </p>
                         

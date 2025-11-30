@@ -12,6 +12,7 @@ interface RecommendationsPageProps {
   onFoodClick: (food: Food) => void;
   onShowSubstitutes: (food: Food) => void;
   onShowFlavorPairing: () => void;
+  baseColor?: string;
 }
 
 const calculateAge = (dateString: string) => {
@@ -40,7 +41,8 @@ const FoodCard: React.FC<{
     isAllergic: boolean;
     onClick: () => void;
     onSubstitutesClick: () => void;
-}> = ({ food, isTried, isAllergic, onClick, onSubstitutesClick }) => {
+    baseColor: string;
+}> = ({ food, isTried, isAllergic, onClick, onSubstitutesClick, baseColor }) => {
     const category = allFoods.find(cat => cat.items.some(item => item.name === food.name));
     if (!category) return null;
     const triedClass = isTried ? 'is-tried' : '';
@@ -49,7 +51,7 @@ const FoodCard: React.FC<{
         <div className={`food-card relative ${category.color} ${category.textColor} rounded-lg shadow-sm font-medium text-sm text-center border ${category.borderColor} ${triedClass} transition-all duration-200 hover:shadow-md`}>
             <button
               onClick={onClick}
-              className="w-full p-3 h-24 flex flex-col items-center justify-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-lg"
+              className={`w-full p-3 h-24 flex flex-col items-center justify-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-${baseColor}-500 rounded-lg`}
               type="button"
               aria-label={`Log ${food.name}`}
             >
@@ -65,7 +67,7 @@ const FoodCard: React.FC<{
     
             {/* Added pointer-events-none so clicks pass through to the button underneath */}
             <div className="check-overlay absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg pointer-events-none">
-              <Icon name="check-circle-2" className="w-12 h-12 text-teal-600" />
+              <Icon name="check-circle-2" className={`w-12 h-12 text-${baseColor}-600`} />
             </div>
             
             {!isTried && (
@@ -74,7 +76,7 @@ const FoodCard: React.FC<{
                         e.stopPropagation();
                         onSubstitutesClick();
                     }}
-                    className="substitute-btn absolute bottom-1 right-1 bg-white/80 hover:bg-white text-teal-700 rounded-full p-1.5 text-xs font-medium flex items-center gap-1 shadow-sm border border-teal-200 z-10 transition-colors"
+                    className={`substitute-btn absolute bottom-1 right-1 bg-white/80 hover:bg-white text-${baseColor}-700 rounded-full p-1.5 text-xs font-medium flex items-center gap-1 shadow-sm border border-${baseColor}-200 z-10 transition-colors`}
                     title="Find Substitutes"
                     aria-label={`Find substitutes for ${food.name}`}
                 >
@@ -85,7 +87,7 @@ const FoodCard: React.FC<{
     );
 };
 
-const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, triedFoods, onSaveProfile, onFoodClick, onShowSubstitutes, onShowFlavorPairing }) => {
+const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, triedFoods, onSaveProfile, onFoodClick, onShowSubstitutes, onShowFlavorPairing, baseColor = 'teal' }) => {
     const [pediatricianApproved, setPediatricianApproved] = useState(userProfile?.pediatricianApproved || false);
 
     const handleApproveEarlyStart = () => {
@@ -123,8 +125,8 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
 
         return (
             <>
-                <div className="mt-6 p-4 bg-teal-50 rounded-md">
-                    <p className="text-lg font-medium text-teal-800">
+                <div className={`mt-6 p-4 bg-${baseColor}-50 rounded-md`}>
+                    <p className={`text-lg font-medium text-${baseColor}-800`}>
                         <span className="font-normal">{userProfile.babyName ? `${userProfile.babyName}'s Age:` : "Baby's Age:"}</span> <span className="font-bold">{ageString}</span>
                     </p>
                 </div>
@@ -174,7 +176,8 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
                                                     isTried={false} 
                                                     isAllergic={isFoodAllergic(food.name)}
                                                     onClick={() => onFoodClick(food)} 
-                                                    onSubstitutesClick={() => onShowSubstitutes(food)} 
+                                                    onSubstitutesClick={() => onShowSubstitutes(food)}
+                                                    baseColor={baseColor}
                                                 />
                                             ))}
                                         </div>
@@ -191,7 +194,8 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
                                                     isTried={true} 
                                                     isAllergic={isFoodAllergic(food.name)}
                                                     onClick={() => onFoodClick(food)} 
-                                                    onSubstitutesClick={() => onShowSubstitutes(food)} 
+                                                    onSubstitutesClick={() => onShowSubstitutes(food)}
+                                                    baseColor={baseColor}
                                                 />
                                             ))}
                                         </div>
@@ -206,6 +210,7 @@ const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ userProfile, 
                                 title={`${stage.title} (${triedInStage.length}/${stageFoods.length} tried)`}
                                 icon="star" 
                                 defaultOpen={key === currentStageKey}
+                                baseColor={baseColor}
                             >
                                 {content}
                             </Accordion>

@@ -7,9 +7,10 @@ interface AccordionProps {
   icon: string;
   defaultOpen?: boolean;
   children: React.ReactNode;
+  baseColor?: string;
 }
 
-const Accordion: React.FC<AccordionProps> = ({ title, icon, defaultOpen = false, children }) => {
+const Accordion: React.FC<AccordionProps> = ({ title, icon, defaultOpen = false, children, baseColor = 'teal' }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -19,7 +20,7 @@ const Accordion: React.FC<AccordionProps> = ({ title, icon, defaultOpen = false,
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className="flex items-center gap-3">
-          <Icon name={icon} className="w-5 h-5 text-teal-600" />
+          <Icon name={icon} className={`w-5 h-5 text-${baseColor}-600`} />
           <span className="text-md font-medium text-gray-700">{title}</span>
         </span>
         <Icon name="chevron-down" className={`w-5 h-5 text-gray-400 accordion-arrow transition-transform ${isOpen ? 'rotate-180' : ''}`} />

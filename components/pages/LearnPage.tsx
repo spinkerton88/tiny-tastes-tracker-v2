@@ -6,12 +6,12 @@ import { AppMode } from '../../types';
 import Accordion from '../ui/Accordion';
 import Icon from '../ui/Icon';
 
-const simpleMarkdownToHtml = (text: string) => {
+const simpleMarkdownToHtml = (text: string, baseColor: string = 'teal') => {
     if (!text) return '';
     let html = text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>');
-    html = html.replace(/\[(\d+)\]/g, '<sup><a href="#source-$1" class="text-teal-600 no-underline hover:underline font-bold">[$1]</a></sup>');
+    html = html.replace(/\[(\d+)\]/g, `<sup><a href="#source-$1" class="text-${baseColor}-600 no-underline hover:underline font-bold">[$1]</a></sup>`);
     return html.split('\n').map(p => p.trim()).filter(p => p.length > 0).map(p => `<p>${p}</p>`).join('');
 };
 
@@ -25,9 +25,10 @@ interface ChatMessage {
 
 interface LearnPageProps {
     mode: AppMode;
+    baseColor?: string;
 }
 
-const CollapsibleSources: React.FC<{ sources: any[] }> = ({ sources }) => {
+const CollapsibleSources: React.FC<{ sources: any[], baseColor: string }> = ({ sources, baseColor }) => {
     const [isOpen, setIsOpen] = useState(false);
     const validSources = sources.filter(source => source && source.web && source.web.uri);
 
@@ -37,7 +38,7 @@ const CollapsibleSources: React.FC<{ sources: any[] }> = ({ sources }) => {
         <div className="mt-3 pt-2 border-t border-gray-200/50">
             <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-teal-600 transition-colors mb-1 focus:outline-none"
+                className={`flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-${baseColor}-600 transition-colors mb-1 focus:outline-none`}
             >
                 <Icon name={isOpen ? "chevron-down" : "chevron-right"} className="w-3.5 h-3.5" />
                 <span>{isOpen ? 'Hide Sources' : `Show Research Sources (${validSources.length})`}</span>
@@ -52,12 +53,12 @@ const CollapsibleSources: React.FC<{ sources: any[] }> = ({ sources }) => {
                             href={source.web.uri} 
                             target="_blank" 
                             rel="noopener noreferrer" 
-                            className="inline-flex items-center gap-2 bg-white/80 border border-gray-200 hover:border-teal-400 hover:bg-white rounded-md px-2.5 py-1.5 transition-all text-left no-underline group max-w-full"
+                            className={`inline-flex items-center gap-2 bg-white/80 border border-gray-200 hover:border-${baseColor}-400 hover:bg-white rounded-md px-2.5 py-1.5 transition-all text-left no-underline group max-w-full`}
                         >
-                            <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-teal-100 text-[9px] font-bold text-teal-700">
+                            <span className={`flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-${baseColor}-100 text-[9px] font-bold text-${baseColor}-700`}>
                                 {index + 1}
                             </span>
-                            <span className="text-[11px] text-gray-600 truncate max-w-[180px] group-hover:text-teal-800 font-medium">
+                            <span className={`text-[11px] text-gray-600 truncate max-w-[180px] group-hover:text-${baseColor}-800 font-medium`}>
                                 {source.web.title || 'Source'}
                             </span>
                         </a>
@@ -68,7 +69,7 @@ const CollapsibleSources: React.FC<{ sources: any[] }> = ({ sources }) => {
     );
 };
 
-const LearnPage: React.FC<LearnPageProps> = ({ mode }) => {
+const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
     const [query, setQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -188,7 +189,7 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode }) => {
                                 <div 
                                     className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm ${
                                         msg.role === 'user' 
-                                        ? 'bg-teal-600 text-white rounded-tr-none' 
+                                        ? `bg-${baseColor}-600 text-white rounded-tr-none` 
                                         : 'bg-gray-100 text-gray-800 rounded-tl-none'
                                     }`}
                                 >
@@ -198,12 +199,12 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode }) => {
                                         <>
                                             <div 
                                                 className="prose-static prose-sm max-w-none prose-p:my-1 prose-a:text-blue-600" 
-                                                dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.text) }} 
+                                                dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.text, baseColor) }} 
                                             />
                                             
                                             {/* Collapsible Sources */}
                                             {msg.sources && msg.sources.length > 0 && (
-                                                <CollapsibleSources sources={msg.sources} />
+                                                <CollapsibleSources sources={msg.sources} baseColor={baseColor} />
                                             )}
 
                                             {/* Suggested Questions */}
@@ -267,20 +268,20 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode }) => {
             {/* Secondary Section: Common Questions */}
             <div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <Icon name="book-open" className="w-5 h-5 text-teal-600" />
+                    <Icon name="book-open" className={`w-5 h-5 text-${baseColor}-600`} />
                     Common Questions & Resources ({mode === 'EXPLORER' ? '6-12m' : mode.charAt(0) + mode.slice(1).toLowerCase()})
                 </h3>
                 <div className="space-y-3">
                     {/* Mode Specific Guides */}
                     {content.guides.map((guide, index) => (
-                        <Accordion key={`guide-${index}`} title={guide.title} icon={guide.icon} defaultOpen={false}>
+                        <Accordion key={`guide-${index}`} title={guide.title} icon={guide.icon} defaultOpen={false} baseColor={baseColor}>
                             <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: guide.content }}></div>
                         </Accordion>
                     ))}
                     
                     {/* Mode Specific Research Data */}
                     {content.research.map((item, index) => (
-                        <Accordion key={`research-${index}`} title={item.title} icon={item.icon} defaultOpen={false}>
+                        <Accordion key={`research-${index}`} title={item.title} icon={item.icon} defaultOpen={false} baseColor={baseColor}>
                             <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: item.content }} />
                         </Accordion>
                     ))}

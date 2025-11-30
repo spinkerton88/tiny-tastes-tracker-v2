@@ -13,6 +13,7 @@ interface RecipesPageProps {
     onViewRecipe: (recipe: Recipe) => void;
     onAddToPlan: (date: string, meal: string) => void;
     onShowShoppingList: () => void;
+    baseColor?: string;
 }
 
 const getStartOfWeek = (date: Date) => {
@@ -47,7 +48,7 @@ const StarRatingDisplay: React.FC<{ rating: number }> = ({ rating }) => {
     );
 };
 
-const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe) => void, onShowAddRecipe: () => void }> = ({ recipes, onViewRecipe, onShowAddRecipe }) => {
+const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe) => void, onShowAddRecipe: () => void, baseColor: string }> = ({ recipes, onViewRecipe, onShowAddRecipe, baseColor }) => {
     const [filter, setFilter] = useState<RecipeFilter>('all');
 
     const filteredRecipes = recipes.filter(recipe => {
@@ -68,7 +69,7 @@ const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe
                     <button 
                         key={f}
                         onClick={() => setFilter(f)}
-                        className={`recipe-filter-btn ${filter === f ? 'active' : ''}`}
+                        className={`recipe-filter-btn ${filter === f ? `bg-${baseColor}-600 text-white` : 'bg-gray-100 text-gray-700'}`}
                     >
                         {f.charAt(0).toUpperCase() + f.slice(1)}
                     </button>
@@ -78,12 +79,12 @@ const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe
                 {filteredRecipes.length > 0 ? filteredRecipes.map(recipe => (
                     <button key={recipe.id} onClick={() => onViewRecipe(recipe)} className="w-full text-left bg-white shadow rounded-lg p-4 transition-all hover:shadow-md">
                         <div className="flex justify-between items-start">
-                            <h3 className="text-lg font-semibold text-teal-700 pr-2">{recipe.title}</h3>
+                            <h3 className={`text-lg font-semibold text-${baseColor}-700 pr-2`}>{recipe.title}</h3>
                             {recipe.rating && recipe.rating > 0 && <StarRatingDisplay rating={recipe.rating} />}
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
                             {[...(recipe.mealTypes || []), ...(recipe.tags || [])].map(tag => (
-                                <span key={tag} className={`text-xs ${['breakfast', 'lunch', 'dinner', 'snack'].includes(tag) ? 'bg-blue-100 text-blue-700' : 'bg-teal-100 text-teal-700'} px-2 py-0.5 rounded-full`}>{tag}</span>
+                                <span key={tag} className={`text-xs ${['breakfast', 'lunch', 'dinner', 'snack'].includes(tag) ? 'bg-blue-100 text-blue-700' : `bg-${baseColor}-100 text-${baseColor}-700`} px-2 py-0.5 rounded-full`}>{tag}</span>
                             ))}
                         </div>
                         <p className="text-sm text-gray-600 mt-3 line-clamp-2">{getIngredientsPreview(recipe.ingredients)}</p>
@@ -95,7 +96,7 @@ const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe
                         message={filter === 'all' ? 'Get started by adding your first baby-friendly recipe!' : `No recipes match the "${filter}" filter.`}
                     >
                         {filter === 'all' && (
-                             <button onClick={onShowAddRecipe} className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700">
+                             <button onClick={onShowAddRecipe} className={`inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-${baseColor}-600 hover:bg-${baseColor}-700`}>
                                 <Icon name="plus" className="w-4 h-4" /> Add First Recipe
                             </button>
                         )}
@@ -106,7 +107,7 @@ const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe
     );
 };
 
-const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddToPlan: (date: string, meal: string) => void, onShowShoppingList: () => void }> = ({ mealPlan, recipes, onAddToPlan, onShowShoppingList }) => {
+const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddToPlan: (date: string, meal: string) => void, onShowShoppingList: () => void, baseColor: string }> = ({ mealPlan, recipes, onAddToPlan, onShowShoppingList, baseColor }) => {
     const [weekStartDate, setWeekStartDate] = useState(getStartOfWeek(new Date()));
 
     const changeWeek = (amount: number) => {
@@ -128,7 +129,7 @@ const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddTo
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
                     <h3 className="text-lg font-semibold text-gray-800">Weekly Plan</h3>
                     <div className="flex-shrink-0 flex gap-2">
-                        <button onClick={onShowShoppingList} className="inline-flex items-center gap-2 px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
+                        <button onClick={onShowShoppingList} className={`inline-flex items-center gap-2 px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-${baseColor}-600 hover:bg-${baseColor}-700`}>
                             <Icon name="shopping-cart" className="w-4 h-4" /> Shopping List
                         </button>
                     </div>
@@ -136,7 +137,7 @@ const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddTo
                 <div className="flex items-center justify-between">
                     <button onClick={() => changeWeek(-7)} className="p-2 rounded-md hover:bg-gray-100"><Icon name="chevron-left" className="w-5 h-5" /></button>
                     <div className="flex-1 text-center">
-                        <button onClick={() => setWeekStartDate(getStartOfWeek(new Date()))} className="text-sm font-medium text-teal-600 hover:underline">Today</button>
+                        <button onClick={() => setWeekStartDate(getStartOfWeek(new Date()))} className={`text-sm font-medium text-${baseColor}-600 hover:underline`}>Today</button>
                         <p className="text-sm font-medium text-gray-700">{getWeekDisplay(weekStartDate)}</p>
                     </div>
                     <button onClick={() => changeWeek(7)} className="p-2 rounded-md hover:bg-gray-100"><Icon name="chevron-right" className="w-5 h-5" /></button>
@@ -151,7 +152,7 @@ const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddTo
                     return (
                         <div key={dateStr} className="bg-white rounded-lg shadow p-3">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="text-lg font-bold text-teal-600">{dayDate.getDate()}</span>
+                                <span className={`text-lg font-bold text-${baseColor}-600`}>{dayDate.getDate()}</span>
                                 <span className="text-sm font-medium text-gray-700">{dayDate.toLocaleDateString(undefined, { weekday: 'short' })}</span>
                             </div>
                             <div className="space-y-2">
@@ -159,14 +160,14 @@ const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddTo
                                     const plannedMeal = dayPlan[meal];
                                     const recipeExists = plannedMeal && recipes.some(r => r.id === plannedMeal.id);
                                     return (
-                                        <div key={meal} className="meal-slot rounded-lg p-2">
+                                        <div key={meal} className={`meal-slot rounded-lg p-2 transition-all hover:bg-${baseColor}-50 hover:border-${baseColor}-600`}>
                                             <span className="text-xs font-medium text-gray-500">{meal.charAt(0).toUpperCase() + meal.slice(1)}</span>
                                             {plannedMeal ? (
-                                                <div className={`planned-meal-item bg-teal-50 border border-teal-200 rounded-md p-2 mt-1 ${!recipeExists ? 'is-deleted' : ''}`} >
-                                                    <p className="text-sm font-medium text-teal-800">{recipeExists ? plannedMeal.title : 'Deleted Recipe'}</p>
+                                                <div className={`planned-meal-item bg-${baseColor}-50 border border-${baseColor}-200 rounded-md p-2 mt-1 ${!recipeExists ? 'is-deleted' : ''}`} >
+                                                    <p className={`text-sm font-medium text-${baseColor}-800`}>{recipeExists ? plannedMeal.title : 'Deleted Recipe'}</p>
                                                 </div>
                                             ) : (
-                                                <button onClick={() => onAddToPlan(dateStr, meal)} className="add-meal-btn mt-1">
+                                                <button onClick={() => onAddToPlan(dateStr, meal)} className={`add-meal-btn mt-1 hover:text-${baseColor}-600`}>
                                                     <Icon name="plus" className="w-4 h-4" />
                                                 </button>
                                             )}
@@ -184,6 +185,7 @@ const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddTo
 
 const RecipesPage: React.FC<RecipesPageProps> = (props) => {
     const [subPage, setSubPage] = useState<'my-recipes' | 'meal-planner'>('my-recipes');
+    const baseColor = props.baseColor || 'teal';
 
     return (
         <>
@@ -196,7 +198,7 @@ const RecipesPage: React.FC<RecipesPageProps> = (props) => {
                     <button onClick={props.onShowImportRecipe} className="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
                         <Icon name="camera" className="w-4 h-4" /> Import
                     </button>
-                    <button onClick={props.onShowAddRecipe} className="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700">
+                    <button onClick={props.onShowAddRecipe} className={`inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-${baseColor}-600 hover:bg-${baseColor}-700`}>
                         <Icon name="plus" className="w-4 h-4" /> Add New
                     </button>
                 </div>
@@ -204,17 +206,23 @@ const RecipesPage: React.FC<RecipesPageProps> = (props) => {
 
             <div className="border-b border-gray-200 mb-4">
                 <nav className="flex -mb-px">
-                    <button onClick={() => setSubPage('my-recipes')} className={`recipe-sub-nav-btn ${subPage === 'my-recipes' ? 'active' : ''}`}>
+                    <button 
+                        onClick={() => setSubPage('my-recipes')} 
+                        className={`recipe-sub-nav-btn ${subPage === 'my-recipes' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    >
                         <Icon name="notebook-pen" className="w-4 h-4 inline-block -mt-1 mr-1" /> My Recipes
                     </button>
-                    <button onClick={() => setSubPage('meal-planner')} className={`recipe-sub-nav-btn ${subPage === 'meal-planner' ? 'active' : ''}`}>
+                    <button 
+                        onClick={() => setSubPage('meal-planner')} 
+                        className={`recipe-sub-nav-btn ${subPage === 'meal-planner' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    >
                         <Icon name="calendar-days" className="w-4 h-4 inline-block -mt-1 mr-1" /> Meal Planner
                     </button>
                 </nav>
             </div>
             
-            {subPage === 'my-recipes' && <MyRecipesView recipes={props.recipes} onViewRecipe={props.onViewRecipe} onShowAddRecipe={props.onShowAddRecipe} />}
-            {subPage === 'meal-planner' && <MealPlannerView mealPlan={props.mealPlan} recipes={props.recipes} onAddToPlan={props.onAddToPlan} onShowShoppingList={props.onShowShoppingList} />}
+            {subPage === 'my-recipes' && <MyRecipesView recipes={props.recipes} onViewRecipe={props.onViewRecipe} onShowAddRecipe={props.onShowAddRecipe} baseColor={baseColor} />}
+            {subPage === 'meal-planner' && <MealPlannerView mealPlan={props.mealPlan} recipes={props.recipes} onAddToPlan={props.onAddToPlan} onShowShoppingList={props.onShowShoppingList} baseColor={baseColor} />}
         </>
     );
 };

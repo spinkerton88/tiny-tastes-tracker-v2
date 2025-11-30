@@ -7,6 +7,7 @@ import { allFoods, FOOD_COLORS, FOOD_NUTRIENT_MAPPING } from '../../constants';
 
 interface BalanceDashboardProps {
     triedFoods: TriedFoodLog[];
+    baseColor?: string;
 }
 
 const COLORS = {
@@ -18,7 +19,7 @@ const COLORS = {
 
 const CRITICAL_NUTRIENTS = ['Iron', 'Calcium', 'Vitamin C', 'Omega-3', 'Protein'];
 
-export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods }) => {
+export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods, baseColor = 'teal' }) => {
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<any>(null);
 
@@ -169,12 +170,12 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods }
       </div>
 
       {/* 2. GAMIFICATION: Eat the Rainbow */}
-      <div className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl shadow-sm border border-indigo-100 p-6">
+      <div className={`bg-gradient-to-br from-${baseColor}-50 to-white rounded-2xl shadow-sm border border-${baseColor}-100 p-6`}>
         <div className="flex items-center gap-2 mb-4">
-           <Icon name="palette" className="w-5 h-5 text-indigo-500" />
-           <h2 className="text-lg font-bold text-indigo-900">Eat the Rainbow</h2>
+           <Icon name="palette" className={`w-5 h-5 text-${baseColor}-500`} />
+           <h2 className={`text-lg font-bold text-${baseColor}-900`}>Eat the Rainbow</h2>
         </div>
-        <p className="text-xs text-indigo-600 mb-6">Hit 5 colors this week to unlock a badge!</p>
+        <p className={`text-xs text-${baseColor}-600 mb-6`}>Hit 5 colors this week to unlock a badge!</p>
         
         <div className="flex justify-between px-2">
           {[
@@ -198,18 +199,18 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods }
       </div>
 
       {/* 3. AI INSIGHT: The Gap Filler */}
-      <div className="bg-teal-50 rounded-2xl border border-teal-100 p-5">
+      <div className={`bg-${baseColor}-50 rounded-2xl border border-${baseColor}-100 p-5`}>
          <div className="flex items-start gap-4">
-            <div className="bg-teal-100 p-2 rounded-full">
-                <Icon name="zap" className="w-6 h-6 text-teal-600" />
+            <div className={`bg-${baseColor}-100 p-2 rounded-full`}>
+                <Icon name="zap" className={`w-6 h-6 text-${baseColor}-600`} />
             </div>
             <div className="flex-1">
-                <h3 className="font-bold text-teal-900 text-sm">
+                <h3 className={`font-bold text-${baseColor}-900 text-sm`}>
                     {weeklyData.missingNutrient !== 'None' 
                         ? `Nutrient Gap: ${weeklyData.missingNutrient}` 
                         : "Looking Good!"}
                 </h3>
-                <p className="text-xs text-teal-700 mt-1 mb-3">
+                <p className={`text-xs text-${baseColor}-700 mt-1 mb-3`}>
                     {weeklyData.missingNutrient !== 'None' 
                         ? `We haven't seen much ${weeklyData.missingNutrient} this week. Need quick ideas?`
                         : "Your weekly log covers the main nutrient groups well! Ask Sage for more fun snack ideas anytime."}
@@ -219,7 +220,7 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods }
                     <button 
                         onClick={handleAskSage}
                         disabled={loading}
-                        className="bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+                        className={`bg-${baseColor}-600 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-${baseColor}-700 disabled:opacity-50 transition-colors flex items-center gap-2`}
                     >
                         {loading ? (
                             <>
@@ -235,12 +236,12 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods }
          </div>
          
          {suggestions && (
-             <div className="mt-5 animate-fadeIn space-y-3 pt-4 border-t border-teal-100">
+             <div className={`mt-5 animate-fadeIn space-y-3 pt-4 border-t border-${baseColor}-100`}>
                  {suggestions.suggestions.map((item: any, idx: number) => (
-                     <div key={idx} className="bg-white p-3 rounded-lg border border-teal-100 shadow-sm">
+                     <div key={idx} className={`bg-white p-3 rounded-lg border border-${baseColor}-100 shadow-sm`}>
                          <div className="flex justify-between items-start">
-                             <h4 className="font-bold text-teal-800 text-sm">{item.food}</h4>
-                             <span className="text-[10px] font-medium bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full">{item.prep_time}</span>
+                             <h4 className={`font-bold text-${baseColor}-800 text-sm`}>{item.food}</h4>
+                             <span className={`text-[10px] font-medium bg-${baseColor}-50 text-${baseColor}-600 px-2 py-0.5 rounded-full`}>{item.prep_time}</span>
                          </div>
                          <p className="text-xs text-gray-600 mt-1">{item.why}</p>
                      </div>

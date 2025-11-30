@@ -14,6 +14,7 @@ interface ProfilePageProps {
   onShowDoctorReport: () => void;
   onUpdateMilestone: (milestone: Milestone) => void;
   onShowCertificate: () => void;
+  baseColor?: string;
 }
 
 const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
@@ -46,7 +47,7 @@ const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
     </div>
 );
 
-const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (profile: UserProfile) => void, onResetData: () => void }> = ({ userProfile, onSaveProfile, onResetData }) => {
+const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (profile: UserProfile) => void, onResetData: () => void, baseColor: string }> = ({ userProfile, onSaveProfile, onResetData, baseColor }) => {
     const [name, setName] = useState(userProfile?.babyName || '');
     const [birthDate, setBirthDate] = useState(userProfile?.birthDate || '');
     const [allergies, setAllergies] = useState<string[]>(
@@ -196,11 +197,11 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="baby-name-input" className="block text-sm font-medium text-gray-700">Baby's Name:</label>
-                        <input type="text" id="baby-name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Alex" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm" />
+                        <input type="text" id="baby-name-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Alex" className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`} />
                     </div>
                     <div>
                         <label htmlFor="birth-date-input" className="block text-sm font-medium text-gray-700">Baby's Birth Date:</label>
-                        <input type="date" id="birth-date-input" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm" />
+                        <input type="date" id="birth-date-input" value={birthDate} onChange={e => setBirthDate(e.target.value)} className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`} />
                     </div>
                 </div>
 
@@ -211,7 +212,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                         id="app-mode-select" 
                         value={appMode} 
                         onChange={(e) => setAppMode(e.target.value as AppMode | 'AUTO')}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+                        className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
                     >
                         <option value="AUTO">Auto (Based on Age)</option>
                         <option value="NEWBORN">Newborn Mode (0-6m)</option>
@@ -246,12 +247,12 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                                 >
                                     <div className={`
                                         w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
-                                        ${isPassed ? 'bg-teal-600 border-teal-600 text-white' : 'bg-white border-gray-300 text-gray-400'}
-                                        ${isSelected ? 'ring-4 ring-teal-100 scale-110' : ''}
+                                        ${isPassed ? `bg-${baseColor}-600 border-${baseColor}-600 text-white` : 'bg-white border-gray-300 text-gray-400'}
+                                        ${isSelected ? `ring-4 ring-${baseColor}-100 scale-110` : ''}
                                     `}>
                                         <Icon name={stage.icon} className="w-5 h-5" />
                                     </div>
-                                    <span className={`mt-2 text-xs font-semibold ${isSelected ? 'text-teal-700' : 'text-gray-500'}`}>
+                                    <span className={`mt-2 text-xs font-semibold ${isSelected ? `text-${baseColor}-700` : 'text-gray-500'}`}>
                                         {stage.title}
                                     </span>
                                 </button>
@@ -290,7 +291,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                     </div>
                 </div>
 
-                <button onClick={handleSave} className="mt-6 w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                <button onClick={handleSave} className={`mt-6 w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-${baseColor}-600 hover:bg-${baseColor}-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${baseColor}-500`}>
                     Save Profile
                 </button>
             </div>
@@ -347,7 +348,7 @@ const NoLogIllustration = () => (
 );
 
 
-const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowDoctorReport: () => void; }> = ({ triedFoods, babyName, onShowDoctorReport }) => {
+const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowDoctorReport: () => void; baseColor: string }> = ({ triedFoods, babyName, onShowDoctorReport, baseColor }) => {
     const getReactionDisplay = (reactionValue: number) => {
         if (reactionValue <= 2) return { emoji: '😩', text: 'Hated it' };
         if (reactionValue <= 4) return { emoji: '😒', text: 'Meh' };
@@ -369,7 +370,7 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowD
                 <div className="flex-shrink-0">
                     <button 
                         onClick={onShowDoctorReport} 
-                        className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 transition-all"
+                        className={`inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-${baseColor}-600 hover:bg-${baseColor}-700 transition-all`}
                     >
                         <Icon name="file-text" className="w-4 h-4" /> Share Report
                     </button>
@@ -388,12 +389,12 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowD
                         const { emoji, text } = getReactionDisplay(log.reaction);
                         const tryCount = log.tryCount || 1;
                         return (
-                            <div key={log.id} className="bg-white shadow rounded-lg p-4 border-l-4 border-teal-500">
+                            <div key={log.id} className={`bg-white shadow rounded-lg p-4 border-l-4 border-${baseColor}-500`}>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <h3 className="text-lg font-semibold text-gray-800">{foodDetails?.emoji || '🍽️'} {log.id}</h3>
                                         {tryCount > 1 && (
-                                            <span className="text-xs font-medium bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">
+                                            <span className={`text-xs font-medium bg-${baseColor}-100 text-${baseColor}-800 px-2 py-0.5 rounded-full`}>
                                                 Tried {tryCount} times
                                             </span>
                                         )}
@@ -432,19 +433,19 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowD
     );
 };
 
-const MilestonesView: React.FC<{ milestones: Milestone[]; onUpdate: (m: Milestone) => void }> = ({ milestones, onUpdate }) => {
+const MilestonesView: React.FC<{ milestones: Milestone[]; onUpdate: (m: Milestone) => void, baseColor: string }> = ({ milestones, onUpdate, baseColor }) => {
     return (
         <div className="space-y-4">
            {milestones.map(m => (
-              <div key={m.id} className={`p-4 rounded-lg border transition-all ${m.isAchieved ? 'bg-teal-50 border-teal-200 shadow-sm' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <div key={m.id} className={`p-4 rounded-lg border transition-all ${m.isAchieved ? `bg-${baseColor}-50 border-${baseColor}-200 shadow-sm` : 'bg-white border-gray-200 shadow-sm'}`}>
                  <div className="flex items-start gap-4">
-                    <div className={`flex-shrink-0 p-3 rounded-full flex items-center justify-center h-12 w-12 ${m.isAchieved ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-400'}`}>
+                    <div className={`flex-shrink-0 p-3 rounded-full flex items-center justify-center h-12 w-12 ${m.isAchieved ? `bg-${baseColor}-100 text-${baseColor}-600` : 'bg-gray-100 text-gray-400'}`}>
                        <Icon name={m.icon} className="w-6 h-6" />
                     </div>
                     <div className="flex-grow">
                        <div className="flex justify-between items-start">
                            <div>
-                                <h4 className={`font-semibold text-lg ${m.isAchieved ? 'text-teal-900' : 'text-gray-800'}`}>{m.title}</h4>
+                                <h4 className={`font-semibold text-lg ${m.isAchieved ? `text-${baseColor}-900` : 'text-gray-800'}`}>{m.title}</h4>
                                 <p className="text-sm text-gray-600 mt-1 leading-snug">{m.description}</p>
                            </div>
                            <input 
@@ -458,19 +459,19 @@ const MilestonesView: React.FC<{ milestones: Milestone[]; onUpdate: (m: Mileston
                                        dateAchieved: isChecked ? new Date().toISOString().split('T')[0] : undefined
                                    })
                                }}
-                               className="h-6 w-6 text-teal-600 rounded focus:ring-teal-500 border-gray-300 cursor-pointer ml-3 mt-1"
+                               className={`h-6 w-6 text-${baseColor}-600 rounded focus:ring-${baseColor}-500 border-gray-300 cursor-pointer ml-3 mt-1`}
                            />
                        </div>
                        
                        {m.isAchieved && (
-                           <div className="mt-4 pt-4 border-t border-teal-100 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+                           <div className={`mt-4 pt-4 border-t border-${baseColor}-100 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn`}>
                                 <div>
                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Date Achieved</label>
                                    <input 
                                        type="date" 
                                        value={m.dateAchieved || ''} 
                                        onChange={(e) => onUpdate({...m, dateAchieved: e.target.value})}
-                                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm bg-white"
+                                       className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm bg-white`}
                                    />
                                 </div>
                                 <div>
@@ -480,7 +481,7 @@ const MilestonesView: React.FC<{ milestones: Milestone[]; onUpdate: (m: Mileston
                                        value={m.notes || ''} 
                                        onChange={(e) => onUpdate({...m, notes: e.target.value})}
                                        placeholder="e.g. Grandma was watching!"
-                                       className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm bg-white"
+                                       className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm bg-white`}
                                    />
                                 </div>
                            </div>
@@ -493,7 +494,7 @@ const MilestonesView: React.FC<{ milestones: Milestone[]; onUpdate: (m: Mileston
     )
 }
 
-const BadgesView: React.FC<{ userProfile: UserProfile | null; onShowCertificate: () => void }> = ({ userProfile, onShowCertificate }) => {
+const BadgesView: React.FC<{ userProfile: UserProfile | null; onShowCertificate: () => void, baseColor: string }> = ({ userProfile, onShowCertificate, baseColor }) => {
     const badges = userProfile?.badges || BADGES_LIST;
     const unlockedCount = badges.filter(b => b.isUnlocked).length;
     const progress = (unlockedCount / badges.length) * 100;
@@ -506,10 +507,10 @@ const BadgesView: React.FC<{ userProfile: UserProfile | null; onShowCertificate:
             <div className="bg-white p-6 rounded-lg shadow">
                  <div className="flex justify-between items-center mb-2">
                     <h3 className="text-xl font-semibold text-gray-800">Trophy Case</h3>
-                    <span className="text-sm font-bold text-teal-600">{unlockedCount} / {badges.length} Unlocked</span>
+                    <span className={`text-sm font-bold text-${baseColor}-600`}>{unlockedCount} / {badges.length} Unlocked</span>
                  </div>
                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6">
-                     <div className="bg-teal-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                     <div className={`bg-${baseColor}-600 h-2.5 rounded-full transition-all duration-500`} style={{ width: `${progress}%` }}></div>
                  </div>
 
                  <div className="grid grid-cols-2 gap-4">
@@ -571,12 +572,12 @@ const GalleryView: React.FC<{ triedFoods: TriedFoodLog[] }> = ({ triedFoods }) =
     );
 };
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, milestones, onSaveProfile, onResetData, onShowDoctorReport, onUpdateMilestone, onShowCertificate }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, milestones, onSaveProfile, onResetData, onShowDoctorReport, onUpdateMilestone, onShowCertificate, baseColor = 'teal' }) => {
     const [activeTab, setActiveTab] = useState<'profile' | 'log' | 'milestones' | 'badges' | 'gallery'>('profile');
     
     const navButtonClasses = (tabName: string) => {
         const base = "flex-1 py-3 px-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap";
-        const active = "border-teal-600 text-teal-600";
+        const active = `border-${baseColor}-600 text-${baseColor}-600`;
         const inactive = "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300";
         return `${base} ${activeTab === tabName ? active : inactive}`;
     };
@@ -604,10 +605,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userProfile, triedFoods, mile
                 </nav>
             </div>
             
-            {activeTab === 'profile' && <ProfileView userProfile={userProfile} onSaveProfile={onSaveProfile} onResetData={onResetData} />}
-            {activeTab === 'log' && <LogView triedFoods={triedFoods} babyName={userProfile?.babyName} onShowDoctorReport={onShowDoctorReport} />}
-            {activeTab === 'milestones' && <MilestonesView milestones={milestones} onUpdate={onUpdateMilestone} />}
-            {activeTab === 'badges' && <BadgesView userProfile={userProfile} onShowCertificate={onShowCertificate} />}
+            {activeTab === 'profile' && <ProfileView userProfile={userProfile} onSaveProfile={onSaveProfile} onResetData={onResetData} baseColor={baseColor} />}
+            {activeTab === 'log' && <LogView triedFoods={triedFoods} babyName={userProfile?.babyName} onShowDoctorReport={onShowDoctorReport} baseColor={baseColor} />}
+            {activeTab === 'milestones' && <MilestonesView milestones={milestones} onUpdate={onUpdateMilestone} baseColor={baseColor} />}
+            {activeTab === 'badges' && <BadgesView userProfile={userProfile} onShowCertificate={onShowCertificate} baseColor={baseColor} />}
             {activeTab === 'gallery' && <GalleryView triedFoods={triedFoods} />}
         </>
     );

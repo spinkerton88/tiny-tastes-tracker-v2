@@ -13,6 +13,7 @@ interface TrackerPageProps {
   userProfile?: UserProfile | null;
   onShowGuide: (food: Food) => void;
   onAddCustomFood?: (initialName: string) => void;
+  baseColor?: string;
 }
 
 const FoodCard: React.FC<{
@@ -24,7 +25,8 @@ const FoodCard: React.FC<{
   isCustom?: boolean;
   onClick: () => void;
   onInfoClick: (e: React.MouseEvent) => void;
-}> = ({ name, emoji, category, isTried, isAllergic, isCustom, onClick, onInfoClick }) => {
+  baseColor: string;
+}> = ({ name, emoji, category, isTried, isAllergic, isCustom, onClick, onInfoClick, baseColor }) => {
   const triedClass = isTried ? 'is-tried' : '';
   const nutrients = FOOD_NUTRIENT_MAPPING[name] || [];
   
@@ -75,7 +77,7 @@ const FoodCard: React.FC<{
             e.stopPropagation();
             onInfoClick(e);
         }}
-        className="absolute top-1 right-1 p-1.5 rounded-full bg-white/60 hover:bg-white text-teal-700 shadow-sm transition-colors opacity-80 hover:opacity-100 z-10"
+        className={`absolute top-1 right-1 p-1.5 rounded-full bg-white/60 hover:bg-white text-${baseColor}-700 shadow-sm transition-colors opacity-80 hover:opacity-100 z-10`}
         title="How to Serve Guide"
       >
          <Icon name="chef-hat" className="w-3.5 h-3.5" />
@@ -83,16 +85,16 @@ const FoodCard: React.FC<{
 
       {/* Check Overlay for Tried Foods */}
       <div className="check-overlay absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg pointer-events-none z-0">
-        <Icon name="check-circle-2" className="w-12 h-12 text-teal-600" />
+        <Icon name="check-circle-2" className={`w-12 h-12 text-${baseColor}-600`} />
       </div>
     </div>
   );
 };
 
-const FilterButton: React.FC<{ filter: Filter, currentFilter: Filter, onClick: (filter: Filter) => void, children: React.ReactNode }> = ({ filter, currentFilter, onClick, children }) => {
+const FilterButton: React.FC<{ filter: Filter, currentFilter: Filter, onClick: (filter: Filter) => void, children: React.ReactNode, baseColor: string }> = ({ filter, currentFilter, onClick, children, baseColor }) => {
     const isActive = filter === currentFilter;
     const baseClasses = "filter-btn flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors duration-150";
-    const activeClasses = "bg-teal-600 text-white";
+    const activeClasses = `bg-${baseColor}-600 text-white`;
     const inactiveClasses = "bg-gray-200 text-gray-700 hover:bg-gray-300";
 
     return (
@@ -132,7 +134,7 @@ const NoResultsIllustration = () => (
     </svg>
 );
 
-const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [], onFoodClick, userProfile, onShowGuide, onAddCustomFood }) => {
+const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [], onFoodClick, userProfile, onShowGuide, onAddCustomFood, baseColor = 'teal' }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
@@ -258,7 +260,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                 placeholder="Search foods..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 sm:text-sm transition duration-150 ease-in-out shadow-sm"
+                className={`block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-${baseColor}-500 focus:border-${baseColor}-500 sm:text-sm transition duration-150 ease-in-out shadow-sm`}
             />
             {searchQuery && (
                 <button 
@@ -284,7 +286,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
           <button 
             onClick={handleCameraClick}
             disabled={isIdentifying}
-            className="flex-shrink-0 bg-teal-600 text-white p-2 rounded-md shadow-sm hover:bg-teal-700 disabled:opacity-50 transition-colors"
+            className={`flex-shrink-0 bg-${baseColor}-600 text-white p-2 rounded-md shadow-sm hover:bg-${baseColor}-700 disabled:opacity-50 transition-colors`}
             title="Identify food from photo"
           >
               {isIdentifying ? (
@@ -303,8 +305,8 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                 className="flex items-center justify-between w-full text-left mb-3 group focus:outline-none bg-gray-50 p-2 rounded-md hover:bg-gray-100 transition-colors border border-gray-100"
              >
                 <div className="flex items-center gap-2">
-                    <Icon name="clock" className="w-4 h-4 text-teal-600" />
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider group-hover:text-teal-700">Recently Tried</h3>
+                    <Icon name="clock" className={`w-4 h-4 text-${baseColor}-600`} />
+                    <h3 className={`text-sm font-semibold text-gray-700 uppercase tracking-wider group-hover:text-${baseColor}-700`}>Recently Tried</h3>
                 </div>
                 <Icon name="chevron-down" className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${isRecentOpen ? 'rotate-180' : ''}`} />
              </button>
@@ -337,6 +339,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                                 isCustom={(foundFood as CustomFood).isCustom}
                                 onClick={() => onFoodClick(foundFood!)}
                                 onInfoClick={(e) => { e.stopPropagation(); onShowGuide(foundFood!); }}
+                                baseColor={baseColor}
                             />
                         );
                     })}
@@ -346,18 +349,18 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
       )}
 
       <div className="flex space-x-2 mb-4">
-        <FilterButton filter="all" currentFilter={filter} onClick={setFilter}>All</FilterButton>
-        <FilterButton filter="to_try" currentFilter={filter} onClick={setFilter}>To Try</FilterButton>
-        <FilterButton filter="tried" currentFilter={filter} onClick={setFilter}>Tried</FilterButton>
+        <FilterButton filter="all" currentFilter={filter} onClick={setFilter} baseColor={baseColor}>All</FilterButton>
+        <FilterButton filter="to_try" currentFilter={filter} onClick={setFilter} baseColor={baseColor}>To Try</FilterButton>
+        <FilterButton filter="tried" currentFilter={filter} onClick={setFilter} baseColor={baseColor}>Tried</FilterButton>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow mb-6">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-lg font-semibold text-teal-700">Food Journey Progress</span>
-          <span className="text-lg font-bold text-teal-700">{triedCount} / {totalFoodCount + customFoods.length}</span>
+          <span className={`text-lg font-semibold text-${baseColor}-700`}>Food Journey Progress</span>
+          <span className={`text-lg font-bold text-${baseColor}-700`}>{triedCount} / {totalFoodCount + customFoods.length}</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-          <div className="bg-teal-600 h-4 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+          <div className={`bg-${baseColor}-600 h-4 rounded-full transition-all duration-500`} style={{ width: `${progressPercent}%` }}></div>
         </div>
         
         <div className="mt-4 pt-3 border-t border-gray-100">
@@ -365,7 +368,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                 onClick={() => setIsBreakdownOpen(!isBreakdownOpen)}
                 className="flex items-center justify-between w-full text-left group focus:outline-none"
             >
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider group-hover:text-teal-600 transition-colors">Breakdown by Category</h4>
+                <h4 className={`text-xs font-semibold text-gray-500 uppercase tracking-wider group-hover:text-${baseColor}-600 transition-colors`}>Breakdown by Category</h4>
                 <Icon name="chevron-down" className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${isBreakdownOpen ? 'rotate-180' : ''}`} />
             </button>
             
@@ -394,6 +397,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                   isCustom={(food as CustomFood).isCustom}
                   onClick={() => onFoodClick(food)}
                   onInfoClick={(e) => { e.stopPropagation(); onShowGuide(food); }}
+                  baseColor={baseColor}
                 />
               ))}
             </div>

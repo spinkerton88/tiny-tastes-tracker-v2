@@ -101,6 +101,9 @@ const App: React.FC = () => {
     const [modalState, setModalState] = useState<ModalState>({ type: null });
 
     const { mode, config, isExplorer } = useAppMode(userProfile);
+    
+    // Extract base color (e.g., 'teal', 'indigo') from the config class string (e.g., 'bg-teal-600')
+    const baseColor = config.themeColor.split('-')[1] || 'teal';
 
     // Ensure currentPage is valid for the current mode on mode switch
     useEffect(() => {
@@ -407,13 +410,13 @@ const App: React.FC = () => {
         }
 
         if (mode === 'NEWBORN' && currentPage === 'learn') {
-            return <LearnPage mode={mode} />;
+            return <LearnPage mode={mode} baseColor={baseColor} />;
         }
 
         if (mode === 'TODDLER') {
             switch (currentPage) {
                 case 'picky_eater':
-                    return <ToddlerPickyEater />;
+                    return <ToddlerPickyEater baseColor={baseColor} />;
                 case 'recipes':
                     // RecipesPage handles meal planning and recipe list
                     return <RecipesPage 
@@ -425,6 +428,7 @@ const App: React.FC = () => {
                         onViewRecipe={(recipe) => setModalState({ type: 'VIEW_RECIPE', recipe })}
                         onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
                         onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
+                        baseColor={baseColor}
                     />;
                 case 'profile':
                     return <ProfilePage 
@@ -436,13 +440,14 @@ const App: React.FC = () => {
                         onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
                         onUpdateMilestone={updateMilestone}
                         onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
+                        baseColor={baseColor}
                     />;
                 case 'balance':
-                     return <BalanceDashboard triedFoods={triedFoods} />;
+                     return <BalanceDashboard triedFoods={triedFoods} baseColor={baseColor} />;
                 case 'learn':
-                     return <LearnPage mode={mode} />;
+                     return <LearnPage mode={mode} baseColor={baseColor} />;
                 default:
-                     return <ToddlerPickyEater />;
+                     return <ToddlerPickyEater baseColor={baseColor} />;
             }
         }
 
@@ -456,6 +461,7 @@ const App: React.FC = () => {
                     userProfile={userProfile}
                     onShowGuide={(food: Food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: false })}
                     onAddCustomFood={(name) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName: name })}
+                    baseColor={baseColor}
                 />;
             case 'recommendations':
                 return <RecommendationsPage
@@ -465,6 +471,7 @@ const App: React.FC = () => {
                     onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })}
                     onShowSubstitutes={(food: Food) => setModalState({ type: 'SUBSTITUTES', food })}
                     onShowFlavorPairing={() => setModalState({ type: 'FLAVOR_PAIRING' })}
+                    baseColor={baseColor}
                 />;
             case 'recipes':
                 return <RecipesPage 
@@ -476,9 +483,10 @@ const App: React.FC = () => {
                     onViewRecipe={(recipe) => setModalState({ type: 'VIEW_RECIPE', recipe })}
                     onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
                     onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
+                    baseColor={baseColor}
                 />;
             case 'learn':
-                return <LearnPage mode={mode} />;
+                return <LearnPage mode={mode} baseColor={baseColor} />;
             case 'profile':
                 return <ProfilePage 
                     userProfile={userProfile} 
@@ -489,6 +497,7 @@ const App: React.FC = () => {
                     onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
                     onUpdateMilestone={updateMilestone}
                     onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
+                    baseColor={baseColor}
                 />;
             default:
                 return <TrackerPage 
@@ -496,6 +505,7 @@ const App: React.FC = () => {
                     onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} 
                     userProfile={userProfile} 
                     onShowGuide={(food: Food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: false })}
+                    baseColor={baseColor}
                 />;
         }
     };
@@ -513,6 +523,7 @@ const App: React.FC = () => {
                     onSave={saveTriedFood}
                     onIncrementTry={incrementTryCount}
                     onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: true })}
+                    baseColor={baseColor}
                 />;
             }
             case 'HOW_TO_SERVE': {
