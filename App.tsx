@@ -1,16 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
-import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone, Badge, CustomFood, SavedStrategy } from './types';
-import { totalFoodCount, DEFAULT_MILESTONES, FOOD_ALLERGY_MAPPING, BADGES_LIST, allFoods, GREEN_VEGETABLES } from './constants';
-import { useAppMode } from './hooks/useAppMode';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
-import RecommendationsPage from './components/pages/IdeasPage';
+import IdeasPage from './components/pages/IdeasPage';
 import RecipesPage from './components/pages/RecipesPage';
 import LearnPage from './components/pages/LearnPage';
 import ProfilePage from './components/pages/LogPage';
 import ToddlerPickyEater from './components/pages/ToddlerPickyEater';
 import BalanceDashboard from './components/pages/BalanceDashboard';
+
 import FoodLogModal from './components/modals/FoodLogModal';
 import HowToServeModal from './components/modals/HowToServeModal';
 import RecipeModal from './components/modals/RecipeModal';
@@ -20,7 +17,6 @@ import AiSuggestModal from './components/modals/AiSuggestModal';
 import ShoppingListModal from './components/modals/ShoppingListModal';
 import SelectRecipeModal from './components/modals/SelectRecipeModal';
 import SubstitutesModal from './components/modals/SubstitutesModal';
-import TutorialModal from './components/modals/TutorialModal';
 import DoctorReportModal from './components/modals/DoctorReportModal';
 import FlavorPairingModal from './components/modals/FlavorPairingModal';
 import AllergenAlertModal from './components/modals/AllergenAlertModal';
@@ -28,703 +24,438 @@ import BadgeUnlockedModal from './components/modals/BadgeUnlockedModal';
 import CertificateModal from './components/modals/CertificateModal';
 import CustomFoodModal from './components/modals/CustomFoodModal';
 import LogMealModal from './components/modals/LogMealModal';
-import Icon from './components/ui/Icon';
+import TutorialModal from './components/modals/TutorialModal';
 
-// Helper function to calculate badges - defined outside component for reuse
-const calculateBadges = (currentTriedFoods: TriedFoodLog[], currentProfile: UserProfile): { updatedProfile: UserProfile, newBadge: Badge | null, badgesChanged: boolean } => {
-    let updatedBadges = currentProfile.badges ? [...currentProfile.badges] : [...BADGES_LIST];
-    let newBadge: Badge | null = null;
-    let badgesChanged = false;
-    
-    const triedSet = new Set(currentTriedFoods.map(f => f.id));
-    const triedCount = triedSet.size;
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    const tryUnlock = (id: string) => {
-        const badgeIndex = updatedBadges.findIndex(b => b.id === id);
-        if (badgeIndex !== -1 && !updatedBadges[badgeIndex].isUnlocked) {
-             updatedBadges[badgeIndex] = {
-                 ...updatedBadges[badgeIndex],
-                 isUnlocked: true,
-                 dateUnlocked: todayStr
-             };
-             newBadge = updatedBadges[badgeIndex]; 
-             badgesChanged = true;
-        }
-    };
-
-    // 1. Numeric Intervals (10-90)
-    for (let i = 10; i <= 90; i += 10) {
-        if (triedCount >= i) tryUnlock(`tried_${i}`);
-    }
-
-    // 2. The 100 Club
-    if (triedCount >= 100) tryUnlock('100_club');
-
-    // 3. Fruit Ninja (15 Fruits)
-    const fruitCategory = allFoods.find(c => c.category === 'Fruits');
-    if (fruitCategory) {
-         const fruitCount = fruitCategory.items.filter(item => triedSet.has(item.name)).length;
-         if (fruitCount >= 15) tryUnlock('fruit_ninja');
-    }
-
-    // 4. Green Machine (10 Green Veggies)
-    const greenCount = GREEN_VEGETABLES.filter(v => triedSet.has(v)).length;
-    if (greenCount >= 10) tryUnlock('green_machine');
-    
-    // 5. Protein Power (5 Proteins)
-    const proteinCategories = ['Meat', 'Plant Protein', 'Dairy & Eggs'];
-    let proteinCount = 0;
-    allFoods.forEach(cat => {
-        if(proteinCategories.includes(cat.category)) {
-            proteinCount += cat.items.filter(item => triedSet.has(item.name)).length;
-        }
-    });
-    if (proteinCount >= 5) tryUnlock('protein_power');
-
-    return {
-        updatedProfile: { ...currentProfile, badges: updatedBadges },
-        newBadge,
-        badgesChanged
-    };
-};
+import { useAppMode } from './hooks/useAppMode';
+import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy } from './types';
+import { DEFAULT_MILESTONES, BADGES_LIST } from './constants';
 
 const App: React.FC = () => {
-    const [currentPage, setCurrentPage] = useState<Page | string>('tracker');
-    const [triedFoods, setTriedFoods] = useState<TriedFoodLog[]>([]);
-    const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
-    const [recipes, setRecipes] = useState<Recipe[]>([]);
-    const [mealPlan, setMealPlan] = useState<MealPlan>({});
-    const [savedStrategies, setSavedStrategies] = useState<SavedStrategy[]>([]);
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [milestones, setMilestones] = useState<Milestone[]>(DEFAULT_MILESTONES);
-    const [loading, setLoading] = useState(true);
+  // State
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-profile');
+      return saved ? JSON.parse(saved) : null;
+  });
+  const [triedFoods, setTriedFoods] = useState<TriedFoodLog[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-triedFoods');
+      return saved ? JSON.parse(saved) : [];
+  });
+  const [recipes, setRecipes] = useState<Recipe[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-recipes');
+      return saved ? JSON.parse(saved) : [];
+  });
+  const [mealPlan, setMealPlan] = useState<MealPlan>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-mealPlan');
+      return saved ? JSON.parse(saved) : {};
+  });
+  const [milestones, setMilestones] = useState<Milestone[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-milestones');
+      return saved ? JSON.parse(saved) : DEFAULT_MILESTONES;
+  });
+  const [customFoods, setCustomFoods] = useState<CustomFood[]>(() => {
+    const saved = localStorage.getItem('tiny-tastes-tracker-customFoods');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  // Saved Strategies for Picky Eater
+  const [savedStrategies, setSavedStrategies] = useState<SavedStrategy[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-savedStrategies');
+      return saved ? JSON.parse(saved) : [];
+  });
+  // Safe Foods for Picky Eater
+  const [safeFoods, setSafeFoods] = useState<string[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-safeFoods');
+      return saved ? JSON.parse(saved) : [];
+  });
 
-    const [modalState, setModalState] = useState<ModalState>({ type: null });
+  const [currentPage, setCurrentPage] = useState('tracker');
+  const [modalState, setModalState] = useState<ModalState>({ type: null });
 
-    const { mode, config, isExplorer } = useAppMode(userProfile);
-    
-    // Extract base color (e.g., 'teal', 'indigo') from the config class string (e.g., 'bg-teal-600')
-    const baseColor = config.themeColor.split('-')[1] || 'teal';
+  const { mode, config } = useAppMode(userProfile);
 
-    // Ensure currentPage is valid for the current mode on mode switch
-    useEffect(() => {
-        if (config && config.navItems.length > 0) {
-            const validIds = config.navItems.map(i => i.id);
-            if (!validIds.includes(currentPage as string)) {
-                setCurrentPage(validIds[0]);
-            }
+  // Persistence Effects
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-profile', JSON.stringify(userProfile)), [userProfile]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-triedFoods', JSON.stringify(triedFoods)), [triedFoods]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-recipes', JSON.stringify(recipes)), [recipes]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-mealPlan', JSON.stringify(mealPlan)), [mealPlan]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-milestones', JSON.stringify(milestones)), [milestones]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-customFoods', JSON.stringify(customFoods)), [customFoods]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-savedStrategies', JSON.stringify(savedStrategies)), [savedStrategies]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-safeFoods', JSON.stringify(safeFoods)), [safeFoods]);
+
+  // Handle Mode Change redirects
+  useEffect(() => {
+    // If current page is not in the new mode's nav items, switch to the first item
+    if (config && config.navItems.length > 0) {
+        const itemExists = config.navItems.some(item => item.id === currentPage);
+        if (!itemExists) {
+            setCurrentPage(config.navItems[0].id);
         }
-    }, [mode, config]);
-
-    const handleResetData = () => {
-        if (window.confirm("Are you sure you want to reset all app data? This action cannot be undone.")) {
-            localStorage.removeItem('tiny-tastes-tracker-profile');
-            localStorage.removeItem('tiny-tastes-tracker-triedFoods');
-            localStorage.removeItem('tiny-tastes-tracker-customFoods');
-            localStorage.removeItem('tiny-tastes-tracker-recipes');
-            localStorage.removeItem('tiny-tastes-tracker-mealPlan');
-            localStorage.removeItem('tiny-tastes-tracker-milestones');
-            localStorage.removeItem('tiny-tastes-tracker-strategies');
-            window.location.reload();
-        }
-    };
-
-    const saveProfile = async (profile: UserProfile) => {
-        // Ensure badges are initialized if they don't exist in the profile update
-        const updatedProfile = {
-            ...profile,
-            badges: profile.badges || BADGES_LIST
-        };
-        localStorage.setItem(`tiny-tastes-tracker-profile`, JSON.stringify(updatedProfile));
-        setUserProfile(updatedProfile);
-    };
-
-    const addCustomFood = async (food: CustomFood) => {
-        const updatedCustomFoods = [...customFoods, food];
-        localStorage.setItem('tiny-tastes-tracker-customFoods', JSON.stringify(updatedCustomFoods));
-        setCustomFoods(updatedCustomFoods);
-        setModalState({ type: null });
-    };
-
-    const saveTriedFood = async (foodName: string, data: FoodLogData) => {
-        // Haptic Feedback: Confirm action with a subtle vibration
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate(10);
-        }
-
-        const isFirstTime = !triedFoods.some(f => f.id === foodName);
-        
-        const newLogData = {
-            ...data,
-            tryCount: data.tryCount || 1, 
-        };
-        const newTriedFoods = [...triedFoods.filter(f => f.id !== foodName), { id: foodName, ...newLogData }];
-        
-        localStorage.setItem(`tiny-tastes-tracker-triedFoods`, JSON.stringify(newTriedFoods));
-        setTriedFoods(newTriedFoods);
-        
-        // Handle Badges logic if user profile exists
-        if (userProfile) {
-            const { updatedProfile, newBadge } = calculateBadges(newTriedFoods, userProfile);
-            // If badges changed (simple check: if newBadge exists), save profile
-            if (newBadge) {
-                await saveProfile(updatedProfile);
-            }
-            
-            // Priority: Badge Unlock Modal > Allergen Alert
-            if (newBadge) {
-                setModalState({ type: 'BADGE_UNLOCKED', badge: newBadge });
-                return;
-            }
-        }
-        
-        // Allergen Alert Logic (Only if no badge unlocked to avoid modal stacking issues)
-        const allergens = FOOD_ALLERGY_MAPPING[foodName];
-        if (isFirstTime && allergens && allergens.length > 0) {
-            setModalState({ type: 'ALLERGEN_ALERT', foodName, allergens });
-        } else {
-            setModalState({ type: null });
-        }
-    };
-
-    const handleBatchLog = async (foodNames: string[], date: string, meal: string) => {
-        // Haptic Feedback
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate(20);
-        }
-
-        const newLogs: TriedFoodLog[] = foodNames.map(foodName => ({
-            id: foodName,
-            date: date,
-            meal: meal,
-            reaction: 5, // Default to 'Liked it' for batch logs
-            moreThanOneBite: true,
-            allergyReaction: 'none',
-            notes: '',
-            tryCount: 1, // We don't track incremental counts strictly in batch mode for simplicity
-        }));
-
-        // Append to existing logs (allowing duplicates for history tracking in Toddler mode)
-        const updatedTriedFoods = [...triedFoods, ...newLogs];
-        localStorage.setItem(`tiny-tastes-tracker-triedFoods`, JSON.stringify(updatedTriedFoods));
-        setTriedFoods(updatedTriedFoods);
-    };
-
-    const incrementTryCount = async (foodName: string) => {
-        // Haptic Feedback
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate(10);
-        }
-
-        const updatedTriedFoods = triedFoods.map(food => {
-            if (food.id === foodName) {
-                return { ...food, tryCount: (food.tryCount || 1) + 1 };
-            }
-            return food;
-        });
-        localStorage.setItem(`tiny-tastes-tracker-triedFoods`, JSON.stringify(updatedTriedFoods));
-        setTriedFoods(updatedTriedFoods);
-    };
-
-    const updateMilestone = async (updatedMilestone: Milestone) => {
-        const newMilestones = milestones.map(m => m.id === updatedMilestone.id ? updatedMilestone : m);
-        localStorage.setItem(`tiny-tastes-tracker-milestones`, JSON.stringify(newMilestones));
-        setMilestones(newMilestones);
-    };
-
-    const addRecipe = async (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => {
-        const newRecipe: Recipe = {
-            ...recipeData,
-            id: crypto.randomUUID(),
-            createdAt: new Date().toISOString(),
-            rating: 0,
-        };
-        const updatedRecipes = [...recipes, newRecipe];
-        localStorage.setItem(`tiny-tastes-tracker-recipes`, JSON.stringify(updatedRecipes));
-        setRecipes(updatedRecipes);
-        setModalState({ type: null });
-    };
-
-    const deleteRecipe = async (recipeId: string) => {
-        const updatedRecipes = recipes.filter(r => r.id !== recipeId);
-        localStorage.setItem(`tiny-tastes-tracker-recipes`, JSON.stringify(updatedRecipes));
-        setRecipes(updatedRecipes);
-        
-        const updatedMealPlan = { ...mealPlan };
-        let mealPlanChanged = false;
-        Object.keys(updatedMealPlan).forEach(date => {
-            Object.keys(updatedMealPlan[date]).forEach(meal => {
-                if (updatedMealPlan[date][meal].id === recipeId) {
-                    delete updatedMealPlan[date][meal];
-                    mealPlanChanged = true;
-                }
-            });
-            if (Object.keys(updatedMealPlan[date]).length === 0) {
-                delete updatedMealPlan[date];
-            }
-        });
-
-        if (mealPlanChanged) {
-            localStorage.setItem(`tiny-tastes-tracker-mealPlan`, JSON.stringify(updatedMealPlan));
-            setMealPlan(updatedMealPlan);
-        }
-        setModalState({ type: null });
-    };
-    
-    const updateRecipeRating = async (recipeId: string, rating: number) => {
-        let updatedRecipe: Recipe | undefined;
-        const updatedRecipes = recipes.map(r => {
-            if (r.id === recipeId) {
-                updatedRecipe = { ...r, rating };
-                return updatedRecipe;
-            }
-            return r;
-        });
-        localStorage.setItem(`tiny-tastes-tracker-recipes`, JSON.stringify(updatedRecipes));
-        setRecipes(updatedRecipes);
-
-        // If the recipe is currently being viewed in the modal, update the modal state as well
-        if (modalState.type === 'VIEW_RECIPE' && modalState.recipe.id === recipeId && updatedRecipe) {
-            setModalState({ type: 'VIEW_RECIPE', recipe: updatedRecipe });
-        }
-    };
-    
-    const saveMealToPlan = async (date: string, meal: string, recipeId: string, recipeTitle: string) => {
-        const updatedMealPlan = { ...mealPlan };
-        if (!updatedMealPlan[date]) {
-            updatedMealPlan[date] = {};
-        }
-        updatedMealPlan[date][meal] = { id: recipeId, title: recipeTitle };
-        localStorage.setItem(`tiny-tastes-tracker-mealPlan`, JSON.stringify(updatedMealPlan));
-        setMealPlan(updatedMealPlan);
-        setModalState({ type: null });
-    };
-
-    const removeMealFromPlan = async (date: string, meal: string) => {
-        const updatedMealPlan = { ...mealPlan };
-        if (updatedMealPlan[date]?.[meal]) {
-            delete updatedMealPlan[date][meal];
-            if (Object.keys(updatedMealPlan[date]).length === 0) {
-                delete updatedMealPlan[date];
-            }
-            localStorage.setItem(`tiny-tastes-tracker-mealPlan`, JSON.stringify(updatedMealPlan));
-            setMealPlan(updatedMealPlan);
-        }
-    };
-
-    const saveStrategy = async (strategy: SavedStrategy) => {
-        const updated = [...savedStrategies, strategy];
-        localStorage.setItem('tiny-tastes-tracker-strategies', JSON.stringify(updated));
-        setSavedStrategies(updated);
-    };
-
-    const deleteStrategy = async (id: string) => {
-        const updated = savedStrategies.filter(s => s.id !== id);
-        localStorage.setItem('tiny-tastes-tracker-strategies', JSON.stringify(updated));
-        setSavedStrategies(updated);
-    };
-
-    useEffect(() => {
-        setLoading(true);
-        
-        const getFromStorage = <T,>(key: string, defaultValue: T): T => {
-            try {
-                const storedValue = localStorage.getItem(`tiny-tastes-tracker-${key}`);
-                return storedValue ? JSON.parse(storedValue) : defaultValue;
-            } catch (error) {
-                console.error(`Error parsing ${key} from localStorage`, error);
-                return defaultValue;
-            }
-        };
-        
-        let loadedProfile = getFromStorage<UserProfile | null>('profile', null);
-        let loadedTriedFoods = getFromStorage<TriedFoodLog[]>('triedFoods', []).map(log => ({
-            ...log,
-            tryCount: log.tryCount || 1
-        }));
-        
-        // Legacy data migration for allergies (string -> string[])
-        if (loadedProfile && typeof loadedProfile.knownAllergies === 'string') {
-            loadedProfile.knownAllergies = []; 
-        }
-        
-        // Migration: Rename "Cow's Milk" to "Dairy"
-        if (loadedProfile && Array.isArray(loadedProfile.knownAllergies)) {
-            if (loadedProfile.knownAllergies.includes("Cow's Milk")) {
-                loadedProfile.knownAllergies = loadedProfile.knownAllergies.map(a => a === "Cow's Milk" ? "Dairy" : a);
-            }
-        }
-
-        // Initialize badges if missing or merge new badges if existing ones are old
-        if (loadedProfile) {
-            if (!loadedProfile.badges) {
-                loadedProfile.badges = BADGES_LIST;
-            } else {
-                // Merge loaded badges with BADGES_LIST to ensure new badges (like tried_10, tried_20 etc) appear
-                const currentBadges = loadedProfile.badges;
-                const mergedBadges = BADGES_LIST.map(defBadge => {
-                    const existing = currentBadges.find(b => b.id === defBadge.id);
-                    return existing ? existing : defBadge;
-                });
-                loadedProfile.badges = mergedBadges;
-            }
-
-            // --- RETROACTIVE BADGE CHECK ---
-            // If the user has enough tried foods but badges are locked (e.g. from data import or old version), unlock them now.
-            const { updatedProfile, badgesChanged } = calculateBadges(loadedTriedFoods, loadedProfile);
-            if (badgesChanged) {
-                console.log("Retroactively unlocked badges based on history.");
-                loadedProfile = updatedProfile;
-                localStorage.setItem(`tiny-tastes-tracker-profile`, JSON.stringify(loadedProfile));
-            }
-        }
-        
-        setUserProfile(loadedProfile);
-        setTriedFoods(loadedTriedFoods);
-
-        if (loadedProfile) {
-            // Load Custom Foods
-            const loadedCustomFoods = getFromStorage<CustomFood[]>('customFoods', []);
-            setCustomFoods(loadedCustomFoods);
-
-            // Load Saved Strategies
-            const loadedStrategies = getFromStorage<SavedStrategy[]>('strategies', []);
-            setSavedStrategies(loadedStrategies);
-
-            const rawRecipes = getFromStorage<any[]>('recipes', []);
-            const cleanedRecipes = rawRecipes.map((r): Recipe | null => {
-                if (!r || typeof r !== 'object') return null;
-                return {
-                    ...r,
-                    id: r.id || crypto.randomUUID(),
-                    title: r.title || 'Untitled Recipe',
-                    ingredients: Array.isArray(r.ingredients) ? r.ingredients.join('\n') : (typeof r.ingredients === 'string' ? r.ingredients : ''),
-                    instructions: Array.isArray(r.instructions) ? r.instructions.join('\n') : (typeof r.instructions === 'string' ? r.instructions : ''),
-                    tags: Array.isArray(r.tags) ? r.tags : [],
-                    mealTypes: Array.isArray(r.mealTypes) ? r.mealTypes : [],
-                    createdAt: r.createdAt || new Date().toISOString(),
-                    rating: r.rating || 0,
-                };
-            }).filter((r): r is Recipe => r !== null);
-            setRecipes(cleanedRecipes);
-
-            setMealPlan(getFromStorage<MealPlan>('mealPlan', {}));
-
-            const storedMilestones = getFromStorage<Milestone[]>('milestones', []);
-            const mergedMilestones = DEFAULT_MILESTONES.map(def => {
-                const found = storedMilestones.find(m => m.id === def.id);
-                return found ? { 
-                    ...def, 
-                    isAchieved: found.isAchieved, 
-                    dateAchieved: found.dateAchieved, 
-                    notes: found.notes 
-                } : def;
-            });
-            setMilestones(mergedMilestones);
-        }
-
-        setLoading(false);
-    }, []);
-
-    const handleOnboardingSave = async (profile: UserProfile) => {
-        await saveProfile(profile);
-    };
-
-    const renderContent = () => {
-        // Special Modes
-        if (mode === 'NEWBORN' && currentPage !== 'profile' && currentPage !== 'learn') {
-            return (
-                <div className="flex flex-col items-center justify-center h-[60vh] text-center px-6 animate-fadeIn">
-                    <div className="bg-rose-100 p-8 rounded-full mb-6 shadow-sm">
-                        <Icon name="baby" className="w-20 h-20 text-rose-500" />
-                    </div>
-                    <h2 className="text-3xl font-bold text-gray-700 mb-2">Newborn Essentials</h2>
-                    <p className="text-gray-500 max-w-xs mx-auto text-lg">
-                        Milk, Diaper, and Sleep tracking features are coming soon for babies under 6 months!
-                    </p>
-                    <div className="mt-8 p-4 bg-white rounded-xl border border-rose-100 shadow-sm w-full max-w-xs">
-                        <p className="text-sm font-medium text-rose-600">Current Focus:</p>
-                        <p className="text-gray-700 font-bold">Bonding & Recovery</p>
-                    </div>
-                </div>
-            );
-        }
-
-        if (mode === 'NEWBORN' && currentPage === 'learn') {
-            return <LearnPage mode={mode} baseColor={baseColor} />;
-        }
-
-        if (mode === 'TODDLER') {
-            switch (currentPage) {
-                case 'picky_eater':
-                    return <ToddlerPickyEater 
-                        baseColor={baseColor} 
-                        savedStrategies={savedStrategies}
-                        onSaveStrategy={saveStrategy}
-                        onDeleteStrategy={deleteStrategy}
-                        safeFoods={userProfile?.safeFoods || []}
-                        onUpdateSafeFoods={(foods) => {
-                            if (userProfile) {
-                                saveProfile({ ...userProfile, safeFoods: foods });
-                            }
-                        }}
-                    />;
-                case 'recipes':
-                    // RecipesPage handles meal planning and recipe list
-                    return <RecipesPage 
-                        recipes={recipes} 
-                        mealPlan={mealPlan}
-                        triedFoods={triedFoods}
-                        customFoods={customFoods}
-                        onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
-                        onShowImportRecipe={() => setModalState({ type: 'IMPORT_RECIPE' })}
-                        onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
-                        onViewRecipe={(recipe) => setModalState({ type: 'VIEW_RECIPE', recipe })}
-                        onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
-                        onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
-                        onBatchLog={handleBatchLog}
-                        onCreateRecipe={addRecipe}
-                        baseColor={baseColor}
-                        onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
-                    />;
-                case 'profile':
-                    return <ProfilePage 
-                        userProfile={userProfile} 
-                        triedFoods={triedFoods} 
-                        milestones={milestones}
-                        onSaveProfile={saveProfile} 
-                        onResetData={handleResetData} 
-                        onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
-                        onUpdateMilestone={updateMilestone}
-                        onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
-                        baseColor={baseColor}
-                    />;
-                case 'balance':
-                     return <BalanceDashboard triedFoods={triedFoods} baseColor={baseColor} />;
-                case 'learn':
-                     return <LearnPage mode={mode} baseColor={baseColor} />;
-                default:
-                     return <ToddlerPickyEater baseColor={baseColor} />;
-            }
-        }
-
-        // Default Explorer / Standard Views
-        switch (currentPage) {
-            case 'tracker':
-                return <TrackerPage 
-                    triedFoods={triedFoods} 
-                    customFoods={customFoods}
-                    onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} 
-                    userProfile={userProfile}
-                    onShowGuide={(food: Food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: false })}
-                    onAddCustomFood={(name) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName: name })}
-                    baseColor={baseColor}
-                />;
-            case 'recommendations':
-                return <RecommendationsPage
-                    userProfile={userProfile} 
-                    triedFoods={triedFoods} 
-                    onSaveProfile={saveProfile} 
-                    onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })}
-                    onShowSubstitutes={(food: Food) => setModalState({ type: 'SUBSTITUTES', food })}
-                    onShowFlavorPairing={() => setModalState({ type: 'FLAVOR_PAIRING' })}
-                    baseColor={baseColor}
-                />;
-            case 'recipes':
-                return <RecipesPage 
-                    recipes={recipes} 
-                    mealPlan={mealPlan}
-                    onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
-                    onShowImportRecipe={() => setModalState({ type: 'IMPORT_RECIPE' })}
-                    onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
-                    onViewRecipe={(recipe) => setModalState({ type: 'VIEW_RECIPE', recipe })}
-                    onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
-                    onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
-                    baseColor={baseColor}
-                />;
-            case 'learn':
-                return <LearnPage mode={mode} baseColor={baseColor} />;
-            case 'profile':
-                return <ProfilePage 
-                    userProfile={userProfile} 
-                    triedFoods={triedFoods} 
-                    milestones={milestones}
-                    onSaveProfile={saveProfile} 
-                    onResetData={handleResetData} 
-                    onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
-                    onUpdateMilestone={updateMilestone}
-                    onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
-                    baseColor={baseColor}
-                />;
-            default:
-                return <TrackerPage 
-                    triedFoods={triedFoods} 
-                    onFoodClick={(food: Food) => setModalState({ type: 'LOG_FOOD', food })} 
-                    userProfile={userProfile} 
-                    onShowGuide={(food: Food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: false })}
-                    baseColor={baseColor}
-                />;
-        }
-    };
-
-    const renderModals = () => {
-        const modal = modalState;
-        if (modal.type === null) return null;
-        switch (modal.type) {
-            case 'LOG_FOOD': {
-                const existingLog = triedFoods.find(f => f.id === modal.food.name);
-                return <FoodLogModal 
-                    food={modal.food} 
-                    existingLog={existingLog}
-                    onClose={() => setModalState({ type: null })} 
-                    onSave={saveTriedFood}
-                    onIncrementTry={incrementTryCount}
-                    onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: true })}
-                    baseColor={baseColor}
-                />;
-            }
-            case 'HOW_TO_SERVE': {
-                return <HowToServeModal 
-                    food={modal.food} 
-                    onClose={() => {
-                        if (modal.returnToLog) {
-                            setModalState({ type: 'LOG_FOOD', food: modal.food });
-                        } else {
-                            setModalState({ type: null });
-                        }
-                    }} 
-                />;
-            }
-            case 'ADD_RECIPE': {
-                return <RecipeModal 
-                    onClose={() => setModalState({ type: null })} 
-                    onSave={addRecipe} 
-                    initialData={modal.recipeData} 
-                />;
-            }
-            case 'VIEW_RECIPE': {
-                return <ViewRecipeModal 
-                    recipe={modal.recipe} 
-                    onClose={() => setModalState({ type: null })} 
-                    onDelete={deleteRecipe}
-                    onUpdateRating={updateRecipeRating}
-                />;
-            }
-            case 'IMPORT_RECIPE':
-                return <AiImportModal 
-                    onClose={() => setModalState({ type: null })} 
-                    onRecipeParsed={(recipeData) => setModalState({ type: 'ADD_RECIPE', recipeData })}
-                />;
-            case 'SUGGEST_RECIPE':
-                return <AiSuggestModal 
-                    onClose={() => setModalState({ type: null })}
-                    onRecipeParsed={(recipeData) => setModalState({ type: 'ADD_RECIPE', recipeData })}
-                    userProfile={userProfile}
-                />;
-            case 'SELECT_RECIPE': {
-                return <SelectRecipeModal 
-                    recipes={recipes} 
-                    meal={modal.meal}
-                    onClose={() => setModalState({ type: null })}
-                    onSelect={(recipe) => saveMealToPlan(modal.date, modal.meal, recipe.id, recipe.title)}
-                />;
-            }
-            case 'SHOPPING_LIST':
-                 return <ShoppingListModal
-                    recipes={recipes}
-                    mealPlan={mealPlan}
-                    onClose={() => setModalState({ type: null })}
-                />;
-            case 'SUBSTITUTES': {
-                return <SubstitutesModal 
-                    food={modal.food}
-                    userProfile={userProfile}
-                    onClose={() => setModalState({ type: null })}
-                    onSelectSubstitute={(substituteFood) => setModalState({ type: 'LOG_FOOD', food: substituteFood })}
-                />;
-            }
-            case 'DOCTOR_REPORT': {
-                return <DoctorReportModal
-                    userProfile={userProfile}
-                    triedFoods={triedFoods}
-                    onClose={() => setModalState({ type: null })}
-                />
-            }
-            case 'FLAVOR_PAIRING': {
-                return <FlavorPairingModal
-                    triedFoods={triedFoods}
-                    onClose={() => setModalState({ type: null })}
-                />
-            }
-            case 'ALLERGEN_ALERT': {
-                return <AllergenAlertModal
-                    foodName={modal.foodName}
-                    allergens={modal.allergens}
-                    onClose={() => setModalState({ type: null })}
-                />
-            }
-            case 'BADGE_UNLOCKED': {
-                return <BadgeUnlockedModal
-                    badge={modal.badge}
-                    onClose={() => setModalState({ type: null })}
-                />
-            }
-            case 'CERTIFICATE': {
-                return <CertificateModal
-                    babyName={modal.babyName}
-                    date={modal.date}
-                    onClose={() => setModalState({ type: null })}
-                />
-            }
-            case 'ADD_CUSTOM_FOOD': {
-                return <CustomFoodModal
-                    initialName={modal.initialName}
-                    onClose={() => setModalState({ type: null })}
-                    onSave={addCustomFood}
-                />
-            }
-            case 'LOG_MEAL': {
-                return <LogMealModal
-                    recipes={recipes}
-                    onClose={() => setModalState({ type: null })}
-                    onSave={handleBatchLog}
-                    onCreateRecipe={addRecipe}
-                    baseColor={baseColor}
-                />
-            }
-            default:
-                return null;
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <div className="spinner"></div>
-            </div>
-        );
     }
+  }, [mode, config]);
 
-    if (!userProfile) {
-        return <TutorialModal onSave={handleOnboardingSave} />;
-    }
 
-    return (
-        <>
-            <Layout
-                currentPage={currentPage as string}
-                setCurrentPage={setCurrentPage}
-                profile={userProfile}
-                progress={{ triedCount: triedFoods.length, totalCount: totalFoodCount + customFoods.length }}
-                mode={mode}
-                config={config}
-            >
-                {renderContent()}
-            </Layout>
-            {renderModals()}
-        </>
-    );
+  // Actions
+  const handleSaveProfile = (profile: UserProfile) => {
+      setUserProfile(profile);
+      setModalState({ type: null });
+  };
+
+  const handleResetData = () => {
+      if (window.confirm("Are you sure? This will delete all data.")) {
+          localStorage.clear();
+          window.location.reload();
+      }
+  };
+
+  const checkBadges = (currentTried: TriedFoodLog[]) => {
+      const triedCount = new Set(currentTried.map(f => f.id)).size;
+      const currentBadges = userProfile?.badges || BADGES_LIST;
+      let newBadges: Badge[] = [...currentBadges];
+      let unlockedBadge: Badge | null = null;
+
+      // Check numeric badges
+      const numericBadges = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+      numericBadges.forEach(num => {
+          const badgeId = `tried_${num}`;
+          const badgeIndex = newBadges.findIndex(b => b.id === badgeId);
+          if (badgeIndex !== -1 && !newBadges[badgeIndex].isUnlocked && triedCount >= num) {
+              newBadges[badgeIndex] = { ...newBadges[badgeIndex], isUnlocked: true, dateUnlocked: new Date().toISOString().split('T')[0] };
+              unlockedBadge = newBadges[badgeIndex];
+          }
+      });
+      
+      // Check 100 Club
+      if (triedCount >= 100) {
+          const badgeId = '100_club';
+          const badgeIndex = newBadges.findIndex(b => b.id === badgeId);
+          if (badgeIndex !== -1 && !newBadges[badgeIndex].isUnlocked) {
+               newBadges[badgeIndex] = { ...newBadges[badgeIndex], isUnlocked: true, dateUnlocked: new Date().toISOString().split('T')[0] };
+               unlockedBadge = newBadges[badgeIndex];
+          }
+      }
+
+      if (unlockedBadge) {
+          setUserProfile(prev => prev ? { ...prev, badges: newBadges } : null);
+          setModalState({ type: 'BADGE_UNLOCKED', badge: unlockedBadge });
+      } else {
+          setUserProfile(prev => prev ? { ...prev, badges: newBadges } : null);
+      }
+  };
+
+  const handleSaveFoodLog = (foodName: string, data: FoodLogData) => {
+      const newLog: TriedFoodLog = { id: foodName, ...data };
+      const updatedTried = [...triedFoods.filter(f => !(f.id === foodName && f.date === data.date && f.meal === data.meal)), newLog];
+      setTriedFoods(updatedTried);
+      
+      // Check for first time try
+      const isFirstTime = !triedFoods.some(f => f.id === foodName);
+      
+      setModalState({ type: null });
+      
+      if (isFirstTime) {
+          checkBadges(updatedTried);
+          
+          // Check for allergens
+          // Note: Logic for checking allergens would go here using FOOD_ALLERGY_MAPPING
+          // For now simplified.
+          const customFood = customFoods.find(c => c.name === foodName);
+          let allergens: string[] = [];
+          if (customFood && customFood.details.allergen_info && customFood.details.allergen_info !== 'No common allergens') {
+             allergens.push(customFood.details.allergen_info);
+          }
+          // Assuming common allergens check is done via helper or hardcoded list if needed
+          
+          if (allergens.length > 0) {
+             setModalState({ type: 'ALLERGEN_ALERT', foodName, allergens });
+          }
+      }
+  };
+
+  const handleBatchLogMeal = (foodNames: string[], date: string, meal: string) => {
+      const newLogs: TriedFoodLog[] = foodNames.map(name => ({
+          id: name,
+          date,
+          meal,
+          reaction: 0, // Default
+          moreThanOneBite: true,
+          allergyReaction: 'none',
+          notes: 'Batch logged from meal',
+          tryCount: 1
+      }));
+      
+      // Filter out duplicates for same day/meal if exists, or append?
+      // For simplicity, we append but could be smarter.
+      const updatedTried = [...triedFoods, ...newLogs];
+      setTriedFoods(updatedTried);
+      checkBadges(updatedTried);
+  };
+
+  const handleCreateRecipe = (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => {
+      const newRecipe: Recipe = {
+          ...recipeData,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          rating: 0
+      };
+      setRecipes([...recipes, newRecipe]);
+  };
+  
+  const handleUpdateRecipe = (id: string, updates: Partial<Recipe>) => {
+      setRecipes(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  };
+
+  const saveMealToPlan = (date: string, meal: string, recipeId: string, recipeTitle: string) => {
+      setMealPlan(prev => ({
+          ...prev,
+          [date]: {
+              ...prev[date],
+              [meal]: { id: recipeId, title: recipeTitle }
+          }
+      }));
+      setModalState({ type: null });
+  };
+  
+  // Picky Eater Handlers
+  const handleSaveStrategy = (strategy: SavedStrategy) => {
+      setSavedStrategies(prev => [...prev, strategy]);
+  };
+  
+  const handleDeleteStrategy = (id: string) => {
+      setSavedStrategies(prev => prev.filter(s => s.id !== id));
+  };
+
+  // Render Page Content
+  const renderPage = () => {
+      const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
+
+      switch (currentPage) {
+          case 'tracker':
+              return <TrackerPage 
+                  triedFoods={triedFoods} 
+                  customFoods={customFoods}
+                  onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
+                  userProfile={userProfile}
+                  onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, customDetails: (food as CustomFood).isCustom ? (food as CustomFood).details : undefined })}
+                  onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
+                  baseColor={baseColorName}
+              />;
+          case 'recommendations':
+              return <IdeasPage 
+                  userProfile={userProfile}
+                  triedFoods={triedFoods}
+                  onSaveProfile={setUserProfile}
+                  onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
+                  onShowSubstitutes={(food) => setModalState({ type: 'SUBSTITUTES', food })}
+                  onShowFlavorPairing={() => setModalState({ type: 'FLAVOR_PAIRING' })}
+                  baseColor={baseColorName}
+              />;
+          case 'recipes':
+              return <RecipesPage 
+                  recipes={recipes}
+                  mealPlan={mealPlan}
+                  triedFoods={triedFoods}
+                  customFoods={customFoods}
+                  onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
+                  onShowImportRecipe={() => setModalState({ type: 'IMPORT_RECIPE' })}
+                  onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
+                  onViewRecipe={(recipe) => setModalState({ type: 'VIEW_RECIPE', recipe })}
+                  onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
+                  onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
+                  onBatchLog={handleBatchLogMeal}
+                  onCreateRecipe={handleCreateRecipe}
+                  onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
+                  baseColor={baseColorName}
+              />;
+          case 'learn':
+              return <LearnPage mode={mode} baseColor={baseColorName} />;
+          case 'profile':
+              return <ProfilePage 
+                  userProfile={userProfile}
+                  triedFoods={triedFoods}
+                  milestones={milestones}
+                  onSaveProfile={setUserProfile}
+                  onResetData={handleResetData}
+                  onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
+                  onUpdateMilestone={(m) => setMilestones(prev => prev.map(mil => mil.id === m.id ? m : mil))}
+                  onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
+                  baseColor={baseColorName}
+              />;
+          case 'picky_eater':
+              return <ToddlerPickyEater 
+                  baseColor={baseColorName}
+                  savedStrategies={savedStrategies}
+                  onSaveStrategy={handleSaveStrategy}
+                  onDeleteStrategy={handleDeleteStrategy}
+                  safeFoods={safeFoods}
+                  onUpdateSafeFoods={setSafeFoods}
+              />;
+          case 'balance':
+              return <BalanceDashboard 
+                  triedFoods={triedFoods}
+                  baseColor={baseColorName}
+              />;
+          // Newborn placeholders
+          case 'feed':
+          case 'diapers':
+          case 'growth':
+              return (
+                  <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                      <p>Feature coming soon for Newborn Mode!</p>
+                  </div>
+              );
+          default:
+              return <div className="p-4">Page not found</div>;
+      }
+  };
+
+  // Render Modal
+  const renderModal = () => {
+      const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
+
+      switch (modalState.type) {
+          case 'LOG_FOOD':
+              const existingLog = triedFoods.find(l => l.id === modalState.food.name);
+              return <FoodLogModal 
+                  food={modalState.food} 
+                  existingLog={existingLog}
+                  onClose={() => setModalState({ type: null })}
+                  onSave={handleSaveFoodLog}
+                  onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: true })}
+                  onIncrementTry={(foodName) => {
+                       const log = triedFoods.find(f => f.id === foodName);
+                       if (log) {
+                           const updatedLog = { ...log, tryCount: (log.tryCount || 1) + 1 };
+                           setTriedFoods(prev => prev.map(f => f.id === foodName ? updatedLog : f));
+                       }
+                  }}
+                  baseColor={baseColorName}
+              />;
+          case 'HOW_TO_SERVE':
+              return <HowToServeModal 
+                  food={modalState.food} 
+                  onClose={() => {
+                      if (modalState.returnToLog) {
+                          setModalState({ type: 'LOG_FOOD', food: modalState.food });
+                      } else {
+                          setModalState({ type: null });
+                      }
+                  }}
+              />;
+          case 'ADD_RECIPE':
+              return <RecipeModal 
+                  onClose={() => setModalState({ type: null })}
+                  onSave={(recipe) => {
+                      handleCreateRecipe(recipe);
+                      setModalState({ type: null });
+                  }}
+                  initialData={modalState.recipeData}
+              />;
+          case 'VIEW_RECIPE':
+              return <ViewRecipeModal 
+                  recipe={modalState.recipe}
+                  onClose={() => setModalState({ type: null })}
+                  onDelete={(id) => {
+                      setRecipes(prev => prev.filter(r => r.id !== id));
+                      setModalState({ type: null });
+                  }}
+                  onUpdateRating={(id, rating) => handleUpdateRecipe(id, { rating })}
+              />;
+          case 'IMPORT_RECIPE':
+              return <AiImportModal 
+                  onClose={() => setModalState({ type: null })}
+                  onRecipeParsed={(recipe) => setModalState({ type: 'ADD_RECIPE', recipeData: recipe })}
+              />;
+          case 'SUGGEST_RECIPE':
+              return <AiSuggestModal
+                  onClose={() => setModalState({ type: null })}
+                  onRecipeParsed={(recipe) => setModalState({ type: 'ADD_RECIPE', recipeData: recipe })}
+                  userProfile={userProfile}
+              />;
+          case 'SELECT_RECIPE':
+              return <SelectRecipeModal 
+                  recipes={recipes} 
+                  meal={modalState.meal}
+                  onClose={() => setModalState({ type: null })}
+                  onSelect={(recipe) => saveMealToPlan(modalState.date, modalState.meal, recipe.id, recipe.title)}
+              />;
+          case 'SHOPPING_LIST':
+              return <ShoppingListModal
+                  recipes={recipes}
+                  mealPlan={mealPlan}
+                  triedFoods={triedFoods}
+                  onClose={() => setModalState({ type: null })}
+              />;
+          case 'SUBSTITUTES':
+              return <SubstitutesModal 
+                  food={modalState.food}
+                  userProfile={userProfile}
+                  onClose={() => setModalState({ type: null })}
+                  onSelectSubstitute={(food) => setModalState({ type: 'LOG_FOOD', food })}
+              />;
+          case 'DOCTOR_REPORT':
+              return <DoctorReportModal 
+                  userProfile={userProfile}
+                  triedFoods={triedFoods}
+                  onClose={() => setModalState({ type: null })}
+              />;
+          case 'FLAVOR_PAIRING':
+              return <FlavorPairingModal
+                  triedFoods={triedFoods}
+                  onClose={() => setModalState({ type: null })}
+              />;
+          case 'ALLERGEN_ALERT':
+              return <AllergenAlertModal 
+                  foodName={modalState.foodName}
+                  allergens={modalState.allergens}
+                  onClose={() => setModalState({ type: null })}
+              />;
+          case 'BADGE_UNLOCKED':
+              return <BadgeUnlockedModal 
+                  badge={modalState.badge}
+                  onClose={() => setModalState({ type: null })}
+              />;
+          case 'CERTIFICATE':
+              return <CertificateModal
+                  babyName={modalState.babyName}
+                  date={modalState.date}
+                  onClose={() => setModalState({ type: null })}
+              />;
+          case 'ADD_CUSTOM_FOOD':
+              return <CustomFoodModal
+                  initialName={modalState.initialName}
+                  onClose={() => setModalState({ type: null })}
+                  onSave={(food) => {
+                      setCustomFoods(prev => [...prev, food]);
+                      setModalState({ type: null });
+                  }}
+              />;
+          case 'LOG_MEAL':
+               return <LogMealModal
+                  recipes={recipes}
+                  onClose={() => setModalState({ type: null })}
+                  onSave={handleBatchLogMeal}
+                  onCreateRecipe={handleCreateRecipe}
+                  baseColor={baseColorName}
+               />;
+          default:
+              return null;
+      }
+  };
+
+  return (
+    <Layout 
+        currentPage={currentPage} 
+        setCurrentPage={setCurrentPage} 
+        profile={userProfile} 
+        progress={{ triedCount: new Set(triedFoods.map(f => f.id)).size, totalCount: 100 }}
+        mode={mode}
+        config={config}
+    >
+      {userProfile ? renderPage() : <TutorialModal onSave={handleSaveProfile} />}
+      {renderModal()}
+    </Layout>
+  );
 };
 
 export default App;

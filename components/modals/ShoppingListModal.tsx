@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Recipe, MealPlan } from '../../types';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Recipe, MealPlan, TriedFoodLog } from '../../types';
 import { categorizeShoppingList } from '../../services/geminiService';
+import { allFoods } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
@@ -14,6 +16,7 @@ const parseIngredients = (text: string) => {
 interface ShoppingListModalProps {
     recipes: Recipe[];
     mealPlan: MealPlan;
+    triedFoods: TriedFoodLog[];
     onClose: () => void;
 }
 
@@ -27,11 +30,34 @@ const NoMealsIllustration = () => (
     </svg>
 );
 
-const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan, onClose }) => {
+const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan, triedFoods, onClose }) => {
     const [categorizedList, setCategorizedList] = useState<Record<string, string[]>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isEmpty, setIsEmpty] = useState(false);
+    const [addedItems, setAddedItems] = useState<string[]>([]);
+
+    // Calculate Top 5 Favorites (Reaction >= 5)
+    const favorites = useMemo(() => {
+        const counts: Record<string, number> = {};
+        triedFoods.forEach(log => {
+            if (log.reaction >= 5) {
+                counts[log.id] = (counts[log.id] || 0) + 1;
+            }
+        });
+        return Object.entries(counts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([id]) => id);
+    }, [triedFoods]);
+
+    const toggleQuickAdd = (item: string) => {
+        if (addedItems.includes(item)) {
+            setAddedItems(prev => prev.filter(i => i !== item));
+        } else {
+            setAddedItems(prev => [...prev, item]);
+        }
+    };
 
     useEffect(() => {
         const generateList = async () => {
@@ -106,30 +132,78 @@ const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan
 
     return (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-[500]">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto flex flex-col max-h-[90vh]">
                 <div className="flex justify-between items-center border-b p-4">
                     <h2 className="text-xl font-semibold text-gray-800">Weekly Shopping List</h2>
                     <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
                 </div>
-                <div className="p-6 modal-scroll-content">
+                <div className="p-6 modal-scroll-content overflow-y-auto">
+                    {/* Quick Add Favorites Section */}
+                    {favorites.length > 0 && (
+                        <div className="mb-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                            <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                <Icon name="heart" className="w-3.5 h-3.5" /> Quick Add Favorites
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                                {favorites.map(foodName => {
+                                    const foodObj = allFoods.flatMap(c => c.items).find(f => f.name === foodName);
+                                    const emoji = foodObj?.emoji || '🍎';
+                                    const isAdded = addedItems.includes(foodName);
+                                    return (
+                                        <button
+                                            key={foodName}
+                                            onClick={() => toggleQuickAdd(foodName)}
+                                            className={`text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 font-medium ${
+                                                isAdded
+                                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md transform scale-105'
+                                                : 'bg-white text-gray-700 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50'
+                                            }`}
+                                        >
+                                            <span>{emoji}</span> {foodName} {isAdded && <Icon name="check" className="w-3 h-3" />}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {loading ? (
                         <div className="text-center p-6">
                             <div className="spinner mx-auto"></div>
-                            <p className="mt-4 text-sm text-gray-600">Categorizing list with AI...</p>
+                            <p className="mt-4 text-sm text-gray-600">Categorizing planned meals with AI...</p>
                         </div>
-                    ) : isEmpty ? (
+                    ) : isEmpty && addedItems.length === 0 ? (
                         <EmptyState
                             illustration={<NoMealsIllustration />}
                             title="No Meals Planned"
-                            message="Add recipes to your meal plan for the current week to generate a shopping list."
+                            message="Add recipes to your meal plan or tap your Favorites above to start a list."
                         />
                     ) : (
-                        <div className="prose-static">
-                            {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+                        <div className="prose-static space-y-4">
+                            {error && <p className="text-sm text-red-600 mb-4 bg-red-50 p-2 rounded">{error}</p>}
+                            
+                            {/* Quick Added Items Category */}
+                            {addedItems.length > 0 && (
+                                <div className="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+                                    <h4 className="text-md font-bold text-indigo-700 mb-2 flex items-center gap-2">
+                                        <Icon name="shopping-basket" className="w-4 h-4"/> Quick Adds
+                                    </h4>
+                                    <ul className="list-none space-y-2 pl-1">
+                                        {addedItems.map((item, index) => (
+                                            <li key={`added-${index}`} className="flex items-center gap-2 text-indigo-900 text-sm">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* AI Categorized Items */}
                             {Object.entries(categorizedList).map(([category, items]) => (
                                 <div key={category}>
-                                    <h4 className="text-md font-semibold text-teal-700 mt-3">{category}</h4>
-                                    <ul className="list-disc list-outside pl-5 space-y-1">
+                                    <h4 className="text-md font-semibold text-teal-700 mt-2 border-b border-gray-100 pb-1 mb-2">{category}</h4>
+                                    <ul className="list-disc list-outside pl-5 space-y-1 text-gray-700">
                                         {(items as string[]).map((item, index) => <li key={index}>{item}</li>)}
                                     </ul>
                                 </div>

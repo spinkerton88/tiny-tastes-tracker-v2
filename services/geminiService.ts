@@ -153,11 +153,23 @@ export const categorizeShoppingList = async (ingredients: string[]): Promise<Rec
 
 export const getFoodSubstitutes = async (foodName: string, babyAgeInMonths: number): Promise<FoodSubstitute[]> => {
     try {
-        const prompt = `For a baby who is ${babyAgeInMonths} months old and doing baby-led weaning, suggest 3-4 simple food substitutes for "${foodName}". 
-The substitutes should be nutritionally similar, commonly available, and safe for that age. 
-Provide a brief reason for each suggestion, focusing on texture, key nutrients, or preparation.
-Respond ONLY with a JSON object in the format: {"substitutes": [{"name": "...", "reason": "..."}, ...]}.
-Ensure the 'name' of the substitute is just the food name (e.g., "Mashed Peas", "Avocado Spears").`;
+        const isToddler = babyAgeInMonths >= 12;
+        let prompt;
+
+        if (isToddler) {
+            prompt = `For a toddler (${babyAgeInMonths} months) who might be refusing "${foodName}", suggest 3-4 "Food Bridge" substitutes.
+            The goal is to find foods with similar TEXTURE, COLOR, or MOUTHFEEL to "${foodName}" (rather than just nutritional value) to help them accept new foods.
+            Example: If refusing Mushrooms (squishy), suggest Eggplant (similar texture).
+            Provide a brief reason for each, highlighting the sensory connection.
+            Respond ONLY with a JSON object in the format: {"substitutes": [{"name": "...", "reason": "..."}, ...]}.
+            Ensure the 'name' of the substitute is just the food name (e.g., "Eggplant", "Tofu").`;
+        } else {
+            prompt = `For a baby who is ${babyAgeInMonths} months old and doing baby-led weaning, suggest 3-4 simple food substitutes for "${foodName}". 
+            The substitutes should be nutritionally similar, commonly available, and safe for that age. 
+            Provide a brief reason for each suggestion, focusing on texture, key nutrients, or preparation.
+            Respond ONLY with a JSON object in the format: {"substitutes": [{"name": "...", "reason": "..."}, ...]}.
+            Ensure the 'name' of the substitute is just the food name (e.g., "Mashed Peas", "Avocado Spears").`;
+        }
 
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",

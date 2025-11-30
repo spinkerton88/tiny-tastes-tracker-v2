@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Food, UserProfile, FoodSubstitute } from '../../types';
 import { getFoodSubstitutes } from '../../services/geminiService';
@@ -18,6 +19,8 @@ const SubstitutesModal: React.FC<SubstitutesModalProps> = ({ food, userProfile, 
     const [error, setError] = useState<string | null>(null);
 
     const flatFoodList = allFoods.flatMap(c => c.items);
+    const ageInMonths = calculateAgeInMonths(userProfile?.birthDate);
+    const isToddler = ageInMonths >= 12;
 
     useEffect(() => {
         const fetchSubstitutes = async () => {
@@ -27,7 +30,7 @@ const SubstitutesModal: React.FC<SubstitutesModalProps> = ({ food, userProfile, 
                 return;
             }
             try {
-                const ageInMonths = calculateAgeInMonths(userProfile.birthDate);
+                // ageInMonths is already calculated in the component scope
                 const result = await getFoodSubstitutes(food.name, ageInMonths);
                 setSubstitutes(result);
             } catch (err) {
@@ -37,7 +40,7 @@ const SubstitutesModal: React.FC<SubstitutesModalProps> = ({ food, userProfile, 
             }
         };
         fetchSubstitutes();
-    }, [food.name, userProfile?.birthDate]);
+    }, [food.name, userProfile?.birthDate, ageInMonths]);
 
     const handleSelect = (substituteName: string) => {
         const upperCaseName = substituteName.toUpperCase();
@@ -54,14 +57,19 @@ const SubstitutesModal: React.FC<SubstitutesModalProps> = ({ food, userProfile, 
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-[501]">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto">
                 <div className="flex justify-between items-center border-b p-4">
-                    <h2 className="text-xl font-semibold">Substitutes for <span className="text-teal-600">{food.name}</span></h2>
+                    <h2 className="text-xl font-semibold">
+                        {isToddler ? "Texture Bridges for " : "Substitutes for "} 
+                        <span className="text-teal-600">{food.name}</span>
+                    </h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
                 </div>
                 <div className="p-6 modal-scroll-content">
                     {loading && (
                         <div className="text-center p-6">
                             <div className="spinner mx-auto"></div>
-                            <p className="mt-4 text-sm text-gray-600">Finding safe & yummy substitutes...</p>
+                            <p className="mt-4 text-sm text-gray-600">
+                                {isToddler ? "Finding similar textures (Food Bridges)..." : "Finding safe & yummy substitutes..."}
+                            </p>
                         </div>
                     )}
                     {error && <p className="text-center text-red-600 p-6">{error}</p>}
@@ -85,7 +93,7 @@ const SubstitutesModal: React.FC<SubstitutesModalProps> = ({ food, userProfile, 
                         </div>
                     )}
                     <p className="mt-6 text-xs text-gray-500 border-t pt-4">
-                        <strong>Disclaimer:</strong> AI-generated suggestions. Always ensure food is soft-cooked and served in a safe, age-appropriate manner. Check for allergens.
+                        <strong>Disclaimer:</strong> {isToddler ? "AI-generated bridging ideas based on texture/color." : "AI-generated suggestions."} Always ensure food is soft-cooked and served in a safe, age-appropriate manner. Check for allergens.
                     </p>
                 </div>
             </div>
