@@ -172,7 +172,7 @@ const App: React.FC = () => {
       }
   };
 
-  const handleBatchLogMeal = (foodNames: string[], date: string, meal: string) => {
+  const handleBatchLogMeal = (foodNames: string[], date: string, meal: string, photo?: string, notes?: string) => {
       const newLogs: TriedFoodLog[] = foodNames.map(name => ({
           id: name,
           date,
@@ -180,8 +180,9 @@ const App: React.FC = () => {
           reaction: 0, // Default
           moreThanOneBite: true,
           allergyReaction: 'none',
-          notes: 'Batch logged from meal',
-          tryCount: 1
+          notes: notes || 'Batch logged from meal',
+          tryCount: 1,
+          messyFaceImage: photo
       }));
       
       // Filter out duplicates for same day/meal if exists, or append?

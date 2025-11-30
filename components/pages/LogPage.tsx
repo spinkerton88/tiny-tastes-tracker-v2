@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserProfile, TriedFoodLog, Milestone, TextureStage, AppMode } from '../../types';
 import { allFoods, COMMON_ALLERGENS, TEXTURE_STAGES, BADGES_LIST } from '../../constants';
 import Icon from '../ui/Icon';
@@ -358,10 +358,29 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowD
 
     const getMealEmoji = (meal: string) => {
         const map: { [key: string]: string } = { breakfast: '🍳', lunch: '🥪', dinner: '🍝', snack: '🍎' };
-        return map[meal] || '🍽️';
+        return map[meal?.toLowerCase()] || '🍽️';
     };
 
-    const sortedFoods = [...triedFoods].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // 1. Group logs by a unique key (Date + MealType)
+    const groupedLogs = useMemo(() => {
+        const groups: Record<string, TriedFoodLog[]> = {};
+        
+        triedFoods.forEach(log => {
+            const key = `${log.date}-${log.meal}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(log);
+        });
+
+        // Convert to array and sort by date descending
+        return Object.entries(groups)
+            .map(([key, items]) => ({
+                key,
+                date: items[0].date,
+                meal: items[0].meal,
+                items
+            }))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [triedFoods]);
 
     return (
         <div>
@@ -377,65 +396,54 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowD
                 </div>
             </div>
             <div className="space-y-4">
-                {sortedFoods.length === 0 ? (
+                {groupedLogs.length === 0 ? (
                     <EmptyState
                         illustration={<NoLogIllustration />}
                         title="No Foods Logged Yet"
                         message="When you log a food from the 'Tracker' tab, your detailed entry will appear here."
                     />
                 ) : (
-                    sortedFoods.map(log => {
-                        const foodDetails = allFoods.flatMap(c => c.items).find(f => f.name === log.id);
-                        const { emoji, text } = getReactionDisplay(log.reaction);
-                        const tryCount = log.tryCount || 1;
-                        return (
-                            <div key={log.id} className={`bg-white shadow rounded-lg p-4 border-l-4 border-${baseColor}-500`}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <h3 className="text-lg font-semibold text-gray-800">{foodDetails?.emoji || '🍽️'} {log.id}</h3>
-                                        {tryCount > 1 && (
-                                            <span className={`text-xs font-medium bg-${baseColor}-100 text-${baseColor}-800 px-2 py-0.5 rounded-full`}>
-                                                Tried {tryCount} times
-                                            </span>
-                                        )}
+                    groupedLogs.map(group => (
+                        <div key={group.key} className="bg-white shadow-sm rounded-xl p-4 border border-gray-100">
+                            <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-50">
+                                <div className="flex items-center gap-2">
+                                    {/* Meal Icon */}
+                                    <span className="text-xl">{getMealEmoji(group.meal)}</span>
+                                    <div>
+                                        <h3 className="font-bold text-gray-800 capitalize">{group.meal}</h3>
+                                        <p className="text-xs text-gray-500">{new Date(group.date).toLocaleDateString()}</p>
                                     </div>
-                                    <span className="text-sm text-gray-500">{log.date}</span>
                                 </div>
-                                <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
-                                    <div className="flex flex-col"><span className="text-gray-500">Meal</span><span className="font-medium text-gray-700">{getMealEmoji(log.meal)} {log.meal}</span></div>
-                                    <div className="flex flex-col"><span className="text-gray-500">Reaction</span><span className="font-medium text-gray-700">{emoji} {text} ({log.reaction}/7)</span></div>
-                                    <div className="flex flex-col"><span className="text-gray-500">Amount</span><span className="font-medium text-gray-700">{log.moreThanOneBite ? 'More than 1 bite' : 'Just a taste'}</span></div>
-                                </div>
-                                {log.allergyReaction && log.allergyReaction !== 'none' && (
-                                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
-                                        <p className="text-sm font-medium text-red-700">Possible Reaction: <span className="font-bold">{log.allergyReaction}</span></p>
-                                    </div>
-                                )}
-                                {log.behavioralTags && log.behavioralTags.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-1">
-                                        {log.behavioralTags.map(tag => (
-                                            <span key={tag} className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full border border-orange-200">
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                                {log.notes && (
-                                    <div className="mt-3 pt-3 border-t">
-                                        <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Notes:</span> {log.notes}</p>
-                                    </div>
-                                )}
-                                {log.messyFaceImage && (
-                                    <div className="mt-3 pt-3 border-t">
-                                        <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Messy Face Moment</p>
-                                        <div className="w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
-                                            <img src={log.messyFaceImage} alt="Messy Face" className="w-full h-full object-cover" />
+                                {/* If photo exists on the first item (batch log), show thumb */}
+                                <div className="flex items-center gap-2">
+                                    {group.items[0].messyFaceImage && (
+                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                                            <img src={group.items[0].messyFaceImage} alt="Meal" className="w-full h-full object-cover" />
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                    <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded-full text-gray-600">
+                                        {group.items.length} items
+                                    </span>
+                                </div>
                             </div>
-                        );
-                    })
+
+                            {/* List Items in the Group */}
+                            <div className="space-y-2">
+                                {group.items.map(log => (
+                                    <div key={log.id} className="flex justify-between items-center text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`w-1.5 h-1.5 rounded-full bg-${baseColor}-400`}></span>
+                                            <span className="text-gray-700">{log.id}</span>
+                                            {log.notes && <Icon name="message-square" className="w-3 h-3 text-gray-300" />}
+                                        </div>
+                                        <span className="text-xs text-gray-400">
+                                            {getReactionDisplay(log.reaction).emoji}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))
                 )}
             </div>
         </div>
