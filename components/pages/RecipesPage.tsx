@@ -74,7 +74,7 @@ const LogMealView: React.FC<{
     const [saveAsRecipe, setSaveAsRecipe] = useState(false);
     const [recipeName, setRecipeName] = useState('');
 
-    const filteredFoods = flatFoodList.filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredFoods = (flatFoodList as string[]).filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
 
     // Get log history for current week relative to selected date
     const selectedDateObj = new Date(date);
@@ -111,7 +111,7 @@ const LogMealView: React.FC<{
             const recipe = recipes.find(r => r.id === selectedRecipeId);
             if (recipe) {
                 const combinedText = (recipe.title + ' ' + recipe.ingredients).toUpperCase();
-                flatFoodList.forEach(food => {
+                (flatFoodList as string[]).forEach(food => {
                     if (combinedText.includes(food) || combinedText.includes(food.slice(0, -1))) {
                          foodsToLog.push(food);
                     }
@@ -169,6 +169,15 @@ const LogMealView: React.FC<{
         }
         
         onFoodClick(foodObj);
+    };
+
+    const handleLogAgain = (foods: string[], originalMeal: string) => {
+        // Use current date and current selected meal type or original?
+        // Let's use current selected date and current selected meal from state to be consistent with top controls
+        // Or if user wants "exact same", maybe we should ask? 
+        // For "One Tap" experience, logging to *current selection* (date/meal at top) is usually best workflow.
+        onSave(foods, date, meal);
+        alert(`Logged ${foods.length} items for ${meal} on ${date}!`);
     };
 
     return (
@@ -312,19 +321,27 @@ const LogMealView: React.FC<{
                                 </h4>
                                 <div className="space-y-3">
                                     {Object.entries(meals).map(([mealType, foods]) => (
-                                        <div key={mealType} className="flex gap-3">
+                                        <div key={mealType} className="flex gap-3 items-start">
                                             <div className="w-20 font-medium text-gray-500 text-sm capitalize pt-1">{mealType}</div>
-                                            <div className="flex-1 flex flex-wrap gap-1.5">
-                                                {foods.map((foodName, idx) => (
-                                                    <button 
-                                                        key={idx} 
-                                                        onClick={() => handleFoodItemClick(foodName)}
-                                                        className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-teal-50 hover:text-teal-700 hover:shadow-sm transition-all border border-transparent hover:border-teal-200"
-                                                        title="Tap to edit details"
-                                                    >
-                                                        {foodName} <Icon name="edit-2" className="w-3 h-3 ml-1 opacity-40"/>
-                                                    </button>
-                                                ))}
+                                            <div className="flex-1">
+                                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                                    {foods.map((foodName, idx) => (
+                                                        <button 
+                                                            key={idx} 
+                                                            onClick={() => handleFoodItemClick(foodName)}
+                                                            className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-teal-50 hover:text-teal-700 hover:shadow-sm transition-all border border-transparent hover:border-teal-200"
+                                                            title="Tap to edit details"
+                                                        >
+                                                            {foodName} <Icon name="edit-2" className="w-3 h-3 ml-1 opacity-40"/>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleLogAgain(foods, mealType)}
+                                                    className={`text-xs font-bold text-${baseColor}-600 hover:text-${baseColor}-800 flex items-center gap-1 mt-1 p-1 -ml-1 rounded hover:bg-${baseColor}-50 transition-colors`}
+                                                >
+                                                    <Icon name="rotate-ccw" className="w-3.5 h-3.5" /> Log This Again
+                                                </button>
                                             </div>
                                         </div>
                                     ))}

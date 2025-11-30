@@ -175,7 +175,7 @@ const App: React.FC = () => {
 
   const handleBatchLogMeal = (foodNames: string[], date: string, meal: string, photo?: string, notes?: string, foodStatuses?: Record<string, string>) => {
       const newLogs: TriedFoodLog[] = foodNames.map(name => {
-          let reaction = 0; // 0 = no rating/neutral
+          let reaction = 0; // 0 = no rating/neutral/eaten
           let moreThanOneBite = true;
           
           if (foodStatuses) {

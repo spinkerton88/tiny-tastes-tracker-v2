@@ -143,7 +143,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                             {step === 'SELECT' ? 'Build Plate' : 'Review Meal'}
                         </h2>
                         <p className="text-xs text-gray-500">
-                            {step === 'SELECT' ? 'Select foods' : 'Tap foods to change status'}
+                            {step === 'SELECT' ? 'Select foods' : 'Tap foods to change outcome'}
                         </p>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><Icon name="x" /></button>
@@ -195,18 +195,18 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
 
                         {/* STICKY VISUAL TRAY */}
                         <div className="border-t bg-white p-4 shadow-lg z-10">
-                            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar h-12 items-center">
-                                {selectedFoods.size === 0 ? <span className="text-sm text-gray-400 italic">Plate is empty...</span> : 
+                            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar h-14 items-center">
+                                {selectedFoods.size === 0 ? <span className="text-sm text-gray-400 italic w-full text-center">Plate is empty...</span> : 
                                     Array.from(selectedFoods).map(food => (
-                                        <button key={food} onClick={() => toggleFood(food)} className="relative shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200 shadow-sm animate-popIn">
-                                            <span className="text-lg">{getFoodEmoji(food)}</span>
-                                            <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5"><Icon name="x" className="w-2 h-2 text-white" /></div>
+                                        <button key={food} onClick={() => toggleFood(food)} className="relative shrink-0 w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-gray-100 shadow-sm animate-popIn hover:bg-red-50 hover:border-red-200 group transition-all">
+                                            <span className="text-2xl">{getFoodEmoji(food)}</span>
+                                            <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="x" className="w-2 h-2 text-white" /></div>
                                         </button>
                                     ))
                                 }
                             </div>
                             <button onClick={() => setStep('REVIEW')} disabled={selectedFoods.size === 0} className={`w-full py-3 px-4 rounded-xl shadow-lg text-sm font-bold text-white transition-all flex justify-center items-center gap-2 ${selectedFoods.size > 0 ? `bg-${baseColor}-600 hover:bg-${baseColor}-700` : 'bg-gray-300 cursor-not-allowed'}`}>
-                                Review & Log <Icon name="arrow-right" className="w-4 h-4" />
+                                Review Plate <Icon name="arrow-right" className="w-4 h-4" />
                             </button>
                         </div>
                     </>
@@ -217,19 +217,24 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                     <div className="flex-1 flex flex-col bg-gray-50">
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                                <h3 className="text-sm font-bold text-gray-700 mb-3">Tap to change outcome:</h3>
+                                <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                    <Icon name="utensils" className="w-4 h-4" /> What happened?
+                                </h3>
                                 <div className="space-y-2">
                                     {Array.from(selectedFoods).map(food => {
                                         const status = foodStatuses[food];
                                         const config = STATUS_CONFIG[status];
                                         return (
-                                            <button key={food} onClick={() => toggleStatus(food)} className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${config.color}`}>
+                                            <button key={food} onClick={() => toggleStatus(food)} className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${config.color} hover:shadow-sm`}>
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-2xl">{getFoodEmoji(food)}</span>
-                                                    <span className="font-medium">{food}</span>
+                                                    <span className="font-medium text-gray-900">{food}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
-                                                    {config.label} <Icon name={config.icon} className="w-4 h-4" />
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold uppercase tracking-wider">{config.label}</span>
+                                                    <div className={`p-1 rounded-full bg-white/50`}>
+                                                        <Icon name={config.icon} className="w-4 h-4" />
+                                                    </div>
                                                 </div>
                                             </button>
                                         );
@@ -248,9 +253,9 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                                         <button onClick={() => setPlatePhoto(null)} className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full"><Icon name="x" className="w-4 h-4" /></button>
                                     </div>
                                 ) : (
-                                    <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                                        <Icon name="camera" className="w-8 h-8 text-gray-300 mb-2" />
-                                        <span className="text-xs text-gray-500">Tap to snap a picture of the plate</span>
+                                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-gray-50">
+                                        <Icon name="camera" className="w-6 h-6 text-gray-400 mb-1" />
+                                        <span className="text-xs text-gray-500">Add Photo</span>
                                         <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                                     </label>
                                 )}
@@ -258,11 +263,11 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
 
                             {/* Notes */}
                             <div>
-                                <label className="text-sm font-bold text-gray-700 mb-1 block">Notes / Reaction</label>
+                                <label className="text-sm font-bold text-gray-700 mb-1 block">Notes</label>
                                 <textarea 
                                     className="w-full rounded-lg border-gray-300 text-sm focus:ring-teal-500 focus:border-teal-500"
                                     rows={2}
-                                    placeholder="Did they eat it? Throw it?"
+                                    placeholder="Any details to remember?"
                                     value={notes}
                                     onChange={e => setNotes(e.target.value)}
                                 />
@@ -283,8 +288,8 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                         </div>
 
                         <div className="p-4 bg-white border-t flex gap-3">
-                            <button onClick={() => setStep('SELECT')} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">Back</button>
-                            <button onClick={handleFinalSave} className={`flex-[2] py-3 text-sm font-bold text-white bg-${baseColor}-600 rounded-xl shadow-lg hover:bg-${baseColor}-700 flex justify-center items-center gap-2`}>
+                            <button onClick={() => setStep('SELECT')} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Back</button>
+                            <button onClick={handleFinalSave} className={`flex-[2] py-3 text-sm font-bold text-white bg-${baseColor}-600 rounded-xl shadow-lg hover:bg-${baseColor}-700 transition-colors flex justify-center items-center gap-2`}>
                                 <Icon name="check" className="w-5 h-5" /> Save Log
                             </button>
                         </div>
