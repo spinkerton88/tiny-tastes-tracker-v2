@@ -4,22 +4,32 @@ import { Recipe, RecipeFilter } from '../../types';
 import { flatFoodList, allFoods } from '../../constants';
 import Icon from '../ui/Icon';
 
+export interface LoggedItemData {
+    food: string;
+    status: 'eaten' | 'touched' | 'refused';
+    tags: string[];
+}
+
 interface LogMealModalProps {
     recipes: Recipe[];
     onClose: () => void;
-    // Updated onSave to handle granular data if needed, or just notes
-    onSave: (foodNames: string[], date: string, meal: string, photo?: string, notes?: string, foodStatuses?: Record<string, string>) => void;
+    onSave: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => void;
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     baseColor?: string;
 }
 
 type Step = 'SELECT' | 'REVIEW';
-type FoodStatus = 'eaten' | 'touched' | 'refused';
+export type FoodStatus = 'eaten' | 'touched' | 'refused';
 
-const STATUS_CONFIG = {
-    eaten: { color: 'bg-green-100 text-green-800 border-green-200', icon: 'check', label: 'Ate' },
-    touched: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: 'hand', label: 'Played' },
-    refused: { color: 'bg-red-100 text-red-800 border-red-200', icon: 'x', label: 'Refused' }
+export const STATUS_CONFIG = {
+    eaten: { color: 'bg-green-50 border-green-200', icon: 'check', label: 'Ate it', text: 'text-green-700' },
+    touched: { color: 'bg-yellow-50 border-yellow-200', icon: 'hand', label: 'Played/Touched', text: 'text-yellow-700' },
+    refused: { color: 'bg-red-50 border-red-200', icon: 'x', label: 'Refused', text: 'text-red-700' }
+};
+
+export const BEHAVIOR_TAGS = {
+    touched: ['Licked it', 'Played with it', 'Pushed away', 'Only one bite'],
+    refused: ['Threw it', 'Spat out', 'Cried', 'Gagged', 'Ignored it', 'Said No']
 };
 
 const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal' }) => {
@@ -27,13 +37,15 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
     
-    // Selection
+    // Selection State
     const [activeTab, setActiveTab] = useState<'foods' | 'recipes'>('foods');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set());
     
-    // Review Data
-    const [foodStatuses, setFoodStatuses] = useState<Record<string, FoodStatus>>({});
+    // Detailed Item Data (Status + Tags)
+    const [itemData, setItemData] = useState<Record<string, { status: FoodStatus; tags: Set<string> }>>({});
+    
+    // Global Meal Data
     const [platePhoto, setPlatePhoto] = useState<string | null>(null);
     const [notes, setNotes] = useState('');
     const [saveAsPreset, setSaveAsPreset] = useState(false);
@@ -43,47 +55,52 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
         return (flatFoodList as string[]).filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
     }, [searchQuery]);
 
+    // Initialize item data when a food is selected
     const toggleFood = (food: string) => {
         const newSet = new Set(selectedFoods);
         if (newSet.has(food)) {
             newSet.delete(food);
-            // Cleanup status
-            const newStatuses = { ...foodStatuses };
-            delete newStatuses[food];
-            setFoodStatuses(newStatuses);
+            const newData = { ...itemData };
+            delete newData[food];
+            setItemData(newData);
         } else {
             newSet.add(food);
-            // Default status
-            setFoodStatuses(prev => ({ ...prev, [food]: 'eaten' }));
+            setItemData(prev => ({ ...prev, [food]: { status: 'eaten', tags: new Set() } }));
         }
         setSelectedFoods(newSet);
     };
 
-    const toggleStatus = (food: string) => {
-        const current = foodStatuses[food] || 'eaten';
-        let next: FoodStatus = 'eaten';
-        if (current === 'eaten') next = 'touched';
-        else if (current === 'touched') next = 'refused';
-        else next = 'eaten'; // Cycle back
+    const setStatus = (food: string, status: FoodStatus) => {
+        setItemData(prev => ({
+            ...prev,
+            [food]: { ...prev[food], status, tags: new Set() } // Reset tags on status change
+        }));
+    };
 
-        setFoodStatuses(prev => ({ ...prev, [food]: next }));
+    const toggleTag = (food: string, tag: string) => {
+        setItemData(prev => {
+            const currentTags = new Set(prev[food].tags);
+            if (currentTags.has(tag)) currentTags.delete(tag);
+            else currentTags.add(tag);
+            return { ...prev, [food]: { ...prev[food], tags: currentTags } };
+        });
     };
 
     const handleAddRecipeToTray = (recipe: Recipe) => {
         const ingredients = recipe.ingredients.split('\n').map(i => i.replace('-', '').trim());
         const newSet = new Set(selectedFoods);
-        const newStatuses = { ...foodStatuses };
+        const newData = { ...itemData };
 
         (flatFoodList as string[]).forEach(food => {
             const foodLower = food.toLowerCase();
             if (ingredients.some(i => i.toLowerCase().includes(foodLower))) {
                 newSet.add(food);
-                newStatuses[food] = 'eaten';
+                if (!newData[food]) newData[food] = { status: 'eaten', tags: new Set() };
             }
         });
         
         setSelectedFoods(newSet);
-        setFoodStatuses(newStatuses);
+        setItemData(newData);
         setActiveTab('foods');
     };
 
@@ -110,19 +127,14 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
             });
         }
 
-        // Generate a smart note based on statuses if user didn't write one
-        let finalNotes = notes;
-        const refused = foodsList.filter(f => foodStatuses[f] === 'refused');
-        const touched = foodsList.filter(f => foodStatuses[f] === 'touched');
-        
-        if (!finalNotes && (refused.length > 0 || touched.length > 0)) {
-            const parts = [];
-            if (refused.length) parts.push(`Refused: ${refused.join(', ')}`);
-            if (touched.length) parts.push(`Played with: ${touched.join(', ')}`);
-            finalNotes = parts.join('. ');
-        }
+        // Prepare data payload
+        const itemsPayload: LoggedItemData[] = foodsList.map(f => ({
+            food: f,
+            status: itemData[f]?.status || 'eaten',
+            tags: Array.from(itemData[f]?.tags || [])
+        }));
 
-        onSave(foodsList, date, meal, platePhoto || undefined, finalNotes, foodStatuses);
+        onSave(itemsPayload, date, meal, platePhoto || undefined, notes);
         onClose();
     };
 
@@ -143,7 +155,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                             {step === 'SELECT' ? 'Build Plate' : 'Review Meal'}
                         </h2>
                         <p className="text-xs text-gray-500">
-                            {step === 'SELECT' ? 'Select foods' : 'Tap foods to change outcome'}
+                            {step === 'SELECT' ? 'Select foods' : 'How did it go?'}
                         </p>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><Icon name="x" /></button>
@@ -215,31 +227,70 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                 {/* --- STEP 2: REVIEW (Interactive) --- */}
                 {step === 'REVIEW' && (
                     <div className="flex-1 flex flex-col bg-gray-50">
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                                <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                    <Icon name="utensils" className="w-4 h-4" /> What happened?
-                                </h3>
-                                <div className="space-y-2">
-                                    {Array.from(selectedFoods).map(food => {
-                                        const status = foodStatuses[food];
-                                        const config = STATUS_CONFIG[status];
-                                        return (
-                                            <button key={food} onClick={() => toggleStatus(food)} className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${config.color} hover:shadow-sm`}>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                            
+                            <div className="space-y-4">
+                                {Array.from(selectedFoods).map(food => {
+                                    const currentData = itemData[food];
+                                    const status = currentData?.status || 'eaten';
+                                    const config = STATUS_CONFIG[status];
+                                    const isIssue = status !== 'eaten';
+
+                                    return (
+                                        <div key={food} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white shadow-sm ${config.color}`}>
+                                            {/* Top Row: Food Info & Main Toggle */}
+                                            <div className="flex items-center justify-between p-3">
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-2xl">{getFoodEmoji(food)}</span>
-                                                    <span className="font-medium text-gray-900">{food}</span>
+                                                    <span className="font-bold text-gray-800">{food}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-bold uppercase tracking-wider">{config.label}</span>
-                                                    <div className={`p-1 rounded-full bg-white/50`}>
-                                                        <Icon name={config.icon} className="w-4 h-4" />
+                                                
+                                                <div className="flex bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+                                                    {(['eaten', 'touched', 'refused'] as FoodStatus[]).map((s) => {
+                                                        const isS = status === s;
+                                                        const c = STATUS_CONFIG[s];
+                                                        return (
+                                                            <button
+                                                                key={s}
+                                                                onClick={() => setStatus(food, s)}
+                                                                className={`p-2 rounded-md transition-all ${isS ? `${c.color} ${c.text}` : 'text-gray-400 hover:bg-gray-50'}`}
+                                                                title={c.label}
+                                                            >
+                                                                <Icon name={c.icon} className="w-5 h-5" />
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            {/* Expanded "Log Card" for Issues */}
+                                            {isIssue && (
+                                                <div className="px-4 pb-4 pt-0 animate-fadeIn">
+                                                    <div className="h-px bg-black/5 w-full mb-3"></div>
+                                                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">What happened?</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {(status === 'touched' ? BEHAVIOR_TAGS.touched : BEHAVIOR_TAGS.refused).map(tag => {
+                                                            const isTagged = currentData.tags.has(tag);
+                                                            return (
+                                                                <button
+                                                                    key={tag}
+                                                                    onClick={() => toggleTag(food, tag)}
+                                                                    className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                                                                        isTagged 
+                                                                        ? 'bg-gray-800 text-white border-gray-800' 
+                                                                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                                                                    }`}
+                                                                >
+                                                                    {tag}
+                                                                </button>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             {/* Plate Photo */}
@@ -253,21 +304,21 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                                         <button onClick={() => setPlatePhoto(null)} className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full"><Icon name="x" className="w-4 h-4" /></button>
                                     </div>
                                 ) : (
-                                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-gray-50">
+                                    <label className="flex flex-col items-center justify-center h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-gray-50">
                                         <Icon name="camera" className="w-6 h-6 text-gray-400 mb-1" />
-                                        <span className="text-xs text-gray-500">Add Photo</span>
+                                        <span className="text-xs text-gray-500">Tap to snap a picture</span>
                                         <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                                     </label>
                                 )}
                             </div>
 
-                            {/* Notes */}
+                            {/* General Notes */}
                             <div>
-                                <label className="text-sm font-bold text-gray-700 mb-1 block">Notes</label>
+                                <label className="text-sm font-bold text-gray-700 mb-1 block">Overall Notes</label>
                                 <textarea 
                                     className="w-full rounded-lg border-gray-300 text-sm focus:ring-teal-500 focus:border-teal-500"
                                     rows={2}
-                                    placeholder="Any details to remember?"
+                                    placeholder="Anything else?"
                                     value={notes}
                                     onChange={e => setNotes(e.target.value)}
                                 />
@@ -278,10 +329,10 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                                 <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                                     <div className="flex items-center gap-2 mb-2">
                                         <input type="checkbox" id="savePreset" checked={saveAsPreset} onChange={e => setSaveAsPreset(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
-                                        <label htmlFor="savePreset" className="text-sm font-bold text-indigo-900">Save as Preset?</label>
+                                        <label htmlFor="savePreset" className="text-sm font-bold text-indigo-900">Save this meal as a Preset?</label>
                                     </div>
                                     {saveAsPreset && (
-                                        <input type="text" placeholder="e.g. Monday Pasta" value={presetName} onChange={e => setPresetName(e.target.value)} className="w-full mt-2 rounded-lg border-indigo-200 text-sm focus:ring-indigo-500 focus:border-indigo-500" autoFocus />
+                                        <input type="text" placeholder="e.g. Monday Pasta Lunch" value={presetName} onChange={e => setPresetName(e.target.value)} className="w-full mt-2 rounded-lg border-indigo-200 text-sm focus:ring-indigo-500 focus:border-indigo-500" autoFocus />
                                     )}
                                 </div>
                             )}

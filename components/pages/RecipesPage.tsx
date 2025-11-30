@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood } from '../../types';
 import { flatFoodList, allFoods } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
+// Import LoggedItemData and shared constants from LogMealModal
+import { LoggedItemData, STATUS_CONFIG, BEHAVIOR_TAGS, FoodStatus } from '../modals/LogMealModal';
 
 interface RecipesPageProps {
     recipes: Recipe[];
@@ -16,7 +18,7 @@ interface RecipesPageProps {
     onViewRecipe: (recipe: Recipe) => void;
     onAddToPlan: (date: string, meal: string) => void;
     onShowShoppingList: () => void;
-    onBatchLog?: (foodNames: string[], date: string, meal: string) => void;
+    onBatchLog?: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => void;
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     onFoodClick?: (food: Food) => void;
     baseColor?: string;
@@ -54,27 +56,376 @@ const StarRatingDisplay: React.FC<{ rating: number }> = ({ rating }) => {
     );
 };
 
+// HELPER: Get emoji
+const getFoodEmoji = (name: string) => {
+    const obj = allFoods.flatMap(c => c.items).find(f => f.name === name);
+    return obj?.emoji || '🍽️';
+};
+
 const LogMealView: React.FC<{ 
     recipes: Recipe[], 
     triedFoods: TriedFoodLog[],
     customFoods?: CustomFood[],
-    onSave: (foodNames: string[], date: string, meal: string) => void, 
+    onSave: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => void, 
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     onFoodClick?: (food: Food) => void;
-    baseColor: string 
-}> = ({ recipes, triedFoods, customFoods = [], onSave, onCreateRecipe, onFoodClick, baseColor }) => {
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    baseColor: string;
+    date: string;
+    setDate: (date: string) => void;
+}> = ({ recipes, triedFoods, customFoods = [], onSave, onCreateRecipe, onFoodClick, baseColor, date, setDate }) => {
+    const [step, setStep] = useState<'SELECT' | 'REVIEW'>('SELECT');
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
+    
+    // Step 1: Selection
     const [activeTab, setActiveTab] = useState<'foods' | 'recipe'>('foods');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set());
-    const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
     
-    // Save as Recipe State
-    const [saveAsRecipe, setSaveAsRecipe] = useState(false);
-    const [recipeName, setRecipeName] = useState('');
+    // Step 2: Review Data
+    const [itemData, setItemData] = useState<Record<string, { status: FoodStatus; tags: Set<string> }>>({});
+    const [platePhoto, setPlatePhoto] = useState<string | null>(null);
+    const [notes, setNotes] = useState('');
+    const [saveAsPreset, setSaveAsPreset] = useState(false);
+    const [presetName, setPresetName] = useState('');
 
-    const filteredFoods = (flatFoodList as string[]).filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredFoods = useMemo(() => {
+        return (flatFoodList as string[]).filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
+    }, [searchQuery]);
+
+    const toggleFood = (food: string) => {
+        const newSet = new Set(selectedFoods);
+        if (newSet.has(food)) {
+            newSet.delete(food);
+            const newData = { ...itemData };
+            delete newData[food];
+            setItemData(newData);
+        } else {
+            newSet.add(food);
+            setItemData(prev => ({ ...prev, [food]: { status: 'eaten', tags: new Set() } }));
+        }
+        setSelectedFoods(newSet);
+    };
+
+    const handleAddRecipeToTray = (recipe: Recipe) => {
+        const ingredients = recipe.ingredients.split('\n').map(i => i.replace('-', '').trim());
+        const newSet = new Set(selectedFoods);
+        const newData = { ...itemData };
+
+        (flatFoodList as string[]).forEach(food => {
+            const foodLower = food.toLowerCase();
+            if (ingredients.some(i => i.toLowerCase().includes(foodLower))) {
+                newSet.add(food);
+                if (!newData[food]) newData[food] = { status: 'eaten', tags: new Set() };
+            }
+        });
+        
+        setSelectedFoods(newSet);
+        setItemData(newData);
+        setActiveTab('foods');
+    };
+
+    const setStatus = (food: string, status: FoodStatus) => {
+        setItemData(prev => ({
+            ...prev,
+            [food]: { ...prev[food], status, tags: new Set() }
+        }));
+    };
+
+    const toggleTag = (food: string, tag: string) => {
+        setItemData(prev => {
+            const currentTags = new Set(prev[food].tags);
+            if (currentTags.has(tag)) currentTags.delete(tag);
+            else currentTags.add(tag);
+            return { ...prev, [food]: { ...prev[food], tags: currentTags } };
+        });
+    };
+
+    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setPlatePhoto(reader.result as string);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleFinalSave = () => {
+        if (selectedFoods.size === 0) return;
+        const foodsList = Array.from(selectedFoods);
+
+        if (saveAsPreset && onCreateRecipe && presetName) {
+            onCreateRecipe({
+                title: presetName,
+                ingredients: foodsList.join('\n'),
+                instructions: 'Quick Log Preset',
+                tags: ['Toddler Meal', meal],
+                mealTypes: [meal]
+            });
+        }
+
+        const itemsPayload: LoggedItemData[] = foodsList.map(f => ({
+            food: f,
+            status: itemData[f]?.status || 'eaten',
+            tags: Array.from(itemData[f]?.tags || [])
+        }));
+
+        onSave(itemsPayload, date, meal, platePhoto || undefined, notes);
+        
+        // Reset state
+        setSelectedFoods(new Set());
+        setItemData({});
+        setPlatePhoto(null);
+        setNotes('');
+        setSaveAsPreset(false);
+        setPresetName('');
+        setStep('SELECT');
+        alert("Meal logged successfully!");
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+            {/* Header / Date Controls */}
+            <div className="p-4 bg-gray-50 border-b grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Date</label>
+                    <input 
+                        type="date" 
+                        value={date} 
+                        onChange={(e) => setDate(e.target.value)} 
+                        className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
+                        disabled={step === 'REVIEW'}
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meal</label>
+                    <select 
+                        value={meal} 
+                        onChange={(e) => setMeal(e.target.value as RecipeFilter)}
+                        className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm capitalize`}
+                        disabled={step === 'REVIEW'}
+                    >
+                        {['breakfast', 'lunch', 'dinner', 'snack'].map(m => (
+                            <option key={m} value={m}>{m}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* --- STEP 1: SELECT --- */}
+            {step === 'SELECT' && (
+                <>
+                    <div className="flex border-b">
+                        <button 
+                            className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'foods' ? `border-b-2 border-${baseColor}-600 text-${baseColor}-600 bg-white` : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}
+                            onClick={() => setActiveTab('foods')}
+                        >
+                            Select Foods
+                        </button>
+                        <button 
+                            className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'recipe' ? `border-b-2 border-${baseColor}-600 text-${baseColor}-600 bg-white` : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}
+                            onClick={() => setActiveTab('recipe')}
+                        >
+                            Use Preset / Recipe
+                        </button>
+                    </div>
+
+                    <div className="p-4 h-[400px] overflow-y-auto">
+                        {activeTab === 'foods' ? (
+                            <>
+                                <div className="relative mb-3">
+                                    <Icon name="search" className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search foods..." 
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className={`w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {filteredFoods.map(food => {
+                                        const isSelected = selectedFoods.has(food);
+                                        return (
+                                            <button 
+                                                key={food} 
+                                                onClick={() => toggleFood(food)}
+                                                className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${isSelected ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-200 hover:border-gray-300'}`}
+                                            >
+                                                <span className="text-xl">{getFoodEmoji(food)}</span>
+                                                <span className={`text-sm font-medium truncate ${isSelected ? `text-${baseColor}-900` : 'text-gray-700'}`}>{food}</span>
+                                                {isSelected && <Icon name="check" className={`ml-auto w-4 h-4 text-${baseColor}-600`} />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="space-y-3">
+                                {recipes.length > 0 ? recipes.map(recipe => (
+                                    <button 
+                                        key={recipe.id}
+                                        onClick={() => handleAddRecipeToTray(recipe)}
+                                        className={`w-full text-left p-3 rounded-lg border border-gray-200 hover:border-${baseColor}-300 hover:bg-${baseColor}-50 transition-all flex justify-between items-center`}
+                                    >
+                                        <div>
+                                            <h4 className="font-semibold text-gray-800">{recipe.title}</h4>
+                                            <p className="text-xs text-gray-500 mt-1 line-clamp-1">{recipe.ingredients.replace(/\n/g, ', ')}</p>
+                                        </div>
+                                        <Icon name="plus" className={`w-4 h-4 text-${baseColor}-500`} />
+                                    </button>
+                                )) : (
+                                    <p className="text-center text-gray-500 py-8">No presets saved yet.</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer for Step 1 */}
+                    <div className="p-4 border-t bg-gray-50">
+                        {/* Visual Tray */}
+                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar h-12 items-center">
+                            {selectedFoods.size === 0 ? <span className="text-sm text-gray-400 italic w-full text-center">Plate is empty...</span> : 
+                                Array.from(selectedFoods).map(food => (
+                                    <button key={food} onClick={() => toggleFood(food)} className="relative shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm animate-popIn">
+                                        <span className="text-lg">{getFoodEmoji(food)}</span>
+                                        <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5"><Icon name="x" className="w-2 h-2 text-white" /></div>
+                                    </button>
+                                ))
+                            }
+                        </div>
+                        <button 
+                            onClick={() => setStep('REVIEW')}
+                            disabled={selectedFoods.size === 0}
+                            className={`w-full py-3 px-4 rounded-xl shadow-lg text-sm font-bold text-white transition-all flex justify-center items-center gap-2 ${selectedFoods.size > 0 ? `bg-${baseColor}-600 hover:bg-${baseColor}-700` : 'bg-gray-300 cursor-not-allowed'}`}
+                        >
+                            Review & Log <Icon name="arrow-right" className="w-4 h-4" />
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {/* --- STEP 2: REVIEW --- */}
+            {step === 'REVIEW' && (
+                <div className="flex flex-col h-[600px]">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50/50">
+                        <div className="space-y-3">
+                            {Array.from(selectedFoods).map(food => {
+                                const currentData = itemData[food];
+                                const status = currentData?.status || 'eaten';
+                                const config = STATUS_CONFIG[status];
+                                const isIssue = status !== 'eaten';
+
+                                return (
+                                    <div key={food} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white shadow-sm ${config.color}`}>
+                                        <div className="flex items-center justify-between p-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">{getFoodEmoji(food)}</span>
+                                                <span className="font-bold text-gray-800">{food}</span>
+                                            </div>
+                                            <div className="flex bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+                                                {(['eaten', 'touched', 'refused'] as FoodStatus[]).map((s) => {
+                                                    const isS = status === s;
+                                                    const c = STATUS_CONFIG[s];
+                                                    return (
+                                                        <button
+                                                            key={s}
+                                                            onClick={() => setStatus(food, s)}
+                                                            className={`p-2 rounded-md transition-all ${isS ? `${c.color} ${c.text}` : 'text-gray-400 hover:bg-gray-50'}`}
+                                                            title={c.label}
+                                                        >
+                                                            <Icon name={c.icon} className="w-5 h-5" />
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                        {/* Expanded Card Logic */}
+                                        {isIssue && (
+                                            <div className="px-4 pb-4 pt-0 animate-fadeIn">
+                                                <div className="h-px bg-black/5 w-full mb-3"></div>
+                                                <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">What happened?</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {(status === 'touched' ? BEHAVIOR_TAGS.touched : BEHAVIOR_TAGS.refused).map(tag => {
+                                                        const isTagged = currentData.tags.has(tag);
+                                                        return (
+                                                            <button
+                                                                key={tag}
+                                                                onClick={() => toggleTag(food, tag)}
+                                                                className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                                                                    isTagged 
+                                                                    ? 'bg-gray-800 text-white border-gray-800' 
+                                                                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                                                                }`}
+                                                            >
+                                                                {tag}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Photo & Notes */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 block">Meal Photo</label>
+                                {platePhoto ? (
+                                    <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
+                                        <img src={platePhoto} alt="Meal" className="w-full h-full object-cover" />
+                                        <button onClick={() => setPlatePhoto(null)} className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full"><Icon name="x" className="w-4 h-4" /></button>
+                                    </div>
+                                ) : (
+                                    <label className="flex flex-col items-center justify-center h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-gray-50">
+                                        <Icon name="camera" className="w-6 h-6 text-gray-400 mb-1" />
+                                        <span className="text-xs text-gray-500">Tap to snap a picture</span>
+                                        <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                                    </label>
+                                )}
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Notes</label>
+                                <textarea 
+                                    className="w-full rounded-lg border-gray-300 text-sm focus:ring-teal-500 focus:border-teal-500"
+                                    rows={2}
+                                    placeholder="Anything else?"
+                                    value={notes}
+                                    onChange={e => setNotes(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Save as Preset */}
+                        {onCreateRecipe && (
+                            <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <input type="checkbox" id="savePreset" checked={saveAsPreset} onChange={e => setSaveAsPreset(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                                    <label htmlFor="savePreset" className="text-sm font-bold text-indigo-900">Save as Preset?</label>
+                                </div>
+                                {saveAsPreset && (
+                                    <input type="text" placeholder="e.g. Monday Pasta Lunch" value={presetName} onChange={e => setPresetName(e.target.value)} className="w-full mt-2 rounded-lg border-indigo-200 text-sm focus:ring-indigo-500 focus:border-indigo-500" autoFocus />
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-4 bg-white border-t flex gap-3">
+                        <button onClick={() => setStep('SELECT')} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Back</button>
+                        <button onClick={handleFinalSave} className={`flex-[2] py-3 text-sm font-bold text-white bg-${baseColor}-600 rounded-xl shadow-lg hover:bg-${baseColor}-700 transition-colors flex justify-center items-center gap-2`}>
+                            <Icon name="check" className="w-5 h-5" /> Save Log
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const RecipesPage: React.FC<RecipesPageProps> = ({ recipes, mealPlan, triedFoods = [], customFoods, onShowAddRecipe, onShowImportRecipe, onShowSuggestRecipe, onViewRecipe, onAddToPlan, onShowShoppingList, onBatchLog, onCreateRecipe, onFoodClick, baseColor = 'teal' }) => {
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Get log history for current week relative to selected date
     const selectedDateObj = new Date(date);
@@ -95,63 +446,6 @@ const LogMealView: React.FC<{
         historyGrouped[log.date][log.meal].push(log.id);
     });
 
-    const toggleFood = (food: string) => {
-        const newSet = new Set(selectedFoods);
-        if (newSet.has(food)) newSet.delete(food);
-        else newSet.add(food);
-        setSelectedFoods(newSet);
-    };
-
-    const handleSaveLog = () => {
-        let foodsToLog: string[] = [];
-
-        if (activeTab === 'foods') {
-            foodsToLog = Array.from(selectedFoods);
-        } else {
-            const recipe = recipes.find(r => r.id === selectedRecipeId);
-            if (recipe) {
-                const combinedText = (recipe.title + ' ' + recipe.ingredients).toUpperCase();
-                (flatFoodList as string[]).forEach(food => {
-                    if (combinedText.includes(food) || combinedText.includes(food.slice(0, -1))) {
-                         foodsToLog.push(food);
-                    }
-                });
-                
-                if (foodsToLog.length === 0) {
-                    alert("We couldn't automatically match ingredients to our food list. Please log individual foods using the 'Select Foods' tab for accurate tracking.");
-                    return;
-                }
-            }
-        }
-
-        if (foodsToLog.length === 0) {
-            alert("Please select at least one food to log.");
-            return;
-        }
-
-        // Handle Save as Recipe Logic
-        if (activeTab === 'foods' && saveAsRecipe && onCreateRecipe) {
-            if (!recipeName.trim()) {
-                alert("Please enter a name for your new recipe.");
-                return;
-            }
-            onCreateRecipe({
-                title: recipeName,
-                ingredients: foodsToLog.join(', '),
-                instructions: 'Combine ingredients and serve.',
-                tags: ['Quick Log'],
-                mealTypes: [meal]
-            });
-        }
-
-        onSave(foodsToLog, date, meal);
-        setSelectedFoods(new Set());
-        setSelectedRecipeId('');
-        setSaveAsRecipe(false);
-        setRecipeName('');
-        alert("Meal logged!");
-    };
-
     const handleFoodItemClick = (foodName: string) => {
         if (!onFoodClick) return;
         
@@ -159,7 +453,7 @@ const LogMealView: React.FC<{
         let foodObj = allFoods.flatMap(c => c.items).find(f => f.name === foodName);
         
         // If not found in standard foods, check custom foods
-        if (!foodObj) {
+        if (!foodObj && customFoods) {
             foodObj = customFoods.find(f => f.name === foodName);
         }
         
@@ -171,143 +465,35 @@ const LogMealView: React.FC<{
         onFoodClick(foodObj);
     };
 
-    const handleLogAgain = (foods: string[], originalMeal: string) => {
-        // Use current date and current selected meal type or original?
-        // Let's use current selected date and current selected meal from state to be consistent with top controls
-        // Or if user wants "exact same", maybe we should ask? 
-        // For "One Tap" experience, logging to *current selection* (date/meal at top) is usually best workflow.
-        onSave(foods, date, meal);
-        alert(`Logged ${foods.length} items for ${meal} on ${date}!`);
+    const handleLogAgain = (foods: string[]) => {
+        if (!onBatchLog) return;
+        // Create detailed items with default status
+        const detailedItems: LoggedItemData[] = foods.map(f => ({
+            food: f,
+            status: 'eaten',
+            tags: []
+        }));
+        
+        // We use the last selected meal type or default to lunch if not available
+        onBatchLog(detailedItems, date, 'lunch');
+        alert(`Logged ${foods.length} items for ${date}!`);
     };
 
     return (
         <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 bg-gray-50 border-b grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Date</label>
-                        <input 
-                            type="date" 
-                            value={date} 
-                            onChange={(e) => setDate(e.target.value)} 
-                            className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Meal</label>
-                        <select 
-                            value={meal} 
-                            onChange={(e) => setMeal(e.target.value as RecipeFilter)}
-                            className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm capitalize`}
-                        >
-                            {['breakfast', 'lunch', 'dinner', 'snack'].map(m => (
-                                <option key={m} value={m}>{m}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                <div className="flex border-b">
-                    <button 
-                        className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'foods' ? `border-b-2 border-${baseColor}-600 text-${baseColor}-600 bg-white` : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}
-                        onClick={() => setActiveTab('foods')}
-                    >
-                        Select Foods
-                    </button>
-                    <button 
-                        className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'recipe' ? `border-b-2 border-${baseColor}-600 text-${baseColor}-600 bg-white` : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}
-                        onClick={() => setActiveTab('recipe')}
-                    >
-                        From Recipe
-                    </button>
-                </div>
-
-                <div className="p-4 h-64 overflow-y-auto">
-                    {activeTab === 'foods' ? (
-                        <>
-                            <div className="relative mb-3">
-                                <Icon name="search" className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Search foods..." 
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className={`w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                {filteredFoods.map(food => {
-                                    const foodObj = allFoods.flatMap(c => c.items).find(f => f.name === food);
-                                    const isSelected = selectedFoods.has(food);
-                                    return (
-                                        <button 
-                                            key={food} 
-                                            onClick={() => toggleFood(food)}
-                                            className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${isSelected ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-200 hover:border-gray-300'}`}
-                                        >
-                                            <span className="text-xl">{foodObj?.emoji || '🍽️'}</span>
-                                            <span className={`text-sm font-medium truncate ${isSelected ? `text-${baseColor}-900` : 'text-gray-700'}`}>{food}</span>
-                                            {isSelected && <Icon name="check" className={`ml-auto w-4 h-4 text-${baseColor}-600`} />}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </>
-                    ) : (
-                        <div className="space-y-3">
-                            {recipes.length > 0 ? recipes.map(recipe => (
-                                <button 
-                                    key={recipe.id}
-                                    onClick={() => setSelectedRecipeId(recipe.id)}
-                                    className={`w-full text-left p-3 rounded-lg border transition-all ${selectedRecipeId === recipe.id ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-200 hover:border-gray-300'}`}
-                                >
-                                    <h4 className={`font-semibold ${selectedRecipeId === recipe.id ? `text-${baseColor}-900` : 'text-gray-800'}`}>{recipe.title}</h4>
-                                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{recipe.ingredients.replace(/\n/g, ', ')}</p>
-                                </button>
-                            )) : (
-                                <p className="text-center text-gray-500 py-8">No recipes saved yet.</p>
-                            )}
-                        </div>
-                    )}
-                </div>
-                
-                {/* Save as Recipe Option */}
-                {activeTab === 'foods' && selectedFoods.size > 0 && onCreateRecipe && (
-                    <div className={`px-4 py-3 bg-${baseColor}-50 border-t border-${baseColor}-100`}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <input 
-                                type="checkbox" 
-                                id="saveRecipeInline" 
-                                checked={saveAsRecipe} 
-                                onChange={(e) => setSaveAsRecipe(e.target.checked)}
-                                className={`rounded border-gray-300 text-${baseColor}-600 focus:ring-${baseColor}-500`}
-                            />
-                            <label htmlFor="saveRecipeInline" className={`text-sm font-medium text-${baseColor}-800`}>Save combination as a Recipe?</label>
-                        </div>
-                        {saveAsRecipe && (
-                            <div className="animate-fadeIn">
-                                <input 
-                                    type="text" 
-                                    placeholder="e.g., Avocado Toast Plate" 
-                                    value={recipeName}
-                                    onChange={(e) => setRecipeName(e.target.value)}
-                                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div className="p-4 border-t bg-gray-50">
-                    <button 
-                        onClick={handleSaveLog}
-                        className={`w-full py-2 px-4 rounded-md shadow-sm text-sm font-bold text-white bg-${baseColor}-600 hover:bg-${baseColor}-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${baseColor}-500`}
-                    >
-                        Log {activeTab === 'foods' ? `${selectedFoods.size} Foods` : 'Meal'}
-                        {saveAsRecipe && activeTab === 'foods' ? ' & Save Recipe' : ''}
-                    </button>
-                </div>
-            </div>
+            {onBatchLog && (
+                <LogMealView 
+                    recipes={recipes}
+                    triedFoods={triedFoods}
+                    customFoods={customFoods}
+                    onSave={onBatchLog}
+                    onCreateRecipe={onCreateRecipe}
+                    onFoodClick={onFoodClick}
+                    baseColor={baseColor}
+                    date={date}
+                    setDate={setDate}
+                />
+            )}
 
             {/* History Section */}
             <div>
@@ -337,7 +523,7 @@ const LogMealView: React.FC<{
                                                     ))}
                                                 </div>
                                                 <button 
-                                                    onClick={() => handleLogAgain(foods, mealType)}
+                                                    onClick={() => handleLogAgain(foods)}
                                                     className={`text-xs font-bold text-${baseColor}-600 hover:text-${baseColor}-800 flex items-center gap-1 mt-1 p-1 -ml-1 rounded hover:bg-${baseColor}-50 transition-colors`}
                                                 >
                                                     <Icon name="rotate-ccw" className="w-3.5 h-3.5" /> Log This Again
@@ -356,207 +542,6 @@ const LogMealView: React.FC<{
                 )}
             </div>
         </div>
-    );
-};
-
-const MyRecipesView: React.FC<{ recipes: Recipe[], onViewRecipe: (recipe: Recipe) => void, onShowAddRecipe: () => void, baseColor: string }> = ({ recipes, onViewRecipe, onShowAddRecipe, baseColor }) => {
-    const [filter, setFilter] = useState<RecipeFilter>('all');
-
-    const filteredRecipes = recipes.filter(recipe => {
-        if (filter === 'all') return true;
-        const mealTypes = recipe.mealTypes || [];
-        return mealTypes.length === 0 || mealTypes.includes(filter);
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    const getIngredientsPreview = (ingredients: string): string => {
-        if (!ingredients) return 'No ingredients listed.';
-        return ingredients.replace(/\n/g, ', ');
-    };
-
-    return (
-        <div>
-            <div className="flex flex-wrap gap-2 mb-4">
-                {(['all', 'breakfast', 'lunch', 'dinner', 'snack'] as RecipeFilter[]).map(f => (
-                    <button 
-                        key={f}
-                        onClick={() => setFilter(f)}
-                        className={`recipe-filter-btn ${filter === f ? `bg-${baseColor}-600 text-white` : 'bg-gray-100 text-gray-700'}`}
-                    >
-                        {f.charAt(0).toUpperCase() + f.slice(1)}
-                    </button>
-                ))}
-            </div>
-            <div className="space-y-4">
-                {filteredRecipes.length > 0 ? filteredRecipes.map(recipe => (
-                    <button key={recipe.id} onClick={() => onViewRecipe(recipe)} className="w-full text-left bg-white shadow rounded-lg p-4 transition-all hover:shadow-md">
-                        <div className="flex justify-between items-start">
-                            <h3 className={`text-lg font-semibold text-${baseColor}-700 pr-2`}>{recipe.title}</h3>
-                            {recipe.rating && recipe.rating > 0 && <StarRatingDisplay rating={recipe.rating} />}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            {[...(recipe.mealTypes || []), ...(recipe.tags || [])].map(tag => (
-                                <span key={tag} className={`text-xs ${['breakfast', 'lunch', 'dinner', 'snack'].includes(tag) ? 'bg-blue-100 text-blue-700' : `bg-${baseColor}-100 text-${baseColor}-700`} px-2 py-0.5 rounded-full`}>{tag}</span>
-                            ))}
-                        </div>
-                        <p className="text-sm text-gray-600 mt-3 line-clamp-2">{getIngredientsPreview(recipe.ingredients)}</p>
-                    </button>
-                )) : (
-                    <EmptyState
-                        illustration={<NoRecipesIllustration />}
-                        title={filter === 'all' ? 'Your Recipe Box is Empty' : 'No Recipes Found'}
-                        message={filter === 'all' ? 'Get started by adding your first baby-friendly recipe!' : `No recipes match the "${filter}" filter.`}
-                    >
-                        {filter === 'all' && (
-                             <button onClick={onShowAddRecipe} className={`inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-${baseColor}-600 hover:bg-${baseColor}-700`}>
-                                <Icon name="plus" className="w-4 h-4" /> Add First Recipe
-                            </button>
-                        )}
-                    </EmptyState>
-                )}
-            </div>
-        </div>
-    );
-};
-
-const MealPlannerView: React.FC<{ mealPlan: MealPlan, recipes: Recipe[], onAddToPlan: (date: string, meal: string) => void, onShowShoppingList: () => void, baseColor: string }> = ({ mealPlan, recipes, onAddToPlan, onShowShoppingList, baseColor }) => {
-    const [weekStartDate, setWeekStartDate] = useState(getStartOfWeek(new Date()));
-
-    const changeWeek = (amount: number) => {
-        const newDate = new Date(weekStartDate);
-        newDate.setDate(newDate.getDate() + amount);
-        setWeekStartDate(newDate);
-    };
-
-    const getWeekDisplay = (startDate: Date) => {
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6);
-        const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-        return `${startDate.toLocaleDateString(undefined, options)} - ${endDate.toLocaleDateString(undefined, options)}`;
-    };
-
-    return (
-        <div>
-            <div className="bg-white p-4 rounded-lg shadow mb-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
-                    <h3 className="text-lg font-semibold text-gray-800">Weekly Plan</h3>
-                    <div className="flex-shrink-0 flex gap-2">
-                        <button onClick={onShowShoppingList} className={`inline-flex items-center gap-2 px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-${baseColor}-600 hover:bg-${baseColor}-700`}>
-                            <Icon name="shopping-cart" className="w-4 h-4" /> Shopping List
-                        </button>
-                    </div>
-                </div>
-                <div className="flex items-center justify-between">
-                    <button onClick={() => changeWeek(-7)} className="p-2 rounded-md hover:bg-gray-100"><Icon name="chevron-left" className="w-5 h-5" /></button>
-                    <div className="flex-1 text-center">
-                        <button onClick={() => setWeekStartDate(getStartOfWeek(new Date()))} className={`text-sm font-medium text-${baseColor}-600 hover:underline`}>Today</button>
-                        <p className="text-sm font-medium text-gray-700">{getWeekDisplay(weekStartDate)}</p>
-                    </div>
-                    <button onClick={() => changeWeek(7)} className="p-2 rounded-md hover:bg-gray-100"><Icon name="chevron-right" className="w-5 h-5" /></button>
-                </div>
-            </div>
-            <div className="space-y-4">
-                {Array.from({ length: 7 }).map((_, i) => {
-                    const dayDate = new Date(weekStartDate);
-                    dayDate.setDate(weekStartDate.getDate() + i);
-                    const dateStr = formatDateString(dayDate);
-                    const dayPlan = mealPlan[dateStr] || {};
-                    return (
-                        <div key={dateStr} className="bg-white rounded-lg shadow p-3">
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className={`text-lg font-bold text-${baseColor}-600`}>{dayDate.getDate()}</span>
-                                <span className="text-sm font-medium text-gray-700">{dayDate.toLocaleDateString(undefined, { weekday: 'short' })}</span>
-                            </div>
-                            <div className="space-y-2">
-                                {(['breakfast', 'lunch', 'dinner'] as const).map(meal => {
-                                    const plannedMeal = dayPlan[meal];
-                                    const recipeExists = plannedMeal && recipes.some(r => r.id === plannedMeal.id);
-                                    return (
-                                        <div key={meal} className={`meal-slot rounded-lg p-2 transition-all hover:bg-${baseColor}-50 hover:border-${baseColor}-600`}>
-                                            <span className="text-xs font-medium text-gray-500">{meal.charAt(0).toUpperCase() + meal.slice(1)}</span>
-                                            {plannedMeal ? (
-                                                <div className={`planned-meal-item bg-${baseColor}-50 border border-${baseColor}-200 rounded-md p-2 mt-1 ${!recipeExists ? 'is-deleted' : ''}`} >
-                                                    <p className={`text-sm font-medium text-${baseColor}-800`}>{recipeExists ? plannedMeal.title : 'Deleted Recipe'}</p>
-                                                </div>
-                                            ) : (
-                                                <button onClick={() => onAddToPlan(dateStr, meal)} className={`add-meal-btn mt-1 hover:text-${baseColor}-600`}>
-                                                    <Icon name="plus" className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
-
-const RecipesPage: React.FC<RecipesPageProps> = (props) => {
-    // Set default subpage to 'log-meal' if log feature is enabled, otherwise 'my-recipes'
-    const [subPage, setSubPage] = useState<'log-meal' | 'my-recipes' | 'meal-planner'>(props.onBatchLog ? 'log-meal' : 'my-recipes');
-    const baseColor = props.baseColor || 'teal';
-
-    return (
-        <>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-semibold text-gray-800">Recipes & Meals</h2>
-                </div>
-                <div className="flex-shrink-0 flex flex-wrap gap-2">
-                    <button onClick={props.onShowSuggestRecipe} className="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-violet-600 hover:bg-violet-700">
-                        <Icon name="sparkles" className="w-4 h-4" /> Suggest
-                    </button>
-                    <button onClick={props.onShowImportRecipe} className="inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                        <Icon name="camera" className="w-4 h-4" /> Import
-                    </button>
-                    <button onClick={props.onShowAddRecipe} className={`inline-flex items-center gap-2 px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-${baseColor}-600 hover:bg-${baseColor}-700`}>
-                        <Icon name="plus" className="w-4 h-4" /> Add New
-                    </button>
-                </div>
-            </div>
-
-            <div className="border-b border-gray-200 mb-4">
-                <nav className="flex -mb-px overflow-x-auto">
-                    {props.onBatchLog && (
-                        <button 
-                            onClick={() => setSubPage('log-meal')} 
-                            className={`recipe-sub-nav-btn whitespace-nowrap ${subPage === 'log-meal' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                        >
-                            <Icon name="utensils" className="w-4 h-4 inline-block -mt-1 mr-1" /> Log Meal
-                        </button>
-                    )}
-                    <button 
-                        onClick={() => setSubPage('my-recipes')} 
-                        className={`recipe-sub-nav-btn whitespace-nowrap ${subPage === 'my-recipes' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                    >
-                        <Icon name="notebook-pen" className="w-4 h-4 inline-block -mt-1 mr-1" /> My Recipes
-                    </button>
-                    <button 
-                        onClick={() => setSubPage('meal-planner')} 
-                        className={`recipe-sub-nav-btn whitespace-nowrap ${subPage === 'meal-planner' ? `text-${baseColor}-600 border-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                    >
-                        <Icon name="calendar-days" className="w-4 h-4 inline-block -mt-1 mr-1" /> Meal Planner
-                    </button>
-                </nav>
-            </div>
-            
-            {subPage === 'log-meal' && props.onBatchLog && (
-                <LogMealView 
-                    recipes={props.recipes} 
-                    triedFoods={props.triedFoods || []}
-                    customFoods={props.customFoods}
-                    onSave={props.onBatchLog} 
-                    onCreateRecipe={props.onCreateRecipe}
-                    onFoodClick={props.onFoodClick}
-                    baseColor={baseColor} 
-                />
-            )}
-            {subPage === 'my-recipes' && <MyRecipesView recipes={props.recipes} onViewRecipe={props.onViewRecipe} onShowAddRecipe={props.onShowAddRecipe} baseColor={baseColor} />}
-            {subPage === 'meal-planner' && <MealPlannerView mealPlan={props.mealPlan} recipes={props.recipes} onAddToPlan={props.onAddToPlan} onShowShoppingList={props.onShowShoppingList} baseColor={baseColor} />}
-        </>
     );
 };
 

@@ -24,7 +24,7 @@ import AllergenAlertModal from './components/modals/AllergenAlertModal';
 import BadgeUnlockedModal from './components/modals/BadgeUnlockedModal';
 import CertificateModal from './components/modals/CertificateModal';
 import CustomFoodModal from './components/modals/CustomFoodModal';
-import LogMealModal from './components/modals/LogMealModal';
+import LogMealModal, { LoggedItemData } from './components/modals/LogMealModal';
 import TutorialModal from './components/modals/TutorialModal';
 
 import { useAppMode } from './hooks/useAppMode';
@@ -86,7 +86,6 @@ const App: React.FC = () => {
 
   // Handle Mode Change redirects
   useEffect(() => {
-    // If current page is not in the new mode's nav items, switch to the first item
     if (config && config.navItems.length > 0) {
         const itemExists = config.navItems.some(item => item.id === currentPage);
         if (!itemExists) {
@@ -115,7 +114,6 @@ const App: React.FC = () => {
       let newBadges: Badge[] = [...currentBadges];
       let unlockedBadge: Badge | null = null;
 
-      // Check numeric badges
       const numericBadges = [10, 20, 30, 40, 50, 60, 70, 80, 90];
       numericBadges.forEach(num => {
           const badgeId = `tried_${num}`;
@@ -126,7 +124,6 @@ const App: React.FC = () => {
           }
       });
       
-      // Check 100 Club
       if (triedCount >= 100) {
           const badgeId = '100_club';
           const badgeIndex = newBadges.findIndex(b => b.id === badgeId);
@@ -149,61 +146,50 @@ const App: React.FC = () => {
       const updatedTried = [...triedFoods.filter(f => !(f.id === foodName && f.date === data.date && f.meal === data.meal)), newLog];
       setTriedFoods(updatedTried);
       
-      // Check for first time try
       const isFirstTime = !triedFoods.some(f => f.id === foodName);
-      
       setModalState({ type: null });
       
       if (isFirstTime) {
           checkBadges(updatedTried);
-          
-          // Check for allergens
-          // Note: Logic for checking allergens would go here using FOOD_ALLERGY_MAPPING
-          // For now simplified.
           const customFood = customFoods.find(c => c.name === foodName);
           let allergens: string[] = [];
           if (customFood && customFood.details.allergen_info && customFood.details.allergen_info !== 'No common allergens') {
              allergens.push(customFood.details.allergen_info);
           }
-          // Assuming common allergens check is done via helper or hardcoded list if needed
-          
           if (allergens.length > 0) {
              setModalState({ type: 'ALLERGEN_ALERT', foodName, allergens });
           }
       }
   };
 
-  const handleBatchLogMeal = (foodNames: string[], date: string, meal: string, photo?: string, notes?: string, foodStatuses?: Record<string, string>) => {
-      const newLogs: TriedFoodLog[] = foodNames.map(name => {
-          let reaction = 0; // 0 = no rating/neutral/eaten
+  // Updated to support detailed items
+  const handleBatchLogMeal = (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => {
+      const newLogs: TriedFoodLog[] = items.map(item => {
+          let reaction = 6; // Default to "Liked" (6/7)
           let moreThanOneBite = true;
           
-          if (foodStatuses) {
-              const status = foodStatuses[name];
-              if (status === 'refused') {
-                  reaction = 1; // 1 = Hated it / Refused
-                  moreThanOneBite = false;
-              } else if (status === 'touched') {
-                  moreThanOneBite = false;
-                  // Reaction remains 0 (neutral/no info)
-              }
+          if (item.status === 'refused') {
+              reaction = 1; // Hated it / Refused
+              moreThanOneBite = false;
+          } else if (item.status === 'touched') {
+              reaction = 3; // Neutral/Meh
+              moreThanOneBite = false;
           }
 
           return {
-              id: name,
+              id: item.food,
               date,
               meal,
               reaction, 
               moreThanOneBite,
               allergyReaction: 'none',
-              notes: notes || 'Batch logged from meal',
+              notes: notes || '',
               tryCount: 1,
-              messyFaceImage: photo
+              messyFaceImage: photo,
+              behavioralTags: item.tags
           };
       });
       
-      // Filter out duplicates for same day/meal if exists, or append?
-      // For simplicity, we append but could be smarter.
       const updatedTried = [...triedFoods, ...newLogs];
       setTriedFoods(updatedTried);
       checkBadges(updatedTried);
@@ -234,7 +220,6 @@ const App: React.FC = () => {
       setModalState({ type: null });
   };
   
-  // Picky Eater Handlers
   const handleSaveStrategy = (strategy: SavedStrategy) => {
       setSavedStrategies(prev => [...prev, strategy]);
   };
@@ -243,7 +228,6 @@ const App: React.FC = () => {
       setSavedStrategies(prev => prev.filter(s => s.id !== id));
   };
 
-  // Render Page Content
   const renderPage = () => {
       const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
 
@@ -313,7 +297,6 @@ const App: React.FC = () => {
                   triedFoods={triedFoods}
                   baseColor={baseColorName}
               />;
-          // Newborn placeholders
           case 'feed':
           case 'diapers':
           case 'growth':
@@ -327,7 +310,6 @@ const App: React.FC = () => {
       }
   };
 
-  // Render Modal
   const renderModal = () => {
       const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
 
