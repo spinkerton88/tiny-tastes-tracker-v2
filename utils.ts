@@ -86,7 +86,7 @@ export const getModeConfig = (mode: AppMode): AppModeConfig => {
                     { id: 'learn', label: 'Learn', icon: 'book-open' },
                     { id: 'profile', label: 'Profile', icon: 'user' }
                 ],
-                homeTitle: "Newborn Log",
+                homeTitle: "Tiny Tastes",
                 showFoodTracker: false
             };
         case 'TODDLER':
@@ -101,7 +101,7 @@ export const getModeConfig = (mode: AppMode): AppModeConfig => {
                     { id: 'learn', label: 'Learn', icon: 'book-open' },
                     { id: 'profile', label: 'Profile', icon: 'user' }
                 ],
-                homeTitle: "Toddler Table",
+                homeTitle: "Tiny Tastes",
                 showFoodTracker: false
             };
         default: // EXPLORER
