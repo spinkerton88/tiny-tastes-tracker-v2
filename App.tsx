@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone, Badge, CustomFood } from './types';
+import { Page, Food, TriedFoodLog, Recipe, UserProfile, MealPlan, ModalState, FoodLogData, Milestone, Badge, CustomFood, SavedStrategy } from './types';
 import { totalFoodCount, DEFAULT_MILESTONES, FOOD_ALLERGY_MAPPING, BADGES_LIST, allFoods, GREEN_VEGETABLES } from './constants';
 import { useAppMode } from './hooks/useAppMode';
 import Layout from './components/Layout';
@@ -95,6 +95,7 @@ const App: React.FC = () => {
     const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [mealPlan, setMealPlan] = useState<MealPlan>({});
+    const [savedStrategies, setSavedStrategies] = useState<SavedStrategy[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [milestones, setMilestones] = useState<Milestone[]>(DEFAULT_MILESTONES);
     const [loading, setLoading] = useState(true);
@@ -124,6 +125,7 @@ const App: React.FC = () => {
             localStorage.removeItem('tiny-tastes-tracker-recipes');
             localStorage.removeItem('tiny-tastes-tracker-mealPlan');
             localStorage.removeItem('tiny-tastes-tracker-milestones');
+            localStorage.removeItem('tiny-tastes-tracker-strategies');
             window.location.reload();
         }
     };
@@ -311,6 +313,18 @@ const App: React.FC = () => {
         }
     };
 
+    const saveStrategy = async (strategy: SavedStrategy) => {
+        const updated = [...savedStrategies, strategy];
+        localStorage.setItem('tiny-tastes-tracker-strategies', JSON.stringify(updated));
+        setSavedStrategies(updated);
+    };
+
+    const deleteStrategy = async (id: string) => {
+        const updated = savedStrategies.filter(s => s.id !== id);
+        localStorage.setItem('tiny-tastes-tracker-strategies', JSON.stringify(updated));
+        setSavedStrategies(updated);
+    };
+
     useEffect(() => {
         setLoading(true);
         
@@ -373,6 +387,10 @@ const App: React.FC = () => {
             // Load Custom Foods
             const loadedCustomFoods = getFromStorage<CustomFood[]>('customFoods', []);
             setCustomFoods(loadedCustomFoods);
+
+            // Load Saved Strategies
+            const loadedStrategies = getFromStorage<SavedStrategy[]>('strategies', []);
+            setSavedStrategies(loadedStrategies);
 
             const rawRecipes = getFromStorage<any[]>('recipes', []);
             const cleanedRecipes = rawRecipes.map((r): Recipe | null => {
@@ -440,7 +458,18 @@ const App: React.FC = () => {
         if (mode === 'TODDLER') {
             switch (currentPage) {
                 case 'picky_eater':
-                    return <ToddlerPickyEater baseColor={baseColor} />;
+                    return <ToddlerPickyEater 
+                        baseColor={baseColor} 
+                        savedStrategies={savedStrategies}
+                        onSaveStrategy={saveStrategy}
+                        onDeleteStrategy={deleteStrategy}
+                        safeFoods={userProfile?.safeFoods || []}
+                        onUpdateSafeFoods={(foods) => {
+                            if (userProfile) {
+                                saveProfile({ ...userProfile, safeFoods: foods });
+                            }
+                        }}
+                    />;
                 case 'recipes':
                     // RecipesPage handles meal planning and recipe list
                     return <RecipesPage 
@@ -454,6 +483,7 @@ const App: React.FC = () => {
                         onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
                         onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
                         onBatchLog={handleBatchLog}
+                        onCreateRecipe={addRecipe}
                         baseColor={baseColor}
                     />;
                 case 'profile':
@@ -657,6 +687,7 @@ const App: React.FC = () => {
                     recipes={recipes}
                     onClose={() => setModalState({ type: null })}
                     onSave={handleBatchLog}
+                    onCreateRecipe={addRecipe}
                     baseColor={baseColor}
                 />
             }

@@ -16,6 +16,7 @@ interface RecipesPageProps {
     onAddToPlan: (date: string, meal: string) => void;
     onShowShoppingList: () => void;
     onBatchLog?: (foodNames: string[], date: string, meal: string) => void;
+    onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     baseColor?: string;
 }
 
@@ -55,14 +56,19 @@ const LogMealView: React.FC<{
     recipes: Recipe[], 
     triedFoods: TriedFoodLog[],
     onSave: (foodNames: string[], date: string, meal: string) => void, 
+    onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     baseColor: string 
-}> = ({ recipes, triedFoods, onSave, baseColor }) => {
+}> = ({ recipes, triedFoods, onSave, onCreateRecipe, baseColor }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
     const [activeTab, setActiveTab] = useState<'foods' | 'recipe'>('foods');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set());
     const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
+    
+    // Save as Recipe State
+    const [saveAsRecipe, setSaveAsRecipe] = useState(false);
+    const [recipeName, setRecipeName] = useState('');
 
     const filteredFoods = flatFoodList.filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -119,9 +125,26 @@ const LogMealView: React.FC<{
             return;
         }
 
+        // Handle Save as Recipe Logic
+        if (activeTab === 'foods' && saveAsRecipe && onCreateRecipe) {
+            if (!recipeName.trim()) {
+                alert("Please enter a name for your new recipe.");
+                return;
+            }
+            onCreateRecipe({
+                title: recipeName,
+                ingredients: foodsToLog.join(', '),
+                instructions: 'Combine ingredients and serve.',
+                tags: ['Quick Log'],
+                mealTypes: [meal]
+            });
+        }
+
         onSave(foodsToLog, date, meal);
         setSelectedFoods(new Set());
         setSelectedRecipeId('');
+        setSaveAsRecipe(false);
+        setRecipeName('');
         alert("Meal logged!");
     };
 
@@ -215,6 +238,33 @@ const LogMealView: React.FC<{
                         </div>
                     )}
                 </div>
+                
+                {/* Save as Recipe Option */}
+                {activeTab === 'foods' && selectedFoods.size > 0 && onCreateRecipe && (
+                    <div className={`px-4 py-3 bg-${baseColor}-50 border-t border-${baseColor}-100`}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <input 
+                                type="checkbox" 
+                                id="saveRecipeInline" 
+                                checked={saveAsRecipe} 
+                                onChange={(e) => setSaveAsRecipe(e.target.checked)}
+                                className={`rounded border-gray-300 text-${baseColor}-600 focus:ring-${baseColor}-500`}
+                            />
+                            <label htmlFor="saveRecipeInline" className={`text-sm font-medium text-${baseColor}-800`}>Save combination as a Recipe?</label>
+                        </div>
+                        {saveAsRecipe && (
+                            <div className="animate-fadeIn">
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g., Avocado Toast Plate" 
+                                    value={recipeName}
+                                    onChange={(e) => setRecipeName(e.target.value)}
+                                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="p-4 border-t bg-gray-50">
                     <button 
@@ -222,6 +272,7 @@ const LogMealView: React.FC<{
                         className={`w-full py-2 px-4 rounded-md shadow-sm text-sm font-bold text-white bg-${baseColor}-600 hover:bg-${baseColor}-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${baseColor}-500`}
                     >
                         Log {activeTab === 'foods' ? `${selectedFoods.size} Foods` : 'Meal'}
+                        {saveAsRecipe && activeTab === 'foods' ? ' & Save Recipe' : ''}
                     </button>
                 </div>
             </div>
@@ -452,6 +503,7 @@ const RecipesPage: React.FC<RecipesPageProps> = (props) => {
                     recipes={props.recipes} 
                     triedFoods={props.triedFoods || []}
                     onSave={props.onBatchLog} 
+                    onCreateRecipe={props.onCreateRecipe}
                     baseColor={baseColor} 
                 />
             )}

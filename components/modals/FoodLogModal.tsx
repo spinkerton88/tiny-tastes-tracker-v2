@@ -26,6 +26,13 @@ const allergyButtons = ['none', 'hives', 'vomiting', 'swelling', 'gas', 'other']
 const mealButtons = ['breakfast', 'lunch', 'dinner', 'snack'];
 const biteButtons = [{ value: 'no', text: 'Just a taste', icon: 'minus-circle'}, { value: 'yes', text: 'More than 1 bite', icon: 'plus-circle' }];
 
+const BEHAVIORAL_TAGS = [
+    "Refused to Sit",
+    "Threw Food",
+    "Touched but didn't eat",
+    "Spat out"
+];
+
 const getReactionDisplay = (reactionValue: number) => {
     if (reactionValue <= 2) return { emoji: '😩', text: 'Hated it' };
     if (reactionValue <= 4) return { emoji: '😒', text: 'Meh' };
@@ -50,6 +57,7 @@ const LogFormView: React.FC<{
     const [notes, setNotes] = useState(existingLog?.notes || '');
     const [tryCount, setTryCount] = useState(existingLog?.tryCount || 1);
     const [photo, setPhoto] = useState<string | undefined>(existingLog?.messyFaceImage);
+    const [behavioralTags, setBehavioralTags] = useState<string[]>(existingLog?.behavioralTags || []);
     const [processingPhoto, setProcessingPhoto] = useState(false);
     
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,6 +73,16 @@ const LogFormView: React.FC<{
             }
         }
         setBite(value);
+    };
+
+    const handleTagToggle = (tag: string) => {
+        setBehavioralTags(prev => {
+            if (prev.includes(tag)) {
+                return prev.filter(t => t !== tag);
+            } else {
+                return [...prev, tag];
+            }
+        });
     };
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +116,8 @@ const LogFormView: React.FC<{
             moreThanOneBite: bite === 'yes',
             notes,
             tryCount,
-            messyFaceImage: photo
+            messyFaceImage: photo,
+            behavioralTags
         });
     };
 
@@ -157,6 +176,28 @@ const LogFormView: React.FC<{
                     {biteButtons.map(b => <button key={b.value} type="button" onClick={() => handleBiteSelection(b.value)} className={`p-3 border border-gray-300 rounded-lg flex items-center justify-center gap-2 text-gray-600 hover:border-gray-400 ${bite === b.value ? `bg-${baseColor}-50 border-${baseColor}-500 text-${baseColor}-600` : ''}`}><Icon name={b.icon} className="w-5 h-5" /><span className="text-sm font-medium">{b.text}</span></button>)}
                 </div>
             </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">6. Behavior (Toddler Challenges)</label>
+                <div className="grid grid-cols-2 gap-2">
+                    {BEHAVIORAL_TAGS.map(tag => {
+                        const isSelected = behavioralTags.includes(tag);
+                        return (
+                            <button 
+                                key={tag} 
+                                type="button" 
+                                onClick={() => handleTagToggle(tag)}
+                                className={`text-xs p-2 rounded-lg border text-left transition-colors flex items-center gap-2 ${isSelected ? 'bg-orange-50 border-orange-300 text-orange-800' : 'bg-white border-gray-200 text-gray-600'}`}
+                            >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300'}`}>
+                                    {isSelected && <Icon name="check" className="w-3 h-3 text-white" />}
+                                </div>
+                                {tag}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
             
             {/* Messy Face Photo Input */}
             <div>
@@ -200,7 +241,7 @@ const LogFormView: React.FC<{
             </div>
 
             <div>
-                <label htmlFor="notes-input" className="block text-sm font-medium text-gray-700">7. Notes (Optional):</label>
+                <label htmlFor="notes-input" className="block text-sm font-medium text-gray-700">8. Notes (Optional):</label>
                 <textarea id="notes-input" value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`} placeholder="e.g., Gagged a lot at first..."></textarea>
             </div>
 
@@ -247,6 +288,15 @@ const LogSummaryView: React.FC<{
             <div className="p-4 bg-gray-50 rounded-lg border">
                 <p className="text-sm text-gray-600">First tried on: <span className="font-medium text-gray-800">{existingLog.date}</span></p>
                 <p className="text-sm text-gray-600">Reaction: <span className="font-medium text-gray-800">{reactionDisplay.emoji} {reactionDisplay.text}</span></p>
+                {existingLog.behavioralTags && existingLog.behavioralTags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                        {existingLog.behavioralTags.map(tag => (
+                            <span key={tag} className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full border border-orange-200">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
                 {existingLog.notes && <p className="text-sm text-gray-600 mt-2">Notes: <span className="italic">"{existingLog.notes}"</span></p>}
             </div>
 

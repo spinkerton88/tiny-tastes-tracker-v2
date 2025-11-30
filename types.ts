@@ -49,6 +49,7 @@ export interface FoodLogData {
     notes: string;
     tryCount: number;
     messyFaceImage?: string; // Base64 string for the photo
+    behavioralTags?: string[];
 }
 
 export interface TriedFoodLog extends FoodLogData {
@@ -84,6 +85,7 @@ export interface UserProfile {
     currentTextureStage?: TextureStage;
     badges?: Badge[];
     preferredMode?: AppMode;
+    safeFoods?: string[];
 }
 
 export interface MealPlan {
@@ -108,6 +110,22 @@ export interface Milestone {
     isAchieved: boolean;
     dateAchieved?: string;
     notes?: string;
+}
+
+// Picky Eater Types
+export interface PickyEaterStrategy {
+    type: string;
+    title: string;
+    why_it_works: string;
+    ingredients: string[];
+    instructions: string;
+}
+
+export interface SavedStrategy extends PickyEaterStrategy {
+    id: string;
+    targetFood: string;
+    safeFood: string;
+    dateSaved: string;
 }
 
 // Modal State Types

@@ -8,10 +8,11 @@ interface LogMealModalProps {
     recipes: Recipe[];
     onClose: () => void;
     onSave: (foodNames: string[], date: string, meal: string) => void;
+    onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     baseColor?: string;
 }
 
-const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, baseColor = 'teal' }) => {
+const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal' }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
     const [activeTab, setActiveTab] = useState<'foods' | 'recipe'>('foods');
@@ -19,6 +20,10 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, b
     // Tab 1: Food Selection
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set());
+    
+    // Save as Recipe State
+    const [saveAsRecipe, setSaveAsRecipe] = useState(false);
+    const [recipeName, setRecipeName] = useState('');
 
     // Tab 2: Recipe Selection
     const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
@@ -44,15 +49,11 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, b
                 const combinedText = (recipe.title + ' ' + recipe.ingredients).toUpperCase();
                 flatFoodList.forEach(food => {
                     // Simple check if food name exists in recipe text
-                    // Adding spaces to avoid partial matches like "PEA" matching "PEAR"
-                    if (combinedText.includes(food) || combinedText.includes(food.slice(0, -1))) { // crude singular check
+                    if (combinedText.includes(food) || combinedText.includes(food.slice(0, -1))) { 
                          foodsToLog.push(food);
                     }
                 });
                 
-                // Fallback: If no ingredients matched (unlikely), just log nothing or handle gracefully?
-                // For now, if empty, we might just log nothing but the action is recorded. 
-                // But let's alert user if 0 foods found.
                 if (foodsToLog.length === 0) {
                     alert("We couldn't automatically match ingredients to our food list. Please log individual foods using the 'Select Foods' tab for accurate tracking.");
                     return;
@@ -63,6 +64,21 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, b
         if (foodsToLog.length === 0) {
             alert("Please select at least one food to log.");
             return;
+        }
+
+        // Handle Save as Recipe Logic
+        if (activeTab === 'foods' && saveAsRecipe && onCreateRecipe) {
+            if (!recipeName.trim()) {
+                alert("Please enter a name for your new recipe.");
+                return;
+            }
+            onCreateRecipe({
+                title: recipeName,
+                ingredients: foodsToLog.join(', '),
+                instructions: 'Combine ingredients and serve.',
+                tags: ['Quick Log'],
+                mealTypes: [meal]
+            });
         }
 
         onSave(foodsToLog, date, meal);
@@ -129,7 +145,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, b
                                     className={`w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-2 mb-4">
                                 {filteredFoods.map(food => {
                                     // Find emoji for display
                                     const foodObj = allFoods.flatMap(c => c.items).find(f => f.name === food);
@@ -147,6 +163,32 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, b
                                     );
                                 })}
                             </div>
+                            
+                            {selectedFoods.size > 1 && onCreateRecipe && (
+                                <div className={`p-3 rounded-lg border border-${baseColor}-200 bg-${baseColor}-50`}>
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            type="checkbox" 
+                                            id="saveRecipe" 
+                                            checked={saveAsRecipe} 
+                                            onChange={(e) => setSaveAsRecipe(e.target.checked)}
+                                            className={`rounded border-gray-300 text-${baseColor}-600 focus:ring-${baseColor}-500`}
+                                        />
+                                        <label htmlFor="saveRecipe" className={`text-sm font-medium text-${baseColor}-800`}>Save combination as a Recipe?</label>
+                                    </div>
+                                    {saveAsRecipe && (
+                                        <div className="mt-2 animate-fadeIn">
+                                            <input 
+                                                type="text" 
+                                                placeholder="e.g., Avocado Toast Plate" 
+                                                value={recipeName}
+                                                onChange={(e) => setRecipeName(e.target.value)}
+                                                className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="space-y-3">
@@ -172,6 +214,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, b
                         className={`w-full py-2 px-4 rounded-md shadow-sm text-sm font-bold text-white bg-${baseColor}-600 hover:bg-${baseColor}-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${baseColor}-500`}
                     >
                         Log {activeTab === 'foods' ? `${selectedFoods.size} Foods` : 'Meal'}
+                        {saveAsRecipe && activeTab === 'foods' ? ' & Save Recipe' : ''}
                     </button>
                 </div>
             </div>

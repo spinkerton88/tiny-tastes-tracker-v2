@@ -411,6 +411,15 @@ const LogView: React.FC<{ triedFoods: TriedFoodLog[]; babyName?: string; onShowD
                                         <p className="text-sm font-medium text-red-700">Possible Reaction: <span className="font-bold">{log.allergyReaction}</span></p>
                                     </div>
                                 )}
+                                {log.behavioralTags && log.behavioralTags.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                        {log.behavioralTags.map(tag => (
+                                            <span key={tag} className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full border border-orange-200">
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                                 {log.notes && (
                                     <div className="mt-3 pt-3 border-t">
                                         <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Notes:</span> {log.notes}</p>
