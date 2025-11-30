@@ -476,6 +476,7 @@ const App: React.FC = () => {
                         recipes={recipes} 
                         mealPlan={mealPlan}
                         triedFoods={triedFoods}
+                        customFoods={customFoods}
                         onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
                         onShowImportRecipe={() => setModalState({ type: 'IMPORT_RECIPE' })}
                         onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
@@ -485,6 +486,7 @@ const App: React.FC = () => {
                         onBatchLog={handleBatchLog}
                         onCreateRecipe={addRecipe}
                         baseColor={baseColor}
+                        onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
                     />;
                 case 'profile':
                     return <ProfilePage 

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Recipe, RecipeFilter, MealPlan, TriedFoodLog } from '../../types';
+import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood } from '../../types';
 import { flatFoodList, allFoods } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
@@ -9,6 +9,7 @@ interface RecipesPageProps {
     recipes: Recipe[];
     mealPlan: MealPlan;
     triedFoods?: TriedFoodLog[];
+    customFoods?: CustomFood[];
     onShowAddRecipe: () => void;
     onShowImportRecipe: () => void;
     onShowSuggestRecipe: () => void;
@@ -17,6 +18,7 @@ interface RecipesPageProps {
     onShowShoppingList: () => void;
     onBatchLog?: (foodNames: string[], date: string, meal: string) => void;
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
+    onFoodClick?: (food: Food) => void;
     baseColor?: string;
 }
 
@@ -55,10 +57,12 @@ const StarRatingDisplay: React.FC<{ rating: number }> = ({ rating }) => {
 const LogMealView: React.FC<{ 
     recipes: Recipe[], 
     triedFoods: TriedFoodLog[],
+    customFoods?: CustomFood[],
     onSave: (foodNames: string[], date: string, meal: string) => void, 
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
+    onFoodClick?: (food: Food) => void;
     baseColor: string 
-}> = ({ recipes, triedFoods, onSave, onCreateRecipe, baseColor }) => {
+}> = ({ recipes, triedFoods, customFoods = [], onSave, onCreateRecipe, onFoodClick, baseColor }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
     const [activeTab, setActiveTab] = useState<'foods' | 'recipe'>('foods');
@@ -146,6 +150,25 @@ const LogMealView: React.FC<{
         setSaveAsRecipe(false);
         setRecipeName('');
         alert("Meal logged!");
+    };
+
+    const handleFoodItemClick = (foodName: string) => {
+        if (!onFoodClick) return;
+        
+        // Find the Food object
+        let foodObj = allFoods.flatMap(c => c.items).find(f => f.name === foodName);
+        
+        // If not found in standard foods, check custom foods
+        if (!foodObj) {
+            foodObj = customFoods.find(f => f.name === foodName);
+        }
+        
+        // Fallback if somehow still not found (e.g., imported legacy data)
+        if (!foodObj) {
+            foodObj = { name: foodName, emoji: '🍽️' };
+        }
+        
+        onFoodClick(foodObj);
     };
 
     return (
@@ -292,10 +315,15 @@ const LogMealView: React.FC<{
                                         <div key={mealType} className="flex gap-3">
                                             <div className="w-20 font-medium text-gray-500 text-sm capitalize pt-1">{mealType}</div>
                                             <div className="flex-1 flex flex-wrap gap-1.5">
-                                                {foods.map((food, idx) => (
-                                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                                                        {food}
-                                                    </span>
+                                                {foods.map((foodName, idx) => (
+                                                    <button 
+                                                        key={idx} 
+                                                        onClick={() => handleFoodItemClick(foodName)}
+                                                        className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-teal-50 hover:text-teal-700 hover:shadow-sm transition-all border border-transparent hover:border-teal-200"
+                                                        title="Tap to edit details"
+                                                    >
+                                                        {foodName} <Icon name="edit-2" className="w-3 h-3 ml-1 opacity-40"/>
+                                                    </button>
                                                 ))}
                                             </div>
                                         </div>
@@ -502,8 +530,10 @@ const RecipesPage: React.FC<RecipesPageProps> = (props) => {
                 <LogMealView 
                     recipes={props.recipes} 
                     triedFoods={props.triedFoods || []}
+                    customFoods={props.customFoods}
                     onSave={props.onBatchLog} 
                     onCreateRecipe={props.onCreateRecipe}
+                    onFoodClick={props.onFoodClick}
                     baseColor={baseColor} 
                 />
             )}

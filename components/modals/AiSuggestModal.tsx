@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Recipe, UserProfile } from '../../types';
 import { suggestRecipe } from '../../services/geminiService';
-import { calculateAgeInMonths } from '../../utils';
+import { calculateAgeInMonths, getAppMode } from '../../utils';
 import Icon from '../ui/Icon';
 
 interface AiSuggestModalProps {
@@ -13,8 +13,11 @@ interface AiSuggestModalProps {
 
 const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed, userProfile }) => {
     const [prompt, setPrompt] = useState('');
+    const [hideVeggies, setHideVeggies] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const mode = getAppMode(userProfile);
 
     const handleSubmit = async () => {
         if (!prompt.trim()) return;
@@ -22,7 +25,12 @@ const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed
         setError(null);
         try {
             const ageInMonths = calculateAgeInMonths(userProfile?.birthDate);
-            const recipeData = await suggestRecipe(prompt, ageInMonths);
+            
+            const finalPrompt = hideVeggies 
+                ? `Create a recipe that hides vegetables using these ingredients: ${prompt}. The child is picky.` 
+                : prompt;
+
+            const recipeData = await suggestRecipe(finalPrompt, ageInMonths);
             onRecipeParsed(recipeData);
         } catch (err: any) {
             setError(err.message || "Failed to generate recipe.");
@@ -53,6 +61,22 @@ const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed
                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 sm:text-sm" 
                         />
                     </div>
+
+                    {mode === 'TODDLER' && (
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="checkbox" 
+                                id="hideVeg" 
+                                checked={hideVeggies} 
+                                onChange={(e) => setHideVeggies(e.target.checked)}
+                                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                            />
+                            <label htmlFor="hideVeg" className="text-sm text-gray-700 select-none cursor-pointer">
+                                "Hidden Veggie" Mode (Mask flavors)
+                            </label>
+                        </div>
+                    )}
+
                     {error && <p className="text-sm text-red-600">{error}</p>}
                     <button onClick={handleSubmit} disabled={loading} className="w-full inline-flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50">
                          {loading ? <div className="spinner h-5 w-5 border-2"></div> : 'Generate Recipe Idea'}
