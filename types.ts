@@ -31,6 +31,7 @@ export interface CustomFood extends Food {
     isCustom: true;
     details: CustomFoodDetails;
     image?: string; // Optional URL for scanned products
+    category?: string; // Added category for better sorting in pantry
 }
 
 export interface FoodCategory {

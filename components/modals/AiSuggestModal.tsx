@@ -11,9 +11,16 @@ interface AiSuggestModalProps {
   userProfile: UserProfile | null;
 }
 
+const HIDDEN_CATEGORIES = [
+    { value: 'none', label: 'None (Normal Recipe)' },
+    { value: 'Vegetables', label: 'Vegetables' },
+    { value: 'Fruits', label: 'Fruits' },
+    { value: 'Protein', label: 'Protein / Meat' },
+];
+
 const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed, userProfile }) => {
     const [prompt, setPrompt] = useState('');
-    const [hideVeggies, setHideVeggies] = useState(false);
+    const [hiddenCategory, setHiddenCategory] = useState('none');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -26,9 +33,10 @@ const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed
         try {
             const ageInMonths = calculateAgeInMonths(userProfile?.birthDate);
             
-            const finalPrompt = hideVeggies 
-                ? `Create a recipe that hides vegetables using these ingredients: ${prompt}. The child is picky.` 
-                : prompt;
+            let finalPrompt = prompt;
+            if (hiddenCategory !== 'none') {
+                finalPrompt = `Create a recipe that hides ${hiddenCategory} using these ingredients: ${prompt}. The child is picky and dislikes ${hiddenCategory}, so mask the flavor/texture.`;
+            }
 
             const recipeData = await suggestRecipe(finalPrompt, ageInMonths);
             onRecipeParsed(recipeData);
@@ -63,17 +71,20 @@ const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed
                     </div>
 
                     {mode === 'TODDLER' && (
-                        <div className="flex items-center gap-2">
-                            <input 
-                                type="checkbox" 
-                                id="hideVeg" 
-                                checked={hideVeggies} 
-                                onChange={(e) => setHideVeggies(e.target.checked)}
-                                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-                            />
-                            <label htmlFor="hideVeg" className="text-sm text-gray-700 select-none cursor-pointer">
-                                "Hidden Veggie" Mode (Mask flavors)
-                            </label>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Picky Eater Mode</label>
+                            <div className="bg-violet-50 p-3 rounded-lg border border-violet-100">
+                                <p className="text-xs text-violet-800 mb-2">Need to hide a specific food group?</p>
+                                <select 
+                                    value={hiddenCategory} 
+                                    onChange={(e) => setHiddenCategory(e.target.value)}
+                                    className="block w-full rounded-md border-violet-300 text-sm focus:border-violet-500 focus:ring-violet-500"
+                                >
+                                    {HIDDEN_CATEGORIES.map(cat => (
+                                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     )}
 

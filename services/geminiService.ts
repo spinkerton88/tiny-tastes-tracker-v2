@@ -246,20 +246,21 @@ Then list 3 short, relevant follow-up questions that the user might want to ask 
   }
 };
 
-export const analyzeFoodWithGemini = async (foodName: string): Promise<CustomFoodDetails & { emoji: string }> => {
+export const analyzeFoodWithGemini = async (foodName: string): Promise<CustomFoodDetails & { emoji: string, category: string }> => {
     try {
         const prompt = `Analyze the food item "${foodName}" for a baby (6-12 months) starting solid foods.
         
         Context for reasoning:
-        - Distinguish between a WHOLE single ingredient (e.g. "Raw Apple", "Broccoli Floret") vs a PRE-PACKAGED PRODUCT/BLEND (e.g. "Pouch", "Yogurt Blend", "Cereal", "Puffs", "Once Upon a Farm", "Serenity Kids").
-        - If it is a pre-packaged blend or pouch, the advice must be relevant to that format (e.g. "Serve on a spoon" rather than "Steam and mash").
+        - Distinguish between a WHOLE single ingredient (e.g. "Raw Apple", "Broccoli Floret") vs a PRE-PACKAGED PRODUCT/BLEND (e.g. "Pouch", "Yogurt Blend", "Cereal", "Puffs").
+        - If it is a pre-packaged blend or pouch, the advice must be relevant to that format.
         
         Respond ONLY with a JSON object:
-        - "safety_rating": strictly one of "Safe", "Use Caution", or "Avoid". (Pouches/Purees are usually "Safe").
-        - "allergen_info": Check for common allergens (Dairy, Soy, Nut, Wheat, Egg, Fish). If it's a specific brand product, try to infer allergens from the name (e.g. "Yogurt" -> Dairy). If unknown, say "Check label for allergens".
-        - "texture_recommendation": Concise serving advice. If product/pouch: "Squeeze onto a spoon or let baby hold pouch". If whole food: "Cook until soft".
-        - "nutrition_highlight": One key benefit (e.g. "Good source of Iron", "Vitamin Blend", "Probiotics").
-        - "emoji": A single emoji. Use 🥣 for pouches/blends/yogurts if a specific ingredient emoji doesn't fit the whole product.`;
+        - "safety_rating": strictly one of "Safe", "Use Caution", or "Avoid".
+        - "allergen_info": Check for common allergens.
+        - "texture_recommendation": Concise serving advice.
+        - "nutrition_highlight": One key benefit.
+        - "emoji": A single emoji.
+        - "category": Best fit from [Vegetables, Fruits, Grains, Protein, Dairy, Snacks]. Default to "Snacks" if unsure or packaged.`;
 
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
@@ -277,7 +278,7 @@ export const analyzeFoodWithGemini = async (foodName: string): Promise<CustomFoo
     }
 };
 
-export const analyzePackagedProduct = async (productName: string, ingredientsText: string): Promise<CustomFoodDetails & { emoji: string }> => {
+export const analyzePackagedProduct = async (productName: string, ingredientsText: string): Promise<CustomFoodDetails & { emoji: string, category: string }> => {
     try {
         const prompt = `Analyze this specific scanned packaged food product for a baby (6-12 months).
         
@@ -285,11 +286,12 @@ export const analyzePackagedProduct = async (productName: string, ingredientsTex
         Ingredients List: "${ingredientsText}"
         
         Instructions:
-        1. "safety_rating": Is this safe for a baby? (e.g. "Safe", "Use Caution" if high sodium/sugar/choking risk, "Avoid" if honey/raw fish).
-        2. "allergen_info": Scan the ingredient list specifically for common allergens (Dairy, Soy, Nuts, Wheat, Egg, Fish, Sesame). List them. If none found, say "No common allergens found in ingredients".
-        3. "texture_recommendation": How to serve this specific product type? (e.g. "Squeeze pouch onto spoon", "Dissolve puffs in mouth", "Mix cereal with breastmilk").
-        4. "nutrition_highlight": Key benefit based on ingredients (e.g. "Fiber from oats", "Iron fortified").
-        5. "emoji": Pick a relevant emoji (🥣 for pouches, 🍪 for biscuits, etc).
+        1. "safety_rating": Is this safe? (e.g. "Safe", "Use Caution", "Avoid").
+        2. "allergen_info": Scan ingredient list for common allergens.
+        3. "texture_recommendation": How to serve this specific product type?
+        4. "nutrition_highlight": Key benefit.
+        5. "emoji": Relevant emoji.
+        6. "category": Best fit from [Vegetables, Fruits, Grains, Protein, Dairy, Snacks]. Use "Snacks" for puffs/biscuits.
 
         Respond ONLY with a JSON object matching this structure.`;
 

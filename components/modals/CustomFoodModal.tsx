@@ -12,11 +12,14 @@ interface CustomFoodModalProps {
     onSave: (food: CustomFood) => void;
 }
 
+const CATEGORIES = ["Vegetables", "Fruits", "Grains", "Protein", "Dairy", "Snacks"];
+
 const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', scannedData, onClose, onSave }) => {
     const [name, setName] = useState(initialName);
     const [loading, setLoading] = useState(false);
-    const [analyzedData, setAnalyzedData] = useState<(CustomFoodDetails & { emoji: string }) | null>(null);
+    const [analyzedData, setAnalyzedData] = useState<(CustomFoodDetails & { emoji: string, category: string }) | null>(null);
     const [customEmoji, setCustomEmoji] = useState('');
+    const [customCategory, setCustomCategory] = useState('');
     const [error, setError] = useState<string | null>(null);
 
     // Auto-analyze if scanned data is provided
@@ -38,6 +41,7 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', sca
             const result = await analyzePackagedProduct(productName, ingredients);
             setAnalyzedData(result);
             setCustomEmoji(result.emoji);
+            setCustomCategory(result.category || 'Snacks');
         } catch (err) {
             setError("Could not analyze this product. Please check your internet connection.");
         } finally {
@@ -54,6 +58,7 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', sca
             const result = await analyzeFoodWithGemini(name);
             setAnalyzedData(result);
             setCustomEmoji(result.emoji);
+            setCustomCategory(result.category || 'Snacks');
         } catch (err) {
             setError("Could not analyze food. Please try again or check your internet.");
         } finally {
@@ -74,7 +79,8 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', sca
                 texture_recommendation: analyzedData.texture_recommendation,
                 nutrition_highlight: analyzedData.nutrition_highlight
             },
-            image: scannedData?.image // Preserve the scanned image URL if available
+            image: scannedData?.image,
+            category: customCategory
         };
 
         // Trigger Telemetry (Fire-and-forget)
@@ -182,6 +188,20 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', sca
                                     </div>
                                 )}
                                 <h3 className="text-xl font-bold text-gray-900 mt-2 text-center leading-tight">{name}</h3>
+                            </div>
+
+                            {/* Category Selector */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Category</label>
+                                <select 
+                                    value={customCategory}
+                                    onChange={(e) => setCustomCategory(e.target.value)}
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm py-2"
+                                >
+                                    {CATEGORIES.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
                             </div>
 
                             {/* Safety Card */}
