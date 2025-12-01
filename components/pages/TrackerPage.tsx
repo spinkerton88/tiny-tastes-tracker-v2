@@ -449,6 +449,34 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                     </div>
                 </div>
             ))}
+
+            {/* Custom & Scanned Foods - Added back as a separate list at the bottom */}
+            {filteredCustomFoods.length > 0 && (
+                <div className="mb-8 p-4 bg-white rounded-xl border border-gray-100 shadow-sm mt-8">
+                    <h2 className="text-xl font-bold text-violet-900 mb-4 flex items-center gap-2">
+                        <div className="p-1.5 bg-violet-50 rounded-full border border-violet-100 shadow-sm">
+                            <Icon name="scan-barcode" className="w-5 h-5 text-violet-600" />
+                        </div>
+                        Custom & Scanned Items
+                    </h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                        {filteredCustomFoods.map(food => (
+                            <FoodCard
+                                key={food.name}
+                                name={food.name}
+                                emoji={food.emoji}
+                                category={customCategoryStyle}
+                                isTried={triedFoodSet.has(food.name)}
+                                isAllergic={isFoodAllergic(food.name)}
+                                isCustom={true}
+                                onClick={() => onFoodClick(food)}
+                                onInfoClick={(e) => { e.stopPropagation(); onShowGuide(food); }}
+                                baseColor={baseColor}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
         </>
       ) : (
         <EmptyState

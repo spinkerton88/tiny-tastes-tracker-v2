@@ -25,7 +25,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
     
     // Selection State
-    const [activeTab, setActiveTab] = useState<'foods' | 'recipes'>('foods');
+    const [activeTab, setActiveTab] = useState<'foods' | 'recipe'>('foods');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set(initialFoods));
     
@@ -230,7 +230,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
 
                         <div className="flex border-b">
                             <button onClick={() => setActiveTab('foods')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'foods' ? `text-${baseColor}-600 border-b-2 border-${baseColor}-600 bg-teal-50/50` : 'text-gray-500'}`}>Foods</button>
-                            <button onClick={() => setActiveTab('recipes')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'recipes' ? `text-${baseColor}-600 border-b-2 border-${baseColor}-600 bg-teal-50/50` : 'text-gray-500'}`}>Use Preset / Recipe</button>
+                            <button onClick={() => setActiveTab('recipe')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'recipe' ? `text-${baseColor}-600 border-b-2 border-${baseColor}-600 bg-teal-50/50` : 'text-gray-500'}`}>Use Preset / Recipe</button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 bg-white">
@@ -267,8 +267,8 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-xl">{food.emoji}</span>
                                                                 <div>
-                                                                    <h4 className={`font-bold ${isSelected ? 'text-teal-900' : 'text-gray-800'}`}>{food.name}</h4>
-                                                                    <p className="text-xs text-gray-500 mt-0.5">Scanned / Custom Item</p>
+                                                                    <h4 className={`font-bold ${isSelected ? `text-${baseColor}-900` : 'text-gray-800'}`}>{food.name}</h4>
+                                                                    <p className="text-xs text-gray-500 mt-0.5">Scanned Item</p>
                                                                 </div>
                                                             </div>
                                                             {isSelected ? <Icon name="check-circle" className={`w-5 h-5 text-${baseColor}-600`} /> : <Icon name="plus" className="w-4 h-4 text-teal-600" />}
