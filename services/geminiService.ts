@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Recipe, FoodSubstitute, CustomFoodDetails, DailyLogAnalysis } from '../types';
+import { Recipe, FoodSubstitute, CustomFoodDetails, DailyLogAnalysis, MedicineInstructions } from '../types';
 import { flatFoodList } from '../constants';
 
 const API_KEY = process.env.API_KEY;
@@ -538,5 +538,55 @@ JSON Structure:
     } catch (error) {
         console.error("Error analyzing daily logs:", error);
         throw new Error("Failed to analyze daily logs.");
+    }
+};
+
+export const getMedicineInstructions = async (medicineName: string, weightKg: string): Promise<MedicineInstructions> => {
+    try {
+        const systemInstruction = `System Role: You are a medical content generator providing general safety information for parents. You must use caution and avoid recommending specific doses. Your response must emphasize the importance of consulting a doctor.
+
+Input:
+- Medicine Name: [String]
+- Baby Weight: [Weight]
+
+Task:
+1. Search for general guidelines on the safe use of this medicine for infants/toddlers.
+2. Provide a 3-step checklist for safe administration.
+3. Provide a clear warning that the parent *must* confirm the dosage with their pediatrician based on the baby's exact weight.
+
+Output JSON:
+{
+  "medicine_name": [String],
+  "safety_checklist": [
+    "Always check the concentration (e.g., drops vs. liquid).",
+    "Never give more than X doses in 24 hours.",
+    "Do not combine with other medications containing the same active ingredient."
+  ],
+  "dosage_warning": "CRITICAL: Dosage is calculated ONLY by your child's weight. CONTACT your pediatrician or pharmacist for the exact amount needed for a baby weighing [Weight] to prevent accidental overdose."
+}`;
+
+        const prompt = `Medicine Name: ${medicineName}\nBaby Weight: ${weightKg}`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [{ parts: [{ text: prompt }] }],
+            config: {
+                systemInstruction: systemInstruction,
+                tools: [{googleSearch: {}}],
+                responseMimeType: "application/json",
+            },
+        });
+
+        let text = response.text;
+        if (text && text.startsWith('```json')) {
+            text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (text && text.startsWith('```')) {
+            text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        return JSON.parse(text || "{}");
+    } catch (error) {
+        console.error("Error getting medicine instructions:", error);
+        throw new Error("Failed to get medicine safety info.");
     }
 };

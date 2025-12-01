@@ -28,7 +28,7 @@ import LogMealModal from './components/modals/LogMealModal';
 import TutorialModal from './components/modals/TutorialModal';
 
 import { useAppMode } from './hooks/useAppMode';
-import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem, FeedLog, DiaperLog, SleepLog } from './types';
+import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem, FeedLog, DiaperLog, SleepLog, MedicineLog } from './types';
 import { DEFAULT_MILESTONES, BADGES_LIST, flatFoodList } from './constants';
 import { fetchProductIngredients } from './services/openFoodFactsService';
 
@@ -96,6 +96,10 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('tiny-tastes-tracker-sleepLogs');
       return saved ? JSON.parse(saved) : [];
   });
+  const [medicineLogs, setMedicineLogs] = useState<MedicineLog[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-medicineLogs');
+      return saved ? JSON.parse(saved) : [];
+  });
 
   const [currentPage, setCurrentPage] = useState('tracker');
   const [modalState, setModalState] = useState<ModalState>({ type: null });
@@ -120,6 +124,7 @@ const App: React.FC = () => {
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-feedLogs', JSON.stringify(feedLogs)), [feedLogs]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-diaperLogs', JSON.stringify(diaperLogs)), [diaperLogs]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-sleepLogs', JSON.stringify(sleepLogs)), [sleepLogs]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-medicineLogs', JSON.stringify(medicineLogs)), [medicineLogs]);
 
   // Handle Mode Change redirects
   useEffect(() => {
@@ -412,6 +417,9 @@ const App: React.FC = () => {
   const handleUpdateSleepLog = (updatedLog: SleepLog) => {
       setSleepLogs(prev => prev.map(log => log.id === updatedLog.id ? updatedLog : log));
   };
+  const handleLogMedicine = (med: MedicineLog) => {
+      setMedicineLogs(prev => [med, ...prev]);
+  }
 
   const renderPage = () => {
       const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
@@ -507,10 +515,12 @@ const App: React.FC = () => {
                   feedLogs={feedLogs}
                   diaperLogs={diaperLogs}
                   sleepLogs={sleepLogs}
+                  medicineLogs={medicineLogs}
                   onLogFeed={handleLogFeed}
                   onLogDiaper={handleLogDiaper}
                   onLogSleep={handleLogSleep}
                   onUpdateSleepLog={handleUpdateSleepLog}
+                  onLogMedicine={handleLogMedicine}
                   baseColor={baseColorName}
                   userProfile={userProfile}
               />;

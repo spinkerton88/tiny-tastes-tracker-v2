@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FeedLog, DiaperLog, SleepLog, UserProfile, DailyLogAnalysis } from '../../types';
-import { predictSleepWindow, SleepPrediction, analyzeDailyLogTotals } from '../../services/geminiService';
+import { FeedLog, DiaperLog, SleepLog, UserProfile, DailyLogAnalysis, MedicineLog, MedicineInstructions } from '../../types';
+import { predictSleepWindow, SleepPrediction, analyzeDailyLogTotals, getMedicineInstructions } from '../../services/geminiService';
 import { calculateAgeInMonths } from '../../utils';
 import Icon from '../ui/Icon';
 
@@ -10,10 +10,12 @@ interface NewbornPageProps {
     feedLogs: FeedLog[];
     diaperLogs: DiaperLog[];
     sleepLogs: SleepLog[];
+    medicineLogs?: MedicineLog[]; // Optional to support older props if not passed yet
     onLogFeed: (log: FeedLog) => void;
     onLogDiaper: (log: DiaperLog) => void;
     onLogSleep: (log: SleepLog) => void;
     onUpdateSleepLog?: (log: SleepLog) => void;
+    onLogMedicine?: (log: MedicineLog) => void;
     baseColor?: string;
     userProfile?: UserProfile | null;
 }
@@ -160,6 +162,121 @@ const DiaperModal: React.FC<{ onClose: () => void, onSave: (type: 'wet' | 'dirty
                 </div>
 
                 <button onClick={onClose} className="w-full py-3 text-gray-500 font-bold">Cancel</button>
+            </div>
+        </div>
+    );
+};
+
+const MedicineModal: React.FC<{ onClose: () => void, onSave: (med: MedicineLog) => void }> = ({ onClose, onSave }) => {
+    const [name, setName] = useState('');
+    const [weight, setWeight] = useState('');
+    const [amount, setAmount] = useState('');
+    const [instructions, setInstructions] = useState<MedicineInstructions | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleGetSafetyInfo = async () => {
+        if (!name.trim() || !weight.trim()) {
+            setError("Please enter medicine name and baby's weight.");
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await getMedicineInstructions(name, weight);
+            setInstructions(result);
+        } catch (err) {
+            setError("Could not retrieve safety info. Please consult your doctor.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLog = () => {
+        if (!name.trim()) return;
+        onSave({
+            id: crypto.randomUUID(),
+            medicineName: name,
+            amount: amount,
+            timestamp: new Date().toISOString(),
+            notes: `Weight at time of dose: ${weight}`
+        });
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-90 flex items-center justify-center p-4 z-[1000]">
+            <div className="bg-white w-full max-w-md rounded-2xl p-6 animate-popIn flex flex-col max-h-[90vh]">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-teal-800 flex items-center gap-2">
+                        <Icon name="pill" className="w-6 h-6" /> Medicine Tracker
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Medicine Name</label>
+                        <input 
+                            value={name} 
+                            onChange={(e) => setName(e.target.value)} 
+                            placeholder="e.g. Infant Tylenol" 
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Baby's Weight (required for safety check)</label>
+                        <input 
+                            value={weight} 
+                            onChange={(e) => setWeight(e.target.value)} 
+                            placeholder="e.g. 15 lbs or 7 kg" 
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm"
+                        />
+                    </div>
+
+                    {!instructions && (
+                        <button 
+                            onClick={handleGetSafetyInfo} 
+                            disabled={loading || !name || !weight}
+                            className="w-full py-2 bg-teal-100 text-teal-700 rounded-lg font-bold text-sm hover:bg-teal-200 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+                        >
+                            {loading ? <div className="spinner w-4 h-4 border-teal-600"></div> : <Icon name="shield-check" className="w-4 h-4" />}
+                            Get Safety Info
+                        </button>
+                    )}
+
+                    {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
+
+                    {instructions && (
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2 text-sm animate-fadeIn">
+                            <div className="flex items-start gap-2">
+                                <Icon name="alert-triangle" className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                                <p className="font-bold text-orange-800 text-xs">{instructions.dosage_warning}</p>
+                            </div>
+                            <ul className="list-disc pl-5 space-y-1 text-gray-700 text-xs">
+                                {instructions.safety_checklist.map((item, idx) => (
+                                    <li key={idx}>{item}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    <div className="border-t pt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Dosage Given (Optional)</label>
+                        <input 
+                            value={amount} 
+                            onChange={(e) => setAmount(e.target.value)} 
+                            placeholder="e.g. 2.5 ml" 
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Only enter after confirming safe dosage with a doctor.</p>
+                    </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-2 text-gray-600 font-bold bg-gray-100 rounded-lg">Cancel</button>
+                    <button onClick={handleLog} className="flex-1 py-2 text-white font-bold bg-teal-600 rounded-lg shadow-md hover:bg-teal-700">Log Dose</button>
+                </div>
             </div>
         </div>
     );
@@ -474,17 +591,19 @@ const SleepGrowthView: React.FC<{ sleepLogs: SleepLog[] }> = ({ sleepLogs }) => 
     );
 };
 
-const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaperLogs, sleepLogs, onLogFeed, onLogDiaper, onLogSleep, onUpdateSleepLog, baseColor = 'rose', userProfile }) => {
+const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaperLogs, sleepLogs, medicineLogs = [], onLogFeed, onLogDiaper, onLogSleep, onUpdateSleepLog, onLogMedicine, baseColor = 'rose', userProfile }) => {
     // --- States for Modals ---
     const [showBreastTimer, setShowBreastTimer] = useState(false);
     const [showBottleModal, setShowBottleModal] = useState(false);
     const [showDiaperModal, setShowDiaperModal] = useState(false);
+    const [showMedicineModal, setShowMedicineModal] = useState(false);
     const [showFeedOptions, setShowFeedOptions] = useState(false);
 
     // --- Derived Data for Dashboard ---
     const lastFeed = feedLogs[0];
     const lastDiaper = diaperLogs[0];
     const lastSleep = sleepLogs[0];
+    const lastMedicine = medicineLogs[0];
     
     // Check if currently sleeping
     const isSleeping = lastSleep && !lastSleep.endTime;
@@ -565,8 +684,8 @@ const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaper
             {/* 2. Recent History List (Scrollable Area) */}
             <div className="flex-1 overflow-y-auto -mx-4 px-4 pb-32">
                 <h3 className="text-sm font-bold text-gray-500 mb-3 px-1">Today's Logs</h3>
-                {[...feedLogs, ...diaperLogs, ...sleepLogs]
-                    .sort((a, b) => new Date(b.timestamp || b.startTime).getTime() - new Date(a.timestamp || a.startTime).getTime())
+                {[...feedLogs, ...diaperLogs, ...sleepLogs, ...medicineLogs]
+                    .sort((a, b) => new Date((b as any).timestamp || (b as any).startTime).getTime() - new Date((a as any).timestamp || (a as any).startTime).getTime())
                     .slice(0, 20) // Show last 20 events
                     .map((log: any) => {
                         let icon = 'circle';
@@ -575,19 +694,29 @@ const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaper
                         let title = 'Event';
                         let detail = '';
 
-                        if (log.amount !== undefined || log.durationSeconds !== undefined) {
+                        if (log.amount !== undefined && log.medicineName) {
+                            // Medicine
+                            icon = 'pill';
+                            color = 'text-teal-600';
+                            bg = 'bg-teal-50';
+                            title = log.medicineName;
+                            detail = log.amount || 'Dose Logged';
+                        } else if (log.amount !== undefined || log.durationSeconds !== undefined) {
+                            // Feed
                             icon = 'milk'; 
                             color = 'text-rose-500'; 
                             bg = 'bg-rose-50';
                             title = log.type === 'breast' ? `Nursing (${log.side})` : 'Bottle';
                             detail = log.type === 'bottle' ? `${log.amount}oz` : `${Math.floor(log.durationSeconds/60)}m`;
                         } else if (log.type === 'wet' || log.type === 'dirty' || log.type === 'mixed') {
+                            // Diaper
                             icon = 'baby';
                             color = 'text-blue-500';
                             bg = 'bg-blue-50';
                             title = 'Diaper';
                             detail = log.type;
                         } else if (log.type === 'sleep') {
+                            // Sleep
                             icon = 'moon';
                             color = 'text-indigo-500';
                             bg = 'bg-indigo-50';
@@ -650,12 +779,15 @@ const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaper
                     </span>
                 </button>
 
-                {/* GROWTH / MORE BUTTON */}
-                <button className="flex flex-col items-center gap-1 active:scale-90 transition-transform opacity-50">
-                    <div className="w-14 h-14 bg-gray-200 rounded-2xl flex items-center justify-center text-gray-500">
-                        <Icon name="more-horizontal" className="w-7 h-7" />
+                {/* MEDICINE BUTTON (Replacing generic More) */}
+                <button 
+                    onClick={() => { triggerHaptic(); setShowMedicineModal(true); }}
+                    className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
+                >
+                    <div className="w-14 h-14 bg-teal-500 rounded-2xl shadow-lg shadow-teal-200 flex items-center justify-center text-white">
+                        <Icon name="pill" className="w-7 h-7" />
                     </div>
-                    <span className="text-[10px] font-bold text-gray-400">More</span>
+                    <span className="text-[10px] font-bold text-gray-600">Meds</span>
                 </button>
             </div>
 
@@ -695,6 +827,13 @@ const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaper
                 <DiaperModal 
                     onClose={() => setShowDiaperModal(false)}
                     onSave={(type) => onLogDiaper({ id: crypto.randomUUID(), timestamp: new Date().toISOString(), type })}
+                />
+            )}
+
+            {showMedicineModal && onLogMedicine && (
+                <MedicineModal 
+                    onClose={() => setShowMedicineModal(false)}
+                    onSave={onLogMedicine}
                 />
             )}
         </div>

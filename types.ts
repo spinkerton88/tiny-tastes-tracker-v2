@@ -88,6 +88,21 @@ export interface SleepLog {
     notes?: string;
 }
 
+export interface MedicineLog {
+    id: string;
+    medicineName: string;
+    amount?: string; // e.g. "2.5ml"
+    unit?: string;
+    timestamp: string;
+    notes?: string;
+}
+
+export interface MedicineInstructions {
+    medicine_name: string;
+    safety_checklist: string[];
+    dosage_warning: string;
+}
+
 export interface DailyLogAnalysis {
     overall_status: "Normal" | "Watch Closely" | "Contact Pediatrician";
     data_points: {
