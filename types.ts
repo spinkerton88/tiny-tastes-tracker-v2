@@ -51,6 +51,9 @@ export interface FoodLogData {
     tryCount: number;
     messyFaceImage?: string; // Base64 string for the photo
     behavioralTags?: string[];
+    // New fields for Toddler Mode
+    portion?: string; 
+    consumption?: 'all' | 'most' | 'some' | 'none';
 }
 
 export interface TriedFoodLog extends FoodLogData {
@@ -136,6 +139,8 @@ export interface LoggedItemData {
     food: string;
     status: FoodStatus;
     tags: string[];
+    portion?: string;
+    consumption?: 'all' | 'most' | 'some' | 'none';
 }
 
 export interface ScannedProductData {

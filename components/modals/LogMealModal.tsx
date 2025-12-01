@@ -15,11 +15,12 @@ interface LogMealModalProps {
     initialFoods?: string[];
     customFoods?: CustomFood[];
     enableScanner?: boolean;
+    onAddCustomFood?: (initialName: string) => void;
 }
 
 type Step = 'SELECT' | 'REVIEW';
 
-const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal', initialFoods = [], customFoods = [], enableScanner = false }) => {
+const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal', initialFoods = [], customFoods = [], enableScanner = false, onAddCustomFood }) => {
     const [step, setStep] = useState<Step>('SELECT');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
@@ -138,6 +139,9 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                      alert(`Found ${addedCount} ingredients in ${result.productName}!`);
                 } else {
                     alert(`Scanned ${result.productName} but couldn't match any specific foods to our list. Try adding custom foods manually.`);
+                    if (onAddCustomFood) {
+                        onAddCustomFood(result.productName);
+                    }
                 }
             } else {
                 alert("Product not found.");
