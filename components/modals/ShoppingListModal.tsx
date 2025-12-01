@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Recipe, MealPlan, TriedFoodLog } from '../../types';
+import { Recipe, MealPlan, TriedFoodLog, ManualShoppingItem } from '../../types';
 import { categorizeShoppingList } from '../../services/geminiService';
 import { allFoods } from '../../constants';
 import Icon from '../ui/Icon';
@@ -17,6 +17,11 @@ interface ShoppingListModalProps {
     recipes: Recipe[];
     mealPlan: MealPlan;
     triedFoods: TriedFoodLog[];
+    manualItems: ManualShoppingItem[];
+    checkedItems: Record<string, string>; // Maps itemName -> ISO string date
+    onAddManualItem: (name: string) => void;
+    onToggleItem: (name: string, isChecked: boolean) => void;
+    onClearChecked: () => void;
     onClose: () => void;
 }
 
@@ -30,11 +35,21 @@ const NoMealsIllustration = () => (
     </svg>
 );
 
-const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan, triedFoods, onClose }) => {
+const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ 
+    recipes, 
+    mealPlan, 
+    triedFoods, 
+    manualItems, 
+    checkedItems, 
+    onAddManualItem, 
+    onToggleItem, 
+    onClearChecked, 
+    onClose 
+}) => {
     const [categorizedList, setCategorizedList] = useState<Record<string, string[]>>({});
+    const [planIngredients, setPlanIngredients] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [addedItems, setAddedItems] = useState<string[]>([]);
     
     // Manual Add State
     const [manualInput, setManualInput] = useState('');
@@ -54,67 +69,71 @@ const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan
             .map(([id]) => id);
     }, [triedFoods]);
 
-    const toggleAddedItem = (item: string) => {
-        if (addedItems.includes(item)) {
-            setAddedItems(prev => prev.filter(i => i !== item));
-        } else {
-            setAddedItems(prev => [...prev, item]);
-        }
-    };
-
-    const handleAddManualItem = () => {
+    const handleAddManualItemClick = () => {
         if (manualInput.trim()) {
-            toggleAddedItem(manualInput.trim());
+            onAddManualItem(manualInput.trim());
             setManualInput('');
         }
     };
 
     const handleAddRecipeIngredients = (recipe: Recipe) => {
         const ingredients = parseIngredients(recipe.ingredients);
-        setAddedItems(prev => {
-            const newSet = new Set([...prev, ...ingredients]);
-            return Array.from(newSet);
-        });
+        ingredients.forEach(ing => onAddManualItem(ing));
         setShowRecipeAdder(false);
     };
 
+    // Derived full list of items to categorize (Plan + Manual)
+    const allItemsToCategorize = useMemo(() => {
+        const manualNames = manualItems.map(i => i.name);
+        // Combine sets to avoid duplicates
+        return Array.from(new Set([...planIngredients, ...manualNames]));
+    }, [planIngredients, manualItems]);
+
+    // Load Plan Ingredients
     useEffect(() => {
-        const generateList = async () => {
-            setLoading(true);
-            setError(null);
-            
-            const allIngredients = new Set<string>();
-            const weekStartDate = new Date(); // Assuming current week for simplicity
-            weekStartDate.setDate(weekStartDate.getDate() - weekStartDate.getDay() + (weekStartDate.getDay() === 0 ? -6 : 1));
+        const allIngredients = new Set<string>();
+        const weekStartDate = new Date(); 
+        weekStartDate.setDate(weekStartDate.getDate() - weekStartDate.getDay() + (weekStartDate.getDay() === 0 ? -6 : 1));
 
-            for (let i = 0; i < 7; i++) {
-                const dayDate = new Date(weekStartDate);
-                dayDate.setDate(weekStartDate.getDate() + i);
-                const dateStr = dayDate.toISOString().split('T')[0];
-                const dayPlan = mealPlan[dateStr];
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(weekStartDate);
+            dayDate.setDate(weekStartDate.getDate() + i);
+            const dateStr = dayDate.toISOString().split('T')[0];
+            const dayPlan = mealPlan[dateStr];
 
-                if (dayPlan) {
-                    for (const meal of Object.values(dayPlan)) {
-                         if (meal && typeof meal === 'object' && 'id' in meal && typeof (meal as any).id === 'string') {
-                            const recipe = recipes.find(r => r.id === (meal as { id: string }).id);
-                            if (recipe && recipe.ingredients) {
-                                parseIngredients(recipe.ingredients).forEach(ing => allIngredients.add(ing));
-                            }
+            if (dayPlan) {
+                for (const meal of Object.values(dayPlan)) {
+                        if (meal && typeof meal === 'object' && 'id' in meal && typeof (meal as any).id === 'string') {
+                        const recipe = recipes.find(r => r.id === (meal as { id: string }).id);
+                        if (recipe && recipe.ingredients) {
+                            parseIngredients(recipe.ingredients).forEach(ing => allIngredients.add(ing));
                         }
                     }
                 }
             }
-            
-            const ingredientsList = [...allIngredients];
-            if (ingredientsList.length === 0) {
+        }
+        setPlanIngredients(Array.from(allIngredients));
+    }, [recipes, mealPlan]);
+
+    // AI Categorization Effect
+    useEffect(() => {
+        const generateList = async () => {
+            if (allItemsToCategorize.length === 0) {
+                setCategorizedList({});
                 setLoading(false);
                 return;
             }
 
+            setLoading(true);
+            setError(null);
+
             try {
-                const categories = await categorizeShoppingList(ingredientsList);
+                // Check if we have cached categories or if we need to call AI
+                // For simplicity in this demo, we call AI if the count is small or just once. 
+                // A better approach would be to cache locally.
                 
-                // Robust validation of AI response
+                const categories = await categorizeShoppingList(allItemsToCategorize);
+                
                 const validatedCategories: Record<string, string[]> = {};
                 let isValid = true;
                 if (typeof categories === 'object' && categories !== null && !Array.isArray(categories)) {
@@ -136,25 +155,33 @@ const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan
                     throw new Error("AI response was not in the expected format.");
                 }
             } catch (err) {
-                setError("AI categorization failed. Displaying a simple list.");
-                setCategorizedList({ 'All Items': ingredientsList });
+                console.error(err);
+                // Fallback: Dump everything in "Uncategorized"
+                setCategorizedList({ 'Items': allItemsToCategorize });
             } finally {
                 setLoading(false);
             }
         };
 
         generateList();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [recipes, mealPlan]);
+    }, [allItemsToCategorize]);
 
-    const isPlanEmpty = Object.keys(categorizedList).length === 0;
+    const isListEmpty = allItemsToCategorize.length === 0;
+    const hasCheckedItems = Object.keys(checkedItems).length > 0;
 
     return (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-[500]">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto flex flex-col max-h-[90vh]">
                 <div className="flex justify-between items-center border-b p-4">
                     <h2 className="text-xl font-semibold text-gray-800">Shopping List</h2>
-                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
+                    <div className="flex items-center gap-2">
+                        {hasCheckedItems && (
+                            <button onClick={onClearChecked} className="text-xs font-bold text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors">
+                                Clear Checked
+                            </button>
+                        )}
+                        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><Icon name="x" /></button>
+                    </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 border-b space-y-3">
@@ -164,11 +191,11 @@ const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan
                             type="text" 
                             value={manualInput}
                             onChange={(e) => setManualInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleAddManualItem()}
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddManualItemClick()}
                             placeholder="Add item (e.g. Diapers)..."
                             className="flex-1 rounded-lg border-gray-300 shadow-sm focus:ring-teal-500 focus:border-teal-500 text-sm"
                         />
-                        <button onClick={handleAddManualItem} className="bg-teal-600 text-white px-3 rounded-lg hover:bg-teal-700">
+                        <button onClick={handleAddManualItemClick} className="bg-teal-600 text-white px-3 rounded-lg hover:bg-teal-700">
                             <Icon name="plus" className="w-5 h-5" />
                         </button>
                     </div>
@@ -179,7 +206,7 @@ const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan
                             onClick={() => setShowRecipeAdder(!showRecipeAdder)}
                             className="text-xs font-bold text-teal-700 flex items-center gap-1 hover:underline"
                         >
-                            <Icon name="plus-circle" className="w-3 h-3" /> Add ingredients from a Saved Plate
+                            <Icon name="plus-circle" className="w-3 h-3" /> Add from Saved Plate
                         </button>
                         
                         {showRecipeAdder && (
@@ -203,40 +230,17 @@ const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan
                 </div>
 
                 <div className="p-6 modal-scroll-content overflow-y-auto">
-                    {/* Manual / Quick Adds Category */}
-                    {addedItems.length > 0 && (
-                        <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-6">
-                            <h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2">
-                                <Icon name="shopping-basket" className="w-4 h-4"/> Added Items
-                            </h4>
-                            <ul className="space-y-2">
-                                {addedItems.map((item, index) => (
-                                    <li key={`added-${index}`} className="flex items-center justify-between group">
-                                        <span className="flex items-center gap-2 text-indigo-900 text-sm">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-                                            {item}
-                                        </span>
-                                        <button onClick={() => toggleAddedItem(item)} className="text-indigo-300 hover:text-red-500">
-                                            <Icon name="x" className="w-3 h-3" />
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-
                     {loading ? (
                         <div className="text-center p-6">
                             <div className="spinner mx-auto"></div>
-                            <p className="mt-4 text-sm text-gray-600">Checking your meal plan...</p>
+                            <p className="mt-4 text-sm text-gray-600">Organizing your list...</p>
                         </div>
-                    ) : isPlanEmpty && addedItems.length === 0 ? (
+                    ) : isListEmpty ? (
                         <EmptyState
                             illustration={<NoMealsIllustration />}
                             title="List is Empty"
                             message="Add items manually or plan some meals to auto-generate a list."
                         >
-                            {/* Favorites Quick Add */}
                             {favorites.length > 0 && (
                                 <div className="mt-6 text-left w-full">
                                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3 text-center">Quick Add Favorites</h4>
@@ -247,7 +251,7 @@ const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan
                                             return (
                                                 <button
                                                     key={foodName}
-                                                    onClick={() => toggleAddedItem(foodName)}
+                                                    onClick={() => onAddManualItem(foodName)}
                                                     className="text-xs px-3 py-1.5 rounded-full border bg-white text-gray-700 border-gray-200 hover:border-teal-400 hover:bg-teal-50 transition-all flex items-center gap-1.5"
                                                 >
                                                     <span>{emoji}</span> {foodName}
@@ -259,23 +263,43 @@ const ShoppingListModal: React.FC<ShoppingListModalProps> = ({ recipes, mealPlan
                             )}
                         </EmptyState>
                     ) : (
-                        <div className="prose-static space-y-6">
+                        <div className="space-y-6">
                             {error && <p className="text-sm text-red-600 mb-4 bg-red-50 p-2 rounded">{error}</p>}
                             
-                            {/* AI Categorized Items */}
-                            {Object.entries(categorizedList).map(([category, items]) => (
-                                <div key={category}>
-                                    <h4 className="text-sm font-bold text-teal-700 uppercase tracking-wider border-b border-gray-100 pb-1 mb-2">{category}</h4>
-                                    <ul className="space-y-1">
-                                        {(items as string[]).map((item, index) => (
-                                            <li key={index} className="flex items-start gap-2 text-gray-700 text-sm pl-2">
-                                                <div className="mt-1.5 w-1 h-1 rounded-full bg-gray-400 flex-shrink-0"></div>
-                                                <span className="leading-snug">{item}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
+                            {/* Categories */}
+                            {Object.entries(categorizedList).map(([category, items]) => {
+                                // Filter out checked items for the main list if we wanted to move them to bottom, 
+                                // but for now we just show them strikethrough.
+                                const categoryItems = items as string[];
+                                
+                                return (
+                                    <div key={category}>
+                                        <h4 className="text-sm font-bold text-teal-800 uppercase tracking-wider border-b border-teal-100 pb-1 mb-2">{category}</h4>
+                                        <ul className="space-y-2">
+                                            {categoryItems.map((item, index) => {
+                                                const isChecked = !!checkedItems[item];
+                                                const checkedDate = checkedItems[item];
+                                                
+                                                return (
+                                                    <li key={`${category}-${index}`} className={`flex items-start justify-between group p-2 rounded-lg transition-colors ${isChecked ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
+                                                        <div className="flex items-start gap-3 flex-1 cursor-pointer" onClick={() => onToggleItem(item, !isChecked)}>
+                                                            <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? 'bg-teal-500 border-teal-500' : 'bg-white border-gray-300'}`}>
+                                                                {isChecked && <Icon name="check" className="w-3.5 h-3.5 text-white" />}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className={`text-sm leading-snug ${isChecked ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{item}</span>
+                                                                {isChecked && checkedDate && (
+                                                                    <span className="text-[10px] text-teal-600 font-medium">Added to cart on {new Date(checkedDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric'})}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

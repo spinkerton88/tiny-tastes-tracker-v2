@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood, LoggedItemData, FoodStatus, SavedStrategy } from '../../types';
+import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood, LoggedItemData, FoodStatus, SavedStrategy, ManualShoppingItem } from '../../types';
 import { allFoods, BEHAVIOR_TAGS } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
@@ -10,6 +11,8 @@ interface RecipesPageProps {
     triedFoods?: TriedFoodLog[];
     customFoods?: CustomFood[];
     savedStrategies?: SavedStrategy[];
+    manualShoppingItems?: ManualShoppingItem[];
+    shoppingCheckedItems?: Record<string, string>;
     onShowAddRecipe: () => void;
     onShowImportRecipe: () => void;
     onShowSuggestRecipe: () => void;
@@ -26,6 +29,9 @@ interface RecipesPageProps {
     onFoodClick?: (food: Food) => void;
     onAddCustomFood?: (initialName: string) => void;
     onScanBarcode?: () => void;
+    onAddManualShoppingItem?: (name: string) => void;
+    onToggleShoppingItem?: (name: string, isChecked: boolean) => void;
+    onClearCheckedShoppingItems?: () => void;
     baseColor?: string;
 }
 
@@ -258,19 +264,29 @@ const PlateBuilderView: React.FC<{
             </div>
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 <div className="w-full md:w-5/12 p-4 flex flex-col items-center border-b md:border-b-0 md:border-r bg-white overflow-y-auto flex-shrink-0 max-h-[50vh] md:max-h-full">
-                    <div className="relative w-48 h-48 sm:w-64 sm:h-64 rounded-full border-4 border-gray-100 shadow-inner bg-gray-50 flex flex-wrap content-center justify-center gap-2 p-6 mb-4 transition-all shrink-0">
-                        {selectedFoods.length === 0 ? (
+                    {selectedFoods.length === 0 ? (
+                        <div className="relative w-48 h-48 sm:w-64 sm:h-64 rounded-full border-4 border-gray-100 shadow-inner bg-gray-50 flex flex-wrap content-center justify-center gap-2 p-6 mb-4 transition-all shrink-0">
                             <div className="text-center text-gray-300"><Icon name="utensils" className="w-12 h-12 mx-auto mb-2 opacity-50" /><p className="text-sm font-medium">Tap foods to build plate</p></div>
-                        ) : (
-                            selectedFoods.map((item, idx) => (
-                                <button key={`${item.food}-${idx}`} onClick={() => setActiveItemIndex(idx)} className={`relative w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full shadow-md flex items-center justify-center border-2 transition-transform hover:scale-110 ${activeItemIndex === idx ? 'border-indigo-500 ring-2 ring-indigo-200 z-10' : 'border-white'}`}>
-                                    <span className="text-xl sm:text-2xl">{getFoodEmoji(item.food, customFoods)}</span>
-                                    <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border border-white flex items-center justify-center ${item.consumption === 'none' ? 'bg-red-500' : 'bg-green-500'}`}><span className="text-[8px] text-white font-bold">{item.consumption?.[0]?.toUpperCase()}</span></div>
-                                    {item.behavioralTags && item.behavioralTags.length > 0 && (<div className="absolute -bottom-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border border-white flex items-center justify-center"><span className="text-[8px] text-white font-bold">!</span></div>)}
-                                </button>
-                            ))
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="w-full mb-4">
+                            <div className="flex gap-2 overflow-x-auto pb-4 pt-2 px-1 no-scrollbar snap-x">
+                                {selectedFoods.map((item, idx) => (
+                                    <button 
+                                        key={`${item.food}-${idx}`} 
+                                        onClick={() => setActiveItemIndex(idx)} 
+                                        className={`relative shrink-0 w-16 h-16 bg-white rounded-full shadow-md flex items-center justify-center border-2 transition-transform snap-center ${activeItemIndex === idx ? 'border-indigo-500 ring-2 ring-indigo-200 scale-110 z-10' : 'border-gray-100'}`}
+                                    >
+                                        <span className="text-2xl">{getFoodEmoji(item.food, customFoods)}</span>
+                                        <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border border-white flex items-center justify-center shadow-sm ${item.consumption === 'none' ? 'bg-red-500' : 'bg-green-500'}`}><span className="text-[9px] text-white font-bold">{item.consumption?.[0]?.toUpperCase()}</span></div>
+                                        {item.behavioralTags && item.behavioralTags.length > 0 && (<div className="absolute -bottom-1 -right-1 w-5 h-5 bg-orange-500 rounded-full border border-white flex items-center justify-center shadow-sm"><span className="text-[10px] text-white font-bold">!</span></div>)}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-center text-gray-400 mt-1">Scroll to see all</p>
+                        </div>
+                    )}
+                    
                     {activeItemIndex !== null && selectedFoods[activeItemIndex] && (
                         <div className="w-full bg-indigo-50 rounded-xl p-4 mb-4 animate-fadeIn border border-indigo-100">
                             <div className="flex justify-between items-center mb-3">

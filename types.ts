@@ -153,6 +153,18 @@ export interface ScannedProductData {
     image?: string;
 }
 
+// Shopping List Types
+export interface ManualShoppingItem {
+    id: string;
+    name: string;
+    addedAt: string;
+}
+
+export interface ShoppingListState {
+    manualItems: ManualShoppingItem[];
+    checkedItems: Record<string, string>; // Maps itemName -> ISODateString of when it was checked
+}
+
 // Modal State Types
 type LogFoodModalState = { type: 'LOG_FOOD'; food: Food };
 type HowToServeModalState = { type: 'HOW_TO_SERVE'; food: Food; customDetails?: CustomFoodDetails; returnToLog?: boolean };

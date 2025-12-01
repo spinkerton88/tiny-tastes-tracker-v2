@@ -28,7 +28,7 @@ import LogMealModal from './components/modals/LogMealModal';
 import TutorialModal from './components/modals/TutorialModal';
 
 import { useAppMode } from './hooks/useAppMode';
-import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData } from './types';
+import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem } from './types';
 import { DEFAULT_MILESTONES, BADGES_LIST, flatFoodList } from './constants';
 import { fetchProductIngredients } from './services/openFoodFactsService';
 
@@ -73,6 +73,16 @@ const App: React.FC = () => {
       return saved ? JSON.parse(saved) : [];
   });
 
+  // Shopping List Persistence
+  const [manualShoppingItems, setManualShoppingItems] = useState<ManualShoppingItem[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-manualShopping');
+      return saved ? JSON.parse(saved) : [];
+  });
+  const [shoppingCheckedItems, setShoppingCheckedItems] = useState<Record<string, string>>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-shoppingChecked');
+      return saved ? JSON.parse(saved) : {};
+  });
+
   const [currentPage, setCurrentPage] = useState('tracker');
   const [modalState, setModalState] = useState<ModalState>({ type: null });
 
@@ -87,6 +97,10 @@ const App: React.FC = () => {
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-customFoods', JSON.stringify(customFoods)), [customFoods]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-savedStrategies', JSON.stringify(savedStrategies)), [savedStrategies]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-safeFoods', JSON.stringify(safeFoods)), [safeFoods]);
+  
+  // Shopping List Persistence Effects
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-manualShopping', JSON.stringify(manualShoppingItems)), [manualShoppingItems]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-shoppingChecked', JSON.stringify(shoppingCheckedItems)), [shoppingCheckedItems]);
 
   // Handle Mode Change redirects
   useEffect(() => {
@@ -335,6 +349,38 @@ const App: React.FC = () => {
       setSavedStrategies(prev => prev.filter(s => s.id !== id));
   };
 
+  // --- Shopping List Handlers ---
+  const handleAddManualItem = (name: string) => {
+      const newItem: ManualShoppingItem = {
+          id: crypto.randomUUID(),
+          name,
+          addedAt: new Date().toISOString()
+      };
+      setManualShoppingItems(prev => [...prev, newItem]);
+  };
+
+  const handleToggleShoppingItem = (name: string, isChecked: boolean) => {
+      setShoppingCheckedItems(prev => {
+          const next = { ...prev };
+          if (isChecked) {
+              next[name] = new Date().toISOString();
+          } else {
+              delete next[name];
+          }
+          return next;
+      });
+  };
+
+  const handleClearCheckedItems = () => {
+      if (window.confirm("Clear all checked items? This will remove checked manual items.")) {
+          // 1. Remove checked manual items
+          setManualShoppingItems(prev => prev.filter(item => !shoppingCheckedItems[item.name]));
+          
+          // 2. Clear checked status (so plan items show as unchecked next time, or effectively 'cleared' from view if filtered)
+          setShoppingCheckedItems({});
+      }
+  };
+
   const renderPage = () => {
       const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
 
@@ -367,6 +413,8 @@ const App: React.FC = () => {
                   triedFoods={triedFoods}
                   customFoods={customFoods}
                   savedStrategies={savedStrategies}
+                  manualShoppingItems={manualShoppingItems}
+                  shoppingCheckedItems={shoppingCheckedItems}
                   onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
                   onShowImportRecipe={() => setModalState({ type: 'IMPORT_RECIPE' })}
                   onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
@@ -383,6 +431,9 @@ const App: React.FC = () => {
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
                   onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
                   onScanBarcode={mode === 'TODDLER' ? () => setModalState({ type: 'SCAN_BARCODE' }) : undefined}
+                  onAddManualShoppingItem={handleAddManualItem}
+                  onToggleShoppingItem={handleToggleShoppingItem}
+                  onClearCheckedShoppingItems={handleClearCheckedItems}
                   baseColor={baseColorName}
               />;
           case 'learn':
@@ -504,6 +555,11 @@ const App: React.FC = () => {
                   recipes={recipes}
                   mealPlan={mealPlan}
                   triedFoods={triedFoods}
+                  manualItems={manualShoppingItems}
+                  checkedItems={shoppingCheckedItems}
+                  onAddManualItem={handleAddManualItem}
+                  onToggleItem={handleToggleShoppingItem}
+                  onClearChecked={handleClearCheckedItems}
                   onClose={() => setModalState({ type: null })}
               />;
           case 'SUBSTITUTES':
