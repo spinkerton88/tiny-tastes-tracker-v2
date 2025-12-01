@@ -215,17 +215,26 @@ const App: React.FC = () => {
           const allKnownFoods = [...flatFoodList, ...customFoods.map(f => f.name)];
           const matchedFoods = mapIngredientsToFoods(product.ingredientsText, allKnownFoods);
           
-          if (matchedFoods.length === 0) {
-              // FALLBACK: Open Add Custom Food modal if no matching ingredients found
-              setModalState({ type: 'ADD_CUSTOM_FOOD', initialName: product.name });
-              return;
+          if (matchedFoods.length > 0) {
+              // Open Log Meal Modal with pre-selected foods
+              setModalState({ 
+                  type: 'LOG_MEAL', 
+                  initialFoods: matchedFoods 
+              });
+          } else {
+              // FALLBACK: Treat as a Recipe/Preset if no simple ingredients found
+              // This allows saving complex pouches/meals as a single "Recipe" unit
+              setModalState({ 
+                  type: 'ADD_RECIPE', 
+                  recipeData: {
+                      title: product.name,
+                      ingredients: product.ingredientsText || product.name,
+                      instructions: 'Ready to serve.', // Default instruction
+                      tags: ['Store Bought', 'Scanned Product'],
+                      mealTypes: ['snack']
+                  }
+              });
           }
-
-          // Open Log Meal Modal with pre-selected foods
-          setModalState({ 
-              type: 'LOG_MEAL', 
-              initialFoods: matchedFoods 
-          });
 
       } catch (error) {
           console.error(error);

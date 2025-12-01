@@ -22,20 +22,35 @@ export const fetchProductByBarcode = async (barcode: string) => {
 };
 
 export const mapIngredientsToFoods = (ingredientText: string, allFoodsList: string[]) => {
-  // Normalize: "Organic Spinach Puree" -> "SPINACH"
+  // Normalize and clean the text
   const cleanText = ingredientText
     .toLowerCase()
-    .replace(/organic|puree|juice|concentrate|vitamin|flour|whole/g, '') // Remove noise
-    .replace(/[,().]/g, ' '); // Remove punctuation
+    .replace(/organic|puree|juice|concentrate|vitamin|flour|whole|paste|sauce|extract|powder|syrup|natural|flavor/g, '') // Remove common filler words
+    .replace(/[,().:;]/g, ' '); // Remove punctuation
 
   const foundFoods: string[] = [];
 
   allFoodsList.forEach(dbFood => {
-    // Check if your DB food (e.g. "Spinach") exists in the cleaned text
-    if (cleanText.includes(dbFood.toLowerCase())) {
-      foundFoods.push(dbFood);
+    const dbLower = dbFood.toLowerCase();
+    
+    // Handle basic singularization logic for matching
+    // 1. "Strawberries" (DB) -> "Strawberry" (Text)
+    // 2. "Apples" (DB) -> "Apple" (Text)
+    let dbSingular = dbLower;
+    if (dbLower.endsWith('ies')) {
+        dbSingular = dbLower.slice(0, -3) + 'y'; // cherries -> cherry
+    } else if (dbLower.endsWith('s')) {
+        dbSingular = dbLower.slice(0, -1); // apples -> apple
+    }
+
+    // Check if the DB food name (or its singular version) exists in the ingredient text
+    // We check both ways to catch "Gala Apple" (contains apple)
+    if (cleanText.includes(dbLower) || cleanText.includes(dbSingular)) {
+      if (!foundFoods.includes(dbFood)) {
+          foundFoods.push(dbFood);
+      }
     }
   });
 
-  return foundFoods; // Returns ["Spinach", "Apple"]
+  return foundFoods;
 };
