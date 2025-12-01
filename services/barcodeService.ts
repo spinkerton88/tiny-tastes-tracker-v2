@@ -9,6 +9,7 @@ export const fetchProductByBarcode = async (barcode: string) => {
     if (data.status === 1) {
       return {
         name: data.product.product_name,
+        brand: data.product.brands,
         image: data.product.image_front_url,
         // The API returns ingredients_text_en (e.g., "Apples, Spinach, Water")
         // Fallback to ingredients_text if _en is missing

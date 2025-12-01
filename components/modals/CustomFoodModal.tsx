@@ -1,22 +1,49 @@
 
-import React, { useState } from 'react';
-import { CustomFood, CustomFoodDetails } from '../../types';
-import { analyzeFoodWithGemini } from '../../services/geminiService';
+import React, { useState, useEffect } from 'react';
+import { CustomFood, CustomFoodDetails, ScannedProductData } from '../../types';
+import { analyzeFoodWithGemini, analyzePackagedProduct } from '../../services/geminiService';
 import { logMissingFoodToCloud } from '../../services/telemetryService';
 import Icon from '../ui/Icon';
 
 interface CustomFoodModalProps {
     initialName?: string;
+    scannedData?: ScannedProductData;
     onClose: () => void;
     onSave: (food: CustomFood) => void;
 }
 
-const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onClose, onSave }) => {
+const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', scannedData, onClose, onSave }) => {
     const [name, setName] = useState(initialName);
     const [loading, setLoading] = useState(false);
     const [analyzedData, setAnalyzedData] = useState<(CustomFoodDetails & { emoji: string }) | null>(null);
     const [customEmoji, setCustomEmoji] = useState('');
     const [error, setError] = useState<string | null>(null);
+
+    // Auto-analyze if scanned data is provided
+    useEffect(() => {
+        if (scannedData) {
+            const formattedName = scannedData.brand 
+                ? `${scannedData.brand} ${scannedData.name}` 
+                : scannedData.name;
+            
+            setName(formattedName);
+            handleScannedAnalysis(formattedName, scannedData.ingredientsText);
+        }
+    }, [scannedData]);
+
+    const handleScannedAnalysis = async (productName: string, ingredients: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await analyzePackagedProduct(productName, ingredients);
+            setAnalyzedData(result);
+            setCustomEmoji(result.emoji);
+        } catch (err) {
+            setError("Could not analyze this product. Please check your internet connection.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleAnalyze = async () => {
         if (!name.trim()) return;
@@ -46,7 +73,8 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
                 allergen_info: analyzedData.allergen_info,
                 texture_recommendation: analyzedData.texture_recommendation,
                 nutrition_highlight: analyzedData.nutrition_highlight
-            }
+            },
+            image: scannedData?.image // Preserve the scanned image URL if available
         };
 
         // Trigger Telemetry (Fire-and-forget)
@@ -70,13 +98,22 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
                 {/* Header */}
                 <div className="flex justify-between items-center border-b p-4 bg-gradient-to-r from-teal-50 to-white">
                     <h2 className="text-xl font-bold text-teal-900 flex items-center gap-2">
-                        <Icon name="plus-circle" className="w-6 h-6 text-teal-600" />
-                        Add Custom Food
+                        {scannedData ? <Icon name="scan-barcode" className="w-6 h-6 text-teal-600" /> : <Icon name="plus-circle" className="w-6 h-6 text-teal-600" />}
+                        {scannedData ? 'Add Scanned Food' : 'Add Custom Food'}
                     </h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><Icon name="x" /></button>
                 </div>
 
                 <div className="p-6 overflow-y-auto">
+                    {/* Show scanned image if available */}
+                    {scannedData?.image && !analyzedData && (
+                        <div className="flex justify-center mb-6">
+                            <div className="w-32 h-32 rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                                <img src={scannedData.image} alt="Scanned product" className="w-full h-full object-contain" />
+                            </div>
+                        </div>
+                    )}
+
                     {!analyzedData ? (
                         <div className="space-y-4">
                             <div>
@@ -89,40 +126,62 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
                                         onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
                                         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500"
                                         placeholder="e.g., Dragonfruit"
-                                        autoFocus
+                                        autoFocus={!scannedData}
                                     />
                                 </div>
                                 <p className="text-xs text-gray-500 mt-2">
-                                    We'll use AI to analyze safety and nutrition for this food.
+                                    {scannedData 
+                                        ? "Review the product name. AI is analyzing safety & nutrition based on ingredients..."
+                                        : "We'll use AI to analyze safety and nutrition for this food."
+                                    }
                                 </p>
                             </div>
 
+                            {loading && (
+                                <div className="flex flex-col items-center py-6 text-gray-500 gap-3">
+                                    <div className="spinner w-8 h-8 border-teal-500"></div>
+                                    <span className="text-sm font-medium animate-pulse">Analyzing ingredients...</span>
+                                </div>
+                            )}
+
                             {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</p>}
 
-                            <button 
-                                onClick={handleAnalyze} 
-                                disabled={loading || !name.trim()}
-                                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                            >
-                                {loading ? <div className="spinner w-5 h-5 border-white"></div> : <><Icon name="wand-2" className="w-4 h-4" /> Analyze with AI</>}
-                            </button>
+                            {!loading && !scannedData && (
+                                <button 
+                                    onClick={handleAnalyze} 
+                                    disabled={!name.trim()}
+                                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    <Icon name="wand-2" className="w-4 h-4" /> Analyze with AI
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-5 animate-fadeIn">
                             <div className="flex flex-col items-center">
-                                <div className="relative group">
-                                    <input 
-                                        type="text" 
-                                        value={customEmoji} 
-                                        onChange={(e) => setCustomEmoji(e.target.value)}
-                                        className="text-6xl text-center border-none focus:ring-0 bg-transparent w-32 p-0 cursor-pointer hover:scale-110 transition-transform bg-gray-50 rounded-xl"
-                                        maxLength={5} 
-                                    />
-                                    <div className="absolute -bottom-5 left-0 right-0 text-center">
-                                        <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold bg-white px-2">Tap to Edit</span>
+                                {/* Combine scanned image or emoji */}
+                                {scannedData?.image ? (
+                                    <div className="relative mb-4">
+                                        <img src={scannedData.image} alt={name} className="w-24 h-24 object-contain rounded-md border border-gray-200" />
+                                        <div className="absolute -bottom-2 -right-2 bg-white rounded-full border shadow-sm p-1 text-xl">
+                                            {customEmoji}
+                                        </div>
                                     </div>
-                                </div>
-                                <h3 className="text-2xl font-bold text-gray-900 mt-6">{name}</h3>
+                                ) : (
+                                    <div className="relative group">
+                                        <input 
+                                            type="text" 
+                                            value={customEmoji} 
+                                            onChange={(e) => setCustomEmoji(e.target.value)}
+                                            className="text-6xl text-center border-none focus:ring-0 bg-transparent w-32 p-0 cursor-pointer hover:scale-110 transition-transform bg-gray-50 rounded-xl"
+                                            maxLength={5} 
+                                        />
+                                        <div className="absolute -bottom-5 left-0 right-0 text-center">
+                                            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold bg-white px-2">Tap to Edit</span>
+                                        </div>
+                                    </div>
+                                )}
+                                <h3 className="text-xl font-bold text-gray-900 mt-2 text-center leading-tight">{name}</h3>
                             </div>
 
                             {/* Safety Card */}
@@ -159,7 +218,7 @@ const CustomFoodModal: React.FC<CustomFoodModalProps> = ({ initialName = '', onC
 
                             <div className="bg-yellow-50 p-3 rounded-md border border-yellow-100 text-xs text-yellow-800 flex gap-2">
                                 <Icon name="info" className="w-4 h-4 flex-shrink-0" />
-                                <p><strong>Disclaimer:</strong> This info is generated by AI. Always verify with your pediatrician before introducing new foods.</p>
+                                <p><strong>Disclaimer:</strong> This info is generated by AI based on the product ingredients. Always verify with your pediatrician.</p>
                             </div>
 
                             <div className="flex gap-3 pt-2">

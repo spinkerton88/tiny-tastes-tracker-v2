@@ -149,22 +149,22 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
   
   const knownAllergens = Array.isArray(userProfile?.knownAllergies) ? userProfile?.knownAllergies : [];
 
-  // Merge Standard Foods with Custom Foods for display
-  let displayCategories = [...allFoods];
-  if (customFoods.length > 0) {
-      displayCategories = [
-          {
-              category: "My Custom Foods",
-              color: "bg-violet-100",
-              textColor: "text-violet-800",
-              borderColor: "border-violet-300",
-              items: customFoods
-          },
-          ...displayCategories
-      ];
-  }
+  // Filter Custom Foods separately
+  const filteredCustomFoods = customFoods.filter(food => {
+      const isTried = triedFoodSet.has(food.name);
+      
+      if (searchQuery && !food.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+          return false;
+      }
 
-  const filteredCategories = displayCategories.map(category => {
+      if (filter === 'all') return true;
+      if (filter === 'to_try') return !isTried;
+      if (filter === 'tried') return isTried;
+      return false;
+  });
+
+  // Filter Standard Categories
+  const filteredCategories = allFoods.map(category => {
       const items = category.items.filter(food => {
           const isTried = triedFoodSet.has(food.name);
           
@@ -179,6 +179,8 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
       });
       return { ...category, items };
   }).filter(category => category.items.length > 0);
+
+  const hasResults = filteredCategories.length > 0 || filteredCustomFoods.length > 0;
 
   const isFoodAllergic = (foodName: string) => {
       const foodAllergens = FOOD_ALLERGY_MAPPING[foodName];
@@ -210,12 +212,18 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
           if (identifiedFoodName) {
               // Find the food object in our list
               let foundFood: Food | undefined;
-              for (const cat of displayCategories) {
+              
+              // Check standard foods
+              for (const cat of allFoods) {
                   const match = cat.items.find(item => item.name === identifiedFoodName);
                   if (match) {
                       foundFood = match;
                       break;
                   }
+              }
+              // Check custom foods
+              if (!foundFood) {
+                  foundFood = customFoods.find(f => f.name === identifiedFoodName);
               }
 
               if (foundFood) {
@@ -234,6 +242,15 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
           // Reset input
           if (fileInputRef.current) fileInputRef.current.value = '';
       }
+  };
+
+  // Styling for Custom Food Cards
+  const customCategoryStyle: FoodCategory = {
+      category: "Custom",
+      color: "bg-white",
+      textColor: "text-violet-800",
+      borderColor: "border-violet-200",
+      items: []
   };
 
   return (
@@ -327,12 +344,21 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                         let foundCategory: FoodCategory | undefined;
                         let foundFood: Food | undefined;
 
-                        for (const cat of displayCategories) {
+                        // Check standard categories
+                        for (const cat of allFoods) {
                             const f = cat.items.find(i => i.name === log.id);
                             if (f) {
                                 foundFood = f;
                                 foundCategory = cat;
                                 break;
+                            }
+                        }
+                        
+                        // Check Custom foods if not found
+                        if (!foundFood) {
+                            foundFood = customFoods.find(f => f.name === log.id);
+                            if (foundFood) {
+                                foundCategory = customCategoryStyle;
                             }
                         }
 
@@ -383,36 +409,75 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
             </button>
             
             <div className={`grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 transition-all duration-300 ease-in-out overflow-hidden ${isBreakdownOpen ? 'max-h-[1000px] opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
-                {displayCategories.map(cat => {
+                {/* Standard Categories */}
+                {allFoods.map(cat => {
                     const catTriedCount = cat.items.filter(item => triedFoodSet.has(item.name)).length;
                     return <CategoryProgress key={cat.category} category={cat} triedCount={catTriedCount} />;
                 })}
+                {/* Custom Category Summary */}
+                {customFoods.length > 0 && (
+                    <CategoryProgress 
+                        category={customCategoryStyle}
+                        triedCount={customFoods.filter(f => triedFoodSet.has(f.name)).length} 
+                    />
+                )}
             </div>
         </div>
       </div>
 
-      {filteredCategories.length > 0 ? (
-        filteredCategories.map(category => (
-          <div key={category.category}>
-            <h2 className={`text-2xl font-semibold ${category.textColor} mt-8 mb-4`}>{category.category}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-              {category.items.map(food => (
-                <FoodCard
-                  key={food.name}
-                  name={food.name}
-                  emoji={food.emoji}
-                  category={category}
-                  isTried={triedFoodSet.has(food.name)}
-                  isAllergic={isFoodAllergic(food.name)}
-                  isCustom={(food as CustomFood).isCustom}
-                  onClick={() => onFoodClick(food)}
-                  onInfoClick={(e) => { e.stopPropagation(); onShowGuide(food); }}
-                  baseColor={baseColor}
-                />
-              ))}
-            </div>
-          </div>
-        ))
+      {hasResults ? (
+        <>
+            {/* 1. Custom Foods Section - DISTINCT */}
+            {filteredCustomFoods.length > 0 && (
+                <div className="mb-8 p-4 bg-violet-50 rounded-xl border border-violet-100 shadow-sm">
+                    <h2 className="text-xl font-bold text-violet-900 mb-4 flex items-center gap-2">
+                        <div className="p-1.5 bg-white rounded-full border border-violet-100 shadow-sm">
+                            <Icon name="scan-barcode" className="w-5 h-5 text-violet-600" />
+                        </div>
+                        My Custom & Scanned Foods
+                    </h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                        {filteredCustomFoods.map(food => (
+                            <FoodCard
+                                key={food.name}
+                                name={food.name}
+                                emoji={food.emoji}
+                                category={customCategoryStyle}
+                                isTried={triedFoodSet.has(food.name)}
+                                isAllergic={isFoodAllergic(food.name)}
+                                isCustom={true}
+                                onClick={() => onFoodClick(food)}
+                                onInfoClick={(e) => { e.stopPropagation(); onShowGuide(food); }}
+                                baseColor={baseColor}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* 2. Standard Categories */}
+            {filteredCategories.map(category => (
+                <div key={category.category}>
+                    <h2 className={`text-2xl font-semibold ${category.textColor} mt-8 mb-4`}>{category.category}</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+                    {category.items.map(food => (
+                        <FoodCard
+                        key={food.name}
+                        name={food.name}
+                        emoji={food.emoji}
+                        category={category}
+                        isTried={triedFoodSet.has(food.name)}
+                        isAllergic={isFoodAllergic(food.name)}
+                        isCustom={false}
+                        onClick={() => onFoodClick(food)}
+                        onInfoClick={(e) => { e.stopPropagation(); onShowGuide(food); }}
+                        baseColor={baseColor}
+                        />
+                    ))}
+                    </div>
+                </div>
+            ))}
+        </>
       ) : (
         <EmptyState
             illustration={<NoResultsIllustration />}

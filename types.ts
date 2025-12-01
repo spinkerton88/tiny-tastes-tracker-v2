@@ -30,6 +30,7 @@ export interface CustomFoodDetails {
 export interface CustomFood extends Food {
     isCustom: true;
     details: CustomFoodDetails;
+    image?: string; // Optional URL for scanned products
 }
 
 export interface FoodCategory {
@@ -137,6 +138,13 @@ export interface LoggedItemData {
     tags: string[];
 }
 
+export interface ScannedProductData {
+    name: string;
+    brand?: string;
+    ingredientsText: string;
+    image?: string;
+}
+
 // Modal State Types
 type LogFoodModalState = { type: 'LOG_FOOD'; food: Food };
 type HowToServeModalState = { type: 'HOW_TO_SERVE'; food: Food; customDetails?: CustomFoodDetails; returnToLog?: boolean };
@@ -152,7 +160,7 @@ type FlavorPairingModalState = { type: 'FLAVOR_PAIRING' };
 type AllergenAlertModalState = { type: 'ALLERGEN_ALERT'; foodName: string; allergens: string[] };
 type BadgeUnlockedModalState = { type: 'BADGE_UNLOCKED'; badge: Badge };
 type CertificateModalState = { type: 'CERTIFICATE'; babyName: string; date: string };
-type CustomFoodModalState = { type: 'ADD_CUSTOM_FOOD'; initialName?: string };
+type CustomFoodModalState = { type: 'ADD_CUSTOM_FOOD'; initialName?: string; scannedData?: ScannedProductData };
 type LogMealModalState = { type: 'LOG_MEAL'; initialFoods?: string[] };
 type ScanBarcodeModalState = { type: 'SCAN_BARCODE' };
 type NullModalState = { type: null };

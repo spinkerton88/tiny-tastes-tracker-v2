@@ -277,6 +277,38 @@ export const analyzeFoodWithGemini = async (foodName: string): Promise<CustomFoo
     }
 };
 
+export const analyzePackagedProduct = async (productName: string, ingredientsText: string): Promise<CustomFoodDetails & { emoji: string }> => {
+    try {
+        const prompt = `Analyze this specific scanned packaged food product for a baby (6-12 months).
+        
+        Product Name: "${productName}"
+        Ingredients List: "${ingredientsText}"
+        
+        Instructions:
+        1. "safety_rating": Is this safe for a baby? (e.g. "Safe", "Use Caution" if high sodium/sugar/choking risk, "Avoid" if honey/raw fish).
+        2. "allergen_info": Scan the ingredient list specifically for common allergens (Dairy, Soy, Nuts, Wheat, Egg, Fish, Sesame). List them. If none found, say "No common allergens found in ingredients".
+        3. "texture_recommendation": How to serve this specific product type? (e.g. "Squeeze pouch onto spoon", "Dissolve puffs in mouth", "Mix cereal with breastmilk").
+        4. "nutrition_highlight": Key benefit based on ingredients (e.g. "Fiber from oats", "Iron fortified").
+        5. "emoji": Pick a relevant emoji (🥣 for pouches, 🍪 for biscuits, etc).
+
+        Respond ONLY with a JSON object matching this structure.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [{ parts: [{ text: prompt }] }],
+            config: {
+                responseMimeType: "application/json",
+            },
+        });
+
+        const text = response.text.trim();
+        return JSON.parse(text);
+    } catch (error) {
+        console.error("Error analyzing packaged product:", error);
+        throw new Error("Failed to analyze product.");
+    }
+};
+
 export const generatePickyEaterStrategies = async (targetFood: string, safeFoods: string, ickFactor: string = "Unknown"): Promise<any> => {
   try {
     const systemInstruction = `System Role:
