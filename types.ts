@@ -54,6 +54,7 @@ export interface FoodLogData {
     // New fields for Toddler Mode
     portion?: string; 
     consumption?: 'all' | 'most' | 'some' | 'none';
+    usedStrategy?: string; // ID or Title of picky eater strategy used
 }
 
 export interface TriedFoodLog extends FoodLogData {
@@ -141,6 +142,7 @@ export interface LoggedItemData {
     tags: string[];
     portion?: string;
     consumption?: 'all' | 'most' | 'some' | 'none';
+    behavioralTags?: string[];
 }
 
 export interface ScannedProductData {

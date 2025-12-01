@@ -167,7 +167,7 @@ const App: React.FC = () => {
   };
 
   // Updated to support detailed items
-  const handleBatchLogMeal = (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => {
+  const handleBatchLogMeal = (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string, strategy?: string) => {
       const newLogs: TriedFoodLog[] = items.map(item => {
           let reaction = 6; // Default to "Liked" (6/7)
           let moreThanOneBite = true;
@@ -190,13 +190,56 @@ const App: React.FC = () => {
               notes: notes || '',
               tryCount: 1,
               messyFaceImage: photo,
-              behavioralTags: item.tags
+              behavioralTags: item.behavioralTags,
+              portion: item.portion,
+              consumption: item.consumption,
+              usedStrategy: strategy
           };
       });
       
       const updatedTried = [...triedFoods, ...newLogs];
       setTriedFoods(updatedTried);
       checkBadges(updatedTried);
+  };
+
+  const handleUpdateBatchLog = (originalDate: string, originalMeal: string, items: LoggedItemData[], newDate: string, newMeal: string, photo?: string, notes?: string, strategy?: string) => {
+      // 1. Filter out all old logs for that date/meal combination
+      const filteredTried = triedFoods.filter(f => !(f.date === originalDate && f.meal === originalMeal));
+      
+      // 2. Generate new logs
+      const newLogs: TriedFoodLog[] = items.map(item => {
+          let reaction = 6;
+          let moreThanOneBite = true;
+          
+          // Re-use logic for reaction based on status/consumption
+          if (item.status === 'refused' || item.consumption === 'none') {
+              reaction = 1;
+              moreThanOneBite = false;
+          } else if (item.status === 'touched' || item.consumption === 'some') {
+              reaction = 3;
+              moreThanOneBite = false;
+          }
+
+          return {
+              id: item.food,
+              date: newDate,
+              meal: newMeal,
+              reaction,
+              moreThanOneBite,
+              allergyReaction: 'none',
+              notes: notes || '',
+              tryCount: 1,
+              messyFaceImage: photo,
+              behavioralTags: item.behavioralTags,
+              portion: item.portion,
+              consumption: item.consumption,
+              usedStrategy: strategy
+          };
+      });
+
+      // 3. Save
+      const updatedTried = [...filteredTried, ...newLogs];
+      setTriedFoods(updatedTried);
   };
 
   const handleBarcodeScan = async (barcode: string) => {
@@ -211,10 +254,6 @@ const App: React.FC = () => {
                return;
           }
           
-          // Logic Upgrade: 
-          // 1. If we matched exactly 1 food and the name is somewhat similar, assume it's a raw ingredient.
-          // 2. Otherwise, treat it as a "Custom Food Product" (Pouch, Snack, Blend).
-          
           if (product.matchedFoods.length === 1 && product.productName.toLowerCase().includes(product.matchedFoods[0].toLowerCase())) {
               // Perfect single match
               setModalState({ 
@@ -222,7 +261,6 @@ const App: React.FC = () => {
                   initialFoods: product.matchedFoods 
               });
           } else {
-              // Complex product or partial match -> Open Custom Food Modal for AI Analysis
               setModalState({ 
                   type: 'ADD_CUSTOM_FOOD', 
                   scannedData: {
@@ -304,6 +342,7 @@ const App: React.FC = () => {
                   mealPlan={mealPlan}
                   triedFoods={triedFoods}
                   customFoods={customFoods}
+                  savedStrategies={savedStrategies}
                   onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
                   onShowImportRecipe={() => setModalState({ type: 'IMPORT_RECIPE' })}
                   onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
@@ -311,7 +350,9 @@ const App: React.FC = () => {
                   onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
                   onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
                   onBatchLog={handleBatchLogMeal}
+                  onUpdateBatchLog={handleUpdateBatchLog}
                   onCreateRecipe={handleCreateRecipe}
+                  onEditRecipe={(recipe) => setModalState({ type: 'ADD_RECIPE', recipeData: recipe })}
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
                   onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
                   onScanBarcode={mode === 'TODDLER' ? () => setModalState({ type: 'SCAN_BARCODE' }) : undefined}
@@ -394,7 +435,11 @@ const App: React.FC = () => {
               return <RecipeModal 
                   onClose={() => setModalState({ type: null })}
                   onSave={(recipe) => {
-                      handleCreateRecipe(recipe);
+                      if (modalState.recipeData?.id) {
+                          handleUpdateRecipe(modalState.recipeData.id, recipe);
+                      } else {
+                          handleCreateRecipe(recipe);
+                      }
                       setModalState({ type: null });
                   }}
                   initialData={modalState.recipeData}
@@ -483,7 +528,7 @@ const App: React.FC = () => {
                return <LogMealModal
                   recipes={recipes}
                   onClose={() => setModalState({ type: null })}
-                  onSave={handleBatchLogMeal}
+                  onSave={(items, date, meal, photo, notes) => handleBatchLogMeal(items, date, meal, photo, notes)}
                   onCreateRecipe={handleCreateRecipe}
                   baseColor={baseColorName}
                   initialFoods={modalState.initialFoods}
