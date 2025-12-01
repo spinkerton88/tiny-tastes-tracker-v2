@@ -290,7 +290,7 @@ const App: React.FC = () => {
                   userProfile={userProfile}
                   onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, customDetails: (food as CustomFood).isCustom ? (food as CustomFood).details : undefined })}
                   onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
-                  onScanBarcode={() => setModalState({ type: 'SCAN_BARCODE' })}
+                  onScanBarcode={mode === 'TODDLER' ? () => setModalState({ type: 'SCAN_BARCODE' }) : undefined}
                   baseColor={baseColorName}
               />;
           case 'recommendations':
@@ -318,7 +318,7 @@ const App: React.FC = () => {
                   onBatchLog={handleBatchLogMeal}
                   onCreateRecipe={handleCreateRecipe}
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
-                  onScanBarcode={() => setModalState({ type: 'SCAN_BARCODE' })}
+                  onScanBarcode={mode === 'TODDLER' ? () => setModalState({ type: 'SCAN_BARCODE' }) : undefined}
                   baseColor={baseColorName}
               />;
           case 'learn':
@@ -492,6 +492,7 @@ const App: React.FC = () => {
                   baseColor={baseColorName}
                   initialFoods={modalState.initialFoods}
                   customFoods={customFoods}
+                  enableScanner={mode === 'TODDLER'}
                />;
           case 'SCAN_BARCODE':
               return (

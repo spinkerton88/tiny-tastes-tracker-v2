@@ -14,11 +14,12 @@ interface LogMealModalProps {
     baseColor?: string;
     initialFoods?: string[];
     customFoods?: CustomFood[];
+    enableScanner?: boolean;
 }
 
 type Step = 'SELECT' | 'REVIEW';
 
-const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal', initialFoods = [], customFoods = [] }) => {
+const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal', initialFoods = [], customFoods = [], enableScanner = false }) => {
     const [step, setStep] = useState<Step>('SELECT');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
@@ -208,9 +209,11 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                         <button onClick={() => setIsScanning(true)} className={`text-${baseColor}-600 bg-${baseColor}-50 hover:bg-${baseColor}-100 p-2 rounded-full transition-colors`} title="Scan Barcode">
-                            <Icon name="scan-barcode" className="w-5 h-5" />
-                        </button>
+                        {enableScanner && (
+                            <button onClick={() => setIsScanning(true)} className={`text-${baseColor}-600 bg-${baseColor}-50 hover:bg-${baseColor}-100 p-2 rounded-full transition-colors`} title="Scan Barcode">
+                                <Icon name="scan-barcode" className="w-5 h-5" />
+                            </button>
+                        )}
                         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><Icon name="x" /></button>
                     </div>
                 </div>
@@ -227,7 +230,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
 
                         <div className="flex border-b">
                             <button onClick={() => setActiveTab('foods')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'foods' ? `text-${baseColor}-600 border-b-2 border-${baseColor}-600 bg-teal-50/50` : 'text-gray-500'}`}>Foods</button>
-                            <button onClick={() => setActiveTab('recipes')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'recipes' ? `text-${baseColor}-600 border-b-2 border-${baseColor}-600 bg-teal-50/50` : 'text-gray-500'}`}>Presets</button>
+                            <button onClick={() => setActiveTab('recipes')} className={`flex-1 py-3 text-sm font-medium ${activeTab === 'recipes' ? `text-${baseColor}-600 border-b-2 border-${baseColor}-600 bg-teal-50/50` : 'text-gray-500'}`}>Use Preset / Recipe</button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 bg-white">
@@ -248,13 +251,46 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                                     </div>
                                 </>
                             ) : (
-                                <div className="space-y-3">
-                                    {recipes.map(recipe => (
-                                        <button key={recipe.id} onClick={() => handleAddRecipeToTray(recipe)} className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 transition-all flex justify-between items-center">
-                                            <div><h4 className="font-bold text-gray-800">{recipe.title}</h4><p className="text-xs text-gray-500 mt-1 line-clamp-1">{recipe.ingredients}</p></div>
-                                            <Icon name="plus" className="w-4 h-4 text-teal-600" />
-                                        </button>
-                                    ))}
+                                <div className="space-y-4">
+                                    {customFoods.length > 0 && (
+                                        <div>
+                                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 sticky top-0 bg-white py-1 z-10">Custom Foods</h3>
+                                            <div className="space-y-2">
+                                                {customFoods.map(food => {
+                                                    const isSelected = selectedFoods.has(food.name);
+                                                    return (
+                                                        <button 
+                                                            key={food.name} 
+                                                            onClick={() => toggleFood(food.name)} 
+                                                            className={`w-full text-left p-3 rounded-xl border transition-all flex justify-between items-center ${isSelected ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-200 hover:border-teal-400 hover:bg-teal-50'}`}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xl">{food.emoji}</span>
+                                                                <div>
+                                                                    <h4 className={`font-bold ${isSelected ? 'text-teal-900' : 'text-gray-800'}`}>{food.name}</h4>
+                                                                    <p className="text-xs text-gray-500 mt-0.5">Scanned / Custom Item</p>
+                                                                </div>
+                                                            </div>
+                                                            {isSelected ? <Icon name="check-circle" className={`w-5 h-5 text-${baseColor}-600`} /> : <Icon name="plus" className="w-4 h-4 text-teal-600" />}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 mt-2 sticky top-0 bg-white py-1 z-10">My Recipes</h3>
+                                        <div className="space-y-3">
+                                            {recipes.map(recipe => (
+                                                <button key={recipe.id} onClick={() => handleAddRecipeToTray(recipe)} className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-teal-400 hover:bg-teal-50 transition-all flex justify-between items-center">
+                                                    <div><h4 className="font-bold text-gray-800">{recipe.title}</h4><p className="text-xs text-gray-500 mt-1 line-clamp-1">{recipe.ingredients}</p></div>
+                                                    <Icon name="plus" className="w-4 h-4 text-teal-600" />
+                                                </button>
+                                            ))}
+                                            {recipes.length === 0 && <p className="text-sm text-gray-400 italic">No recipes created yet.</p>}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
