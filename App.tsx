@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
 import IdeasPage from './components/pages/IdeasPage';
@@ -24,12 +24,16 @@ import AllergenAlertModal from './components/modals/AllergenAlertModal';
 import BadgeUnlockedModal from './components/modals/BadgeUnlockedModal';
 import CertificateModal from './components/modals/CertificateModal';
 import CustomFoodModal from './components/modals/CustomFoodModal';
-import LogMealModal, { LoggedItemData } from './components/modals/LogMealModal';
+import LogMealModal from './components/modals/LogMealModal';
 import TutorialModal from './components/modals/TutorialModal';
 
 import { useAppMode } from './hooks/useAppMode';
-import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy } from './types';
+import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData } from './types';
 import { DEFAULT_MILESTONES, BADGES_LIST } from './constants';
+import { fetchProductIngredients } from './services/openFoodFactsService';
+
+// Lazy load the scanner modal to prevent initialization errors if the library isn't fully ready
+const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal'));
 
 const App: React.FC = () => {
   // State
@@ -195,6 +199,34 @@ const App: React.FC = () => {
       checkBadges(updatedTried);
   };
 
+  const handleBarcodeScan = async (barcode: string) => {
+      // Close scan modal immediately
+      setModalState({ type: null });
+      
+      try {
+          // Show quick loading toast/alert if needed
+          const productData = await fetchProductIngredients(barcode);
+          
+          if (!productData || productData.matchedFoods.length === 0) {
+              alert(`Found product "${productData?.productName || 'Unknown'}" but couldn't match any specific foods to our list. Try adding custom foods manually.`);
+              return;
+          }
+
+          // Open Log Meal Modal with pre-selected foods
+          setModalState({ 
+              type: 'LOG_MEAL', 
+              initialFoods: productData.matchedFoods 
+          });
+          
+          // Optional: Show a success message about what was found
+          // alert(`Found: ${productData.matchedFoods.join(', ')}`);
+
+      } catch (error) {
+          console.error(error);
+          alert("Error looking up barcode. Please try again.");
+      }
+  };
+
   const handleCreateRecipe = (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => {
       const newRecipe: Recipe = {
           ...recipeData,
@@ -240,6 +272,7 @@ const App: React.FC = () => {
                   userProfile={userProfile}
                   onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, customDetails: (food as CustomFood).isCustom ? (food as CustomFood).details : undefined })}
                   onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
+                  onScanBarcode={() => setModalState({ type: 'SCAN_BARCODE' })}
                   baseColor={baseColorName}
               />;
           case 'recommendations':
@@ -437,7 +470,17 @@ const App: React.FC = () => {
                   onSave={handleBatchLogMeal}
                   onCreateRecipe={handleCreateRecipe}
                   baseColor={baseColorName}
+                  initialFoods={modalState.initialFoods}
                />;
+          case 'SCAN_BARCODE':
+              return (
+                  <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[999]"><div className="spinner w-8 h-8 border-white"></div></div>}>
+                      <BarcodeScannerModal
+                          onClose={() => setModalState({ type: null })}
+                          onScanSuccess={handleBarcodeScan}
+                      />
+                  </Suspense>
+              );
           default:
               return null;
       }

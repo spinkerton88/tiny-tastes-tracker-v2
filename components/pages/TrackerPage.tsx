@@ -13,6 +13,7 @@ interface TrackerPageProps {
   userProfile?: UserProfile | null;
   onShowGuide: (food: Food) => void;
   onAddCustomFood?: (initialName: string) => void;
+  onScanBarcode?: () => void;
   baseColor?: string;
 }
 
@@ -134,7 +135,7 @@ const NoResultsIllustration = () => (
     </svg>
 );
 
-const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [], onFoodClick, userProfile, onShowGuide, onAddCustomFood, baseColor = 'teal' }) => {
+const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [], onFoodClick, userProfile, onShowGuide, onAddCustomFood, onScanBarcode, baseColor = 'teal' }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
@@ -272,6 +273,16 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
             )}
           </div>
           
+          {onScanBarcode && (
+            <button 
+                onClick={onScanBarcode}
+                className="flex-shrink-0 bg-indigo-600 text-white p-2 rounded-md shadow-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1 min-w-[2.5rem]"
+                title="Scan Barcode"
+            >
+                <Icon name="scan-barcode" className="h-5 w-5" />
+            </button>
+          )}
+
           {onAddCustomFood && (
             <button 
                 onClick={() => onAddCustomFood('')}
@@ -279,7 +290,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                 title="Add Custom Food"
             >
                 <Icon name="plus" className="h-5 w-5" />
-                <span className="hidden sm:inline text-sm font-medium pr-1">Add</span>
             </button>
           )}
 

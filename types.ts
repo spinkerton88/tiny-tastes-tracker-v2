@@ -128,6 +128,15 @@ export interface SavedStrategy extends PickyEaterStrategy {
     dateSaved: string;
 }
 
+// Log Meal Types
+export type FoodStatus = 'eaten' | 'touched' | 'refused';
+
+export interface LoggedItemData {
+    food: string;
+    status: FoodStatus;
+    tags: string[];
+}
+
 // Modal State Types
 type LogFoodModalState = { type: 'LOG_FOOD'; food: Food };
 type HowToServeModalState = { type: 'HOW_TO_SERVE'; food: Food; customDetails?: CustomFoodDetails; returnToLog?: boolean };
@@ -144,7 +153,8 @@ type AllergenAlertModalState = { type: 'ALLERGEN_ALERT'; foodName: string; aller
 type BadgeUnlockedModalState = { type: 'BADGE_UNLOCKED'; badge: Badge };
 type CertificateModalState = { type: 'CERTIFICATE'; babyName: string; date: string };
 type CustomFoodModalState = { type: 'ADD_CUSTOM_FOOD'; initialName?: string };
-type LogMealModalState = { type: 'LOG_MEAL' };
+type LogMealModalState = { type: 'LOG_MEAL'; initialFoods?: string[] };
+type ScanBarcodeModalState = { type: 'SCAN_BARCODE' };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -164,4 +174,5 @@ export type ModalState =
   | CertificateModalState
   | CustomFoodModalState
   | LogMealModalState
+  | ScanBarcodeModalState
   | NullModalState;

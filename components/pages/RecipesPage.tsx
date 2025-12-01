@@ -1,11 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
-import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood } from '../../types';
-import { flatFoodList, allFoods } from '../../constants';
+import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood, LoggedItemData, FoodStatus } from '../../types';
+import { flatFoodList, allFoods, STATUS_CONFIG, BEHAVIOR_TAGS } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
-// Import LoggedItemData and shared constants from LogMealModal
-import { LoggedItemData, STATUS_CONFIG, BEHAVIOR_TAGS, FoodStatus } from '../modals/LogMealModal';
 
 interface RecipesPageProps {
     recipes: Recipe[];
@@ -151,7 +149,7 @@ const LogMealView: React.FC<{
 
     const handleFinalSave = () => {
         if (selectedFoods.size === 0) return;
-        const foodsList = Array.from(selectedFoods);
+        const foodsList: string[] = Array.from(selectedFoods) as string[];
 
         if (saveAsPreset && onCreateRecipe && presetName) {
             onCreateRecipe({
@@ -163,7 +161,7 @@ const LogMealView: React.FC<{
             });
         }
 
-        const itemsPayload: LoggedItemData[] = foodsList.map(f => ({
+        const itemsPayload: LoggedItemData[] = foodsList.map((f: string) => ({
             food: f,
             status: itemData[f]?.status || 'eaten',
             tags: Array.from(itemData[f]?.tags || [])
@@ -243,7 +241,7 @@ const LogMealView: React.FC<{
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {filteredFoods.map(food => {
+                                    {filteredFoods.map((food: string) => {
                                         const isSelected = selectedFoods.has(food);
                                         return (
                                             <button 
@@ -285,9 +283,9 @@ const LogMealView: React.FC<{
                         {/* Visual Tray */}
                         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar h-12 items-center">
                             {selectedFoods.size === 0 ? <span className="text-sm text-gray-400 italic w-full text-center">Plate is empty...</span> : 
-                                Array.from(selectedFoods).map(food => (
-                                    <button key={food} onClick={() => toggleFood(food)} className="relative shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm animate-popIn">
-                                        <span className="text-lg">{getFoodEmoji(food)}</span>
+                                Array.from(selectedFoods).map((food: any) => (
+                                    <button key={food} onClick={() => toggleFood(food as string)} className="relative shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm animate-popIn">
+                                        <span className="text-lg">{getFoodEmoji(food as string)}</span>
                                         <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5"><Icon name="x" className="w-2 h-2 text-white" /></div>
                                     </button>
                                 ))
@@ -309,18 +307,19 @@ const LogMealView: React.FC<{
                 <div className="flex flex-col h-[600px]">
                     <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50/50">
                         <div className="space-y-3">
-                            {Array.from(selectedFoods).map(food => {
-                                const currentData = itemData[food];
+                            {Array.from(selectedFoods).map((food: any) => {
+                                const fName = food as string;
+                                const currentData = itemData[fName];
                                 const status = currentData?.status || 'eaten';
                                 const config = STATUS_CONFIG[status];
                                 const isIssue = status !== 'eaten';
 
                                 return (
-                                    <div key={food} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white shadow-sm ${config.color}`}>
+                                    <div key={fName} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white shadow-sm ${config.color}`}>
                                         <div className="flex items-center justify-between p-3">
                                             <div className="flex items-center gap-3">
-                                                <span className="text-2xl">{getFoodEmoji(food)}</span>
-                                                <span className="font-bold text-gray-800">{food}</span>
+                                                <span className="text-2xl">{getFoodEmoji(fName)}</span>
+                                                <span className="font-bold text-gray-800">{fName}</span>
                                             </div>
                                             <div className="flex bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
                                                 {(['eaten', 'touched', 'refused'] as FoodStatus[]).map((s) => {
@@ -329,7 +328,7 @@ const LogMealView: React.FC<{
                                                     return (
                                                         <button
                                                             key={s}
-                                                            onClick={() => setStatus(food, s)}
+                                                            onClick={() => setStatus(fName, s)}
                                                             className={`p-2 rounded-md transition-all ${isS ? `${c.color} ${c.text}` : 'text-gray-400 hover:bg-gray-50'}`}
                                                             title={c.label}
                                                         >
@@ -350,7 +349,7 @@ const LogMealView: React.FC<{
                                                         return (
                                                             <button
                                                                 key={tag}
-                                                                onClick={() => toggleTag(food, tag)}
+                                                                onClick={() => toggleTag(fName, tag)}
                                                                 className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
                                                                     isTagged 
                                                                     ? 'bg-gray-800 text-white border-gray-800' 
@@ -424,64 +423,145 @@ const LogMealView: React.FC<{
     );
 };
 
-const RecipesPage: React.FC<RecipesPageProps> = ({ recipes, mealPlan, triedFoods = [], customFoods, onShowAddRecipe, onShowImportRecipe, onShowSuggestRecipe, onViewRecipe, onAddToPlan, onShowShoppingList, onBatchLog, onCreateRecipe, onFoodClick, baseColor = 'teal' }) => {
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+const RecipesPage: React.FC<RecipesPageProps> = ({ 
+    recipes, 
+    mealPlan, 
+    triedFoods = [], 
+    customFoods = [],
+    onShowAddRecipe, 
+    onShowImportRecipe, 
+    onShowSuggestRecipe, 
+    onViewRecipe, 
+    onAddToPlan, 
+    onShowShoppingList,
+    onBatchLog,
+    onCreateRecipe,
+    onFoodClick,
+    baseColor = 'teal'
+}) => {
+    const [activeTab, setActiveTab] = useState<'plan' | 'recipes' | 'log'>('log');
+    const [weekOffset, setWeekOffset] = useState(0);
+    // Local state for LogMealView inside this page
+    const [planDate, setPlanDate] = useState(new Date().toISOString().split('T')[0]);
 
-    // Get log history for current week relative to selected date
-    const selectedDateObj = new Date(date);
-    const startOfWeek = getStartOfWeek(selectedDateObj);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-    const weeklyLogs = triedFoods.filter(log => {
-        const logDate = new Date(log.date);
-        return logDate >= startOfWeek && logDate <= endOfWeek;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    // Group logs by date and meal for display
-    const historyGrouped: Record<string, Record<string, string[]>> = {};
-    weeklyLogs.forEach(log => {
-        if (!historyGrouped[log.date]) historyGrouped[log.date] = {};
-        if (!historyGrouped[log.date][log.meal]) historyGrouped[log.date][log.meal] = [];
-        historyGrouped[log.date][log.meal].push(log.id);
-    });
-
-    const handleFoodItemClick = (foodName: string) => {
-        if (!onFoodClick) return;
-        
-        // Find the Food object
-        let foodObj = allFoods.flatMap(c => c.items).find(f => f.name === foodName);
-        
-        // If not found in standard foods, check custom foods
-        if (!foodObj && customFoods) {
-            foodObj = customFoods.find(f => f.name === foodName);
-        }
-        
-        // Fallback if somehow still not found (e.g., imported legacy data)
-        if (!foodObj) {
-            foodObj = { name: foodName, emoji: '🍽️' };
-        }
-        
-        onFoodClick(foodObj);
-    };
-
-    const handleLogAgain = (foods: string[]) => {
-        if (!onBatchLog) return;
-        // Create detailed items with default status
-        const detailedItems: LoggedItemData[] = foods.map(f => ({
-            food: f,
-            status: 'eaten',
-            tags: []
-        }));
-        
-        // We use the last selected meal type or default to lunch if not available
-        onBatchLog(detailedItems, date, 'lunch');
-        alert(`Logged ${foods.length} items for ${date}!`);
-    };
-
+    const weekStart = getStartOfWeek(new Date());
+    weekStart.setDate(weekStart.getDate() + (weekOffset * 7));
+    
     return (
         <div className="space-y-6">
-            {onBatchLog && (
+            <div className="flex border-b border-gray-200 overflow-x-auto">
+                <button onClick={() => setActiveTab('log')} className={`px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'log' ? `border-${baseColor}-600 text-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    Log Meal
+                </button>
+                <button onClick={() => setActiveTab('plan')} className={`px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'plan' ? `border-${baseColor}-600 text-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    Meal Plan
+                </button>
+                <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'recipes' ? `border-${baseColor}-600 text-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    My Recipes
+                </button>
+            </div>
+
+            {activeTab === 'plan' && (
+                <div className="bg-white rounded-lg shadow p-4">
+                    <div className="flex justify-between items-center mb-4">
+                         <h3 className="font-bold text-gray-800">Weekly Plan</h3>
+                         <button onClick={onShowShoppingList} className={`text-sm text-${baseColor}-600 flex items-center gap-1 hover:underline`}>
+                            <Icon name="shopping-cart" className="w-4 h-4"/> Shopping List
+                         </button>
+                    </div>
+                    <div className="space-y-4">
+                        {[0, 1, 2, 3, 4, 5, 6].map(dayOffset => {
+                            const date = new Date(weekStart);
+                            date.setDate(date.getDate() + dayOffset);
+                            const dateStr = formatDateString(date);
+                            const dayPlan = mealPlan[dateStr] || {};
+                            const isToday = dateStr === formatDateString(new Date());
+                            
+                            return (
+                                <div key={dateStr} className={`border rounded-lg p-3 ${isToday ? `bg-${baseColor}-50 border-${baseColor}-200` : 'border-gray-100'}`}>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className={`font-semibold text-sm ${isToday ? `text-${baseColor}-800` : 'text-gray-700'}`}>
+                                            {date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                        </h4>
+                                        {isToday && <span className={`text-[10px] font-bold bg-${baseColor}-100 text-${baseColor}-700 px-2 py-0.5 rounded-full`}>Today</span>}
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                                        {['breakfast', 'lunch', 'dinner', 'snack'].map(meal => {
+                                            const entry = dayPlan[meal];
+                                            return (
+                                                <div key={meal} className="relative group">
+                                                    {entry ? (
+                                                        <div className="bg-white border border-gray-200 rounded p-2 text-sm shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => {
+                                                            const r = recipes.find(rec => rec.id === entry.id);
+                                                            if(r) onViewRecipe(r);
+                                                        }}>
+                                                            <p className="font-medium text-gray-800 truncate">{entry.title}</p>
+                                                            <p className="text-xs text-gray-400 capitalize">{meal}</p>
+                                                        </div>
+                                                    ) : (
+                                                        <button 
+                                                            onClick={() => onAddToPlan(dateStr, meal)}
+                                                            className="w-full border border-dashed border-gray-300 rounded p-2 text-xs text-gray-400 hover:border-gray-400 hover:text-gray-600 flex items-center justify-center gap-1"
+                                                        >
+                                                            <Icon name="plus" className="w-3 h-3"/> {meal}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'recipes' && (
+                <div>
+                     <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-gray-800">My Recipes</h3>
+                        <div className="flex gap-2">
+                             <button onClick={onShowSuggestRecipe} className="p-2 bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200" title="Suggest with AI">
+                                 <Icon name="sparkles" className="w-5 h-5"/>
+                             </button>
+                             <button onClick={onShowImportRecipe} className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200" title="Import from Photo">
+                                 <Icon name="camera" className="w-5 h-5"/>
+                             </button>
+                             <button onClick={onShowAddRecipe} className={`flex items-center gap-2 px-4 py-2 bg-${baseColor}-600 text-white rounded-lg shadow hover:bg-${baseColor}-700`}>
+                                 <Icon name="plus" className="w-4 h-4"/> Add Recipe
+                             </button>
+                        </div>
+                     </div>
+                     
+                     {recipes.length > 0 ? (
+                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                             {recipes.map(recipe => (
+                                 <div key={recipe.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewRecipe(recipe)}>
+                                     <h4 className="font-bold text-gray-800 mb-1">{recipe.title}</h4>
+                                     <div className="flex items-center gap-1 mb-2">
+                                         <StarRatingDisplay rating={recipe.rating || 0} />
+                                     </div>
+                                     <div className="flex flex-wrap gap-1 mb-3">
+                                         {recipe.mealTypes?.map(t => (
+                                             <span key={t} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">{t}</span>
+                                         ))}
+                                     </div>
+                                     <p className="text-xs text-gray-500 line-clamp-2">{recipe.ingredients}</p>
+                                 </div>
+                             ))}
+                         </div>
+                     ) : (
+                         <EmptyState 
+                            illustration={<NoRecipesIllustration />}
+                            title="No Recipes Yet"
+                            message="Add your own recipes or let AI suggest some based on what's in your fridge!"
+                         />
+                     )}
+                </div>
+            )}
+
+            {activeTab === 'log' && onBatchLog && (
                 <LogMealView 
                     recipes={recipes}
                     triedFoods={triedFoods}
@@ -490,57 +570,10 @@ const RecipesPage: React.FC<RecipesPageProps> = ({ recipes, mealPlan, triedFoods
                     onCreateRecipe={onCreateRecipe}
                     onFoodClick={onFoodClick}
                     baseColor={baseColor}
-                    date={date}
-                    setDate={setDate}
+                    date={planDate}
+                    setDate={setPlanDate}
                 />
             )}
-
-            {/* History Section */}
-            <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">Meal History (Week of {startOfWeek.toLocaleDateString()})</h3>
-                {Object.keys(historyGrouped).length > 0 ? (
-                    <div className="space-y-4">
-                        {Object.entries(historyGrouped).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime()).map(([logDate, meals]) => (
-                            <div key={logDate} className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-                                <h4 className={`font-bold text-${baseColor}-800 border-b border-gray-100 pb-2 mb-2`}>
-                                    {new Date(logDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-                                </h4>
-                                <div className="space-y-3">
-                                    {Object.entries(meals).map(([mealType, foods]) => (
-                                        <div key={mealType} className="flex gap-3 items-start">
-                                            <div className="w-20 font-medium text-gray-500 text-sm capitalize pt-1">{mealType}</div>
-                                            <div className="flex-1">
-                                                <div className="flex flex-wrap gap-1.5 mb-2">
-                                                    {foods.map((foodName, idx) => (
-                                                        <button 
-                                                            key={idx} 
-                                                            onClick={() => handleFoodItemClick(foodName)}
-                                                            className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-teal-50 hover:text-teal-700 hover:shadow-sm transition-all border border-transparent hover:border-teal-200"
-                                                            title="Tap to edit details"
-                                                        >
-                                                            {foodName} <Icon name="edit-2" className="w-3 h-3 ml-1 opacity-40"/>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <button 
-                                                    onClick={() => handleLogAgain(foods)}
-                                                    className={`text-xs font-bold text-${baseColor}-600 hover:text-${baseColor}-800 flex items-center gap-1 mt-1 p-1 -ml-1 rounded hover:bg-${baseColor}-50 transition-colors`}
-                                                >
-                                                    <Icon name="rotate-ccw" className="w-3.5 h-3.5" /> Log This Again
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300 text-gray-500 text-sm">
-                        No meals logged for this week yet.
-                    </div>
-                )}
-            </div>
         </div>
     );
 };

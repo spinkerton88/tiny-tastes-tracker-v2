@@ -14,6 +14,17 @@ export const COMMON_ALLERGENS = [
     "Sesame"
 ];
 
+export const STATUS_CONFIG = {
+    eaten: { color: 'bg-green-50 border-green-200', icon: 'check', label: 'Ate it', text: 'text-green-700' },
+    touched: { color: 'bg-yellow-50 border-yellow-200', icon: 'hand', label: 'Played/Touched', text: 'text-yellow-700' },
+    refused: { color: 'bg-red-50 border-red-200', icon: 'x', label: 'Refused', text: 'text-red-700' }
+};
+
+export const BEHAVIOR_TAGS = {
+    touched: ['Licked it', 'Played with it', 'Pushed away', 'Only one bite'],
+    refused: ['Threw it', 'Spat out', 'Cried', 'Gagged', 'Ignored it', 'Said No']
+};
+
 export const GREEN_VEGETABLES = [
     "ASPARAGUS", "BROCCOLI", "ZUCCHINI", "CUCUMBER", "PEAS", "SNAP PEAS", 
     "KALE", "SPINACH", "AVOCADO", "BRUSSELS SPROUTS", "CELERY", "PARSLEY", "CILANTRO",
@@ -56,10 +67,10 @@ export const BADGES_LIST: Badge[] = [
         color: 'text-orange-600 bg-orange-100 border-orange-200'
     },
     {
-        id: 'protein_power',
-        title: 'Protein Power',
-        description: 'Tried 5 different protein sources.',
-        icon: 'dumbbell',
+        id: 'protein_power', 
+        title: 'Protein Power', 
+        description: 'Tried 5 different protein sources.', 
+        icon: 'dumbbell', 
         isUnlocked: false,
         color: 'text-blue-600 bg-blue-100 border-blue-200'
     },
@@ -119,10 +130,10 @@ export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
     "FARRO": ["Wheat"],
     "BULGUR": ["Wheat"],
     "FREEKEH": ["Wheat"],
-    "WAFFLES": ["Wheat", "Egg", "Dairy", "Lactose"], // Common ingredients assumed
-    "HEALTHY MUFFINS": ["Wheat", "Egg"], // Common ingredients assumed
+    "WAFFLES": ["Wheat", "Egg", "Dairy", "Lactose"], 
+    "HEALTHY MUFFINS": ["Wheat", "Egg"], 
     "GNOCCHI": ["Wheat"],
-    "TORTILLA": ["Wheat"], // Often wheat, though corn exists. Flagging to be safe.
+    "TORTILLA": ["Wheat"],
     
     // Soy
     "TOFU": ["Soy"],
@@ -135,7 +146,7 @@ export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
     // Tree Nuts
     "ALMONDS": ["Tree Nut"],
     "ALMOND BUTTER": ["Tree Nut"],
-    "COCONUT": ["Tree Nut"], // FDA classifies coconut as a tree nut
+    "COCONUT": ["Tree Nut"], 
     
     // Fish
     "FISH": ["Fish"],
@@ -147,7 +158,7 @@ export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
     "SHRIMP": ["Shellfish"],
     
     // Sesame
-    "SEEDS": ["Sesame"], // Often includes sesame/tahini
+    "SEEDS": ["Sesame"],
 };
 
 export const NUTRIENT_STYLES: Record<string, { bg: string, text: string, border: string, icon: string, label: string }> = {
@@ -207,19 +218,19 @@ export const FOOD_NUTRIENT_MAPPING: Record<string, string[]> = {
 
     // GRAINS
     "KAMUT": ["Protein", "Fiber", "Zinc"],
-    "CEREALS": ["Iron", "Zinc"], // Fortified
+    "CEREALS": ["Iron", "Zinc"],
     "MILLET": ["Magnesium", "Antioxidants"],
     "OATMEAL": ["Iron", "Fiber", "Zinc", "Magnesium"],
     "BUCKWHEAT": ["Fiber", "Magnesium"],
-    "WAFFLES": ["Iron"], // Often fortified
-    "HEALTHY MUFFINS": ["Fiber"], // Generic
-    "PASTA": ["Iron"], // Often fortified
+    "WAFFLES": ["Iron"],
+    "HEALTHY MUFFINS": ["Fiber"],
+    "PASTA": ["Iron"],
     "COUSCOUS": ["Selenium"],
     "POLENTA": ["Vitamin A"],
     "CORNMEAL": ["Iron"],
-    "BREAD": ["Iron", "Fiber"], // Fortified
+    "BREAD": ["Iron", "Fiber"],
     "GNOCCHI": ["Potassium"],
-    "TORTILLA": ["Calcium"], // Corn tortillas
+    "TORTILLA": ["Calcium"],
     "FARRO": ["Fiber", "Protein", "Magnesium", "Zinc"],
     "BARLEY": ["Fiber", "Selenium"],
     "BULGUR": ["Fiber", "Magnesium"],
@@ -264,7 +275,7 @@ export const FOOD_NUTRIENT_MAPPING: Record<string, string[]> = {
     "LENTILS": ["Iron", "Protein", "Fiber", "Folate"],
     "ALMOND BUTTER": ["Healthy Fats", "Protein", "Vitamin E"],
     "PEANUT BUTTER": ["Protein", "Healthy Fats", "Vitamin E"],
-    "SEEDS": ["Fiber", "Healthy Fats", "Iron", "Magnesium"], // General for Chia/Hemp/Flax
+    "SEEDS": ["Fiber", "Healthy Fats", "Iron", "Magnesium"],
 
     // MEAT
     "FISH": ["Protein", "Omega-3", "Vitamin B12"],

@@ -1,14 +1,8 @@
 
-import React, { useState, useMemo } from 'react';
-import { Recipe, RecipeFilter } from '../../types';
-import { flatFoodList, allFoods } from '../../constants';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Recipe, RecipeFilter, LoggedItemData, FoodStatus } from '../../types';
+import { flatFoodList, allFoods, STATUS_CONFIG, BEHAVIOR_TAGS } from '../../constants';
 import Icon from '../ui/Icon';
-
-export interface LoggedItemData {
-    food: string;
-    status: 'eaten' | 'touched' | 'refused';
-    tags: string[];
-}
 
 interface LogMealModalProps {
     recipes: Recipe[];
@@ -16,23 +10,12 @@ interface LogMealModalProps {
     onSave: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => void;
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     baseColor?: string;
+    initialFoods?: string[];
 }
 
 type Step = 'SELECT' | 'REVIEW';
-export type FoodStatus = 'eaten' | 'touched' | 'refused';
 
-export const STATUS_CONFIG = {
-    eaten: { color: 'bg-green-50 border-green-200', icon: 'check', label: 'Ate it', text: 'text-green-700' },
-    touched: { color: 'bg-yellow-50 border-yellow-200', icon: 'hand', label: 'Played/Touched', text: 'text-yellow-700' },
-    refused: { color: 'bg-red-50 border-red-200', icon: 'x', label: 'Refused', text: 'text-red-700' }
-};
-
-export const BEHAVIOR_TAGS = {
-    touched: ['Licked it', 'Played with it', 'Pushed away', 'Only one bite'],
-    refused: ['Threw it', 'Spat out', 'Cried', 'Gagged', 'Ignored it', 'Said No']
-};
-
-const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal' }) => {
+const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal', initialFoods = [] }) => {
     const [step, setStep] = useState<Step>('SELECT');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
@@ -40,7 +23,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
     // Selection State
     const [activeTab, setActiveTab] = useState<'foods' | 'recipes'>('foods');
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set());
+    const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set(initialFoods));
     
     // Detailed Item Data (Status + Tags)
     const [itemData, setItemData] = useState<Record<string, { status: FoodStatus; tags: Set<string> }>>({});
@@ -50,6 +33,17 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
     const [notes, setNotes] = useState('');
     const [saveAsPreset, setSaveAsPreset] = useState(false);
     const [presetName, setPresetName] = useState('');
+
+    // Pre-populate item data for initial foods
+    useEffect(() => {
+        if (initialFoods.length > 0) {
+            const initialData: Record<string, { status: FoodStatus; tags: Set<string> }> = {};
+            initialFoods.forEach(food => {
+                initialData[food] = { status: 'eaten', tags: new Set() };
+            });
+            setItemData(initialData);
+        }
+    }, [initialFoods]);
 
     const filteredFoods = useMemo(() => {
         return (flatFoodList as string[]).filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -115,7 +109,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
 
     const handleFinalSave = () => {
         if (selectedFoods.size === 0) return;
-        const foodsList = Array.from(selectedFoods);
+        const foodsList: string[] = Array.from(selectedFoods) as string[];
 
         if (saveAsPreset && onCreateRecipe && presetName) {
             onCreateRecipe({
@@ -128,7 +122,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
         }
 
         // Prepare data payload
-        const itemsPayload: LoggedItemData[] = foodsList.map(f => ({
+        const itemsPayload: LoggedItemData[] = foodsList.map((f: string) => ({
             food: f,
             status: itemData[f]?.status || 'eaten',
             tags: Array.from(itemData[f]?.tags || [])
@@ -181,7 +175,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                                 <>
                                     <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full mb-4 rounded-lg border-gray-300 shadow-sm focus:ring-teal-500 focus:border-teal-500" />
                                     <div className="grid grid-cols-2 gap-2">
-                                        {filteredFoods.map(food => {
+                                        {filteredFoods.map((food: string) => {
                                             const isSelected = selectedFoods.has(food);
                                             return (
                                                 <button key={food} onClick={() => toggleFood(food)} className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all ${isSelected ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-100 hover:border-gray-300'}`}>
@@ -209,9 +203,9 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                         <div className="border-t bg-white p-4 shadow-lg z-10">
                             <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar h-14 items-center">
                                 {selectedFoods.size === 0 ? <span className="text-sm text-gray-400 italic w-full text-center">Plate is empty...</span> : 
-                                    Array.from(selectedFoods).map(food => (
-                                        <button key={food} onClick={() => toggleFood(food)} className="relative shrink-0 w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-gray-100 shadow-sm animate-popIn hover:bg-red-50 hover:border-red-200 group transition-all">
-                                            <span className="text-2xl">{getFoodEmoji(food)}</span>
+                                    Array.from(selectedFoods).map((food: any) => (
+                                        <button key={food} onClick={() => toggleFood(food as string)} className="relative shrink-0 w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-gray-100 shadow-sm animate-popIn hover:bg-red-50 hover:border-red-200 group transition-all">
+                                            <span className="text-2xl">{getFoodEmoji(food as string)}</span>
                                             <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="x" className="w-2 h-2 text-white" /></div>
                                         </button>
                                     ))
@@ -230,19 +224,20 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                         <div className="flex-1 overflow-y-auto p-4 space-y-6">
                             
                             <div className="space-y-4">
-                                {Array.from(selectedFoods).map(food => {
-                                    const currentData = itemData[food];
+                                {Array.from(selectedFoods).map((food: any) => {
+                                    const fName = food as string;
+                                    const currentData = itemData[fName];
                                     const status = currentData?.status || 'eaten';
                                     const config = STATUS_CONFIG[status];
                                     const isIssue = status !== 'eaten';
 
                                     return (
-                                        <div key={food} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white shadow-sm ${config.color}`}>
+                                        <div key={fName} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white shadow-sm ${config.color}`}>
                                             {/* Top Row: Food Info & Main Toggle */}
                                             <div className="flex items-center justify-between p-3">
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-2xl">{getFoodEmoji(food)}</span>
-                                                    <span className="font-bold text-gray-800">{food}</span>
+                                                    <span className="text-2xl">{getFoodEmoji(fName)}</span>
+                                                    <span className="font-bold text-gray-800">{fName}</span>
                                                 </div>
                                                 
                                                 <div className="flex bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
@@ -252,7 +247,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                                                         return (
                                                             <button
                                                                 key={s}
-                                                                onClick={() => setStatus(food, s)}
+                                                                onClick={() => setStatus(fName, s)}
                                                                 className={`p-2 rounded-md transition-all ${isS ? `${c.color} ${c.text}` : 'text-gray-400 hover:bg-gray-50'}`}
                                                                 title={c.label}
                                                             >
@@ -274,7 +269,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                                                             return (
                                                                 <button
                                                                     key={tag}
-                                                                    onClick={() => toggleTag(food, tag)}
+                                                                    onClick={() => toggleTag(fName, tag)}
                                                                     className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
                                                                         isTagged 
                                                                         ? 'bg-gray-800 text-white border-gray-800' 
@@ -294,7 +289,7 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                             </div>
 
                             {/* Plate Photo */}
-                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
                                 <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                                     <Icon name="camera" className="w-4 h-4" /> Meal Photo
                                 </h3>
