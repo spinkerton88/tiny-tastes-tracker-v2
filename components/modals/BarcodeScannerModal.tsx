@@ -17,22 +17,15 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
         
         if (!document.getElementById(scannerId)) return;
 
-        // Calculate aspect ratio to try and fill screen (portrait vs landscape)
-        // Default to roughly smartphone portrait if window isn't available for some reason
+        // Calculate aspect ratio to try and fill screen
         const aspectRatio = window.innerWidth / window.innerHeight;
 
         const scanner = new Html5QrcodeScanner(
             scannerId,
             { 
                 fps: 10, 
-                // Larger box for easier scanning
                 qrbox: { width: 250, height: 250 },
-                // Use undefined to let library adapt, or specific ratio. 
-                // 1.0 is often safer for the 'scanner' widget style to avoid distortion, 
-                // but let's try not setting it to let it fill the div.
-                // Actually, the library docs suggest not setting it for responsive full width.
-                // However, the scanner widget enforces a square aspect ratio often.
-                // We'll use a vertical aspect ratio for mobile.
+                // Use a vertical aspect ratio for mobile to better fill the screen
                 aspectRatio: aspectRatio < 1 ? 0.75 : 1.33,
                 formatsToSupport: [
                     Html5QrcodeSupportedFormats.EAN_13,
@@ -50,7 +43,6 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
 
         scanner.render(
             (decodedText) => {
-                // Pause/Clear immediately on success
                 if (scannerRef.current) {
                     try {
                         scannerRef.current.clear();
@@ -77,9 +69,11 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
     }, [onScanSuccess]);
 
     return (
-        <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
-            {/* Header with Close Button */}
-            <div className="absolute top-0 left-0 right-0 p-4 pt-12 bg-gradient-to-b from-black/80 to-transparent z-20 flex justify-between items-start pointer-events-none">
+        // Use 100dvh (dynamic viewport height) to account for iOS Safari address bar quirks
+        <div className="fixed inset-0 bg-black z-[9999] flex flex-col h-[100dvh]">
+            
+            {/* Header: Added pt-safe for Notch */}
+            <div className="absolute top-0 left-0 right-0 p-4 pt-[calc(env(safe-area-inset-top)+1rem)] bg-gradient-to-b from-black/80 to-transparent z-20 flex justify-between items-start pointer-events-none">
                 <div className="pointer-events-auto">
                     <h3 className="font-bold text-lg text-white flex items-center gap-2 drop-shadow-md">
                         <Icon name="scan-barcode" className="w-5 h-5 text-teal-400" />
@@ -87,33 +81,39 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
                     </h3>
                     <p className="text-xs text-gray-300 drop-shadow-sm">Align barcode in box</p>
                 </div>
+                
+                {/* Larger touch target for Close button */}
                 <button 
                     onClick={onClose} 
-                    className="pointer-events-auto bg-white/20 backdrop-blur-md p-2 rounded-full hover:bg-white/30 transition-colors text-white border border-white/10"
+                    className="pointer-events-auto bg-white/20 backdrop-blur-md p-2.5 rounded-full hover:bg-white/30 transition-colors text-white border border-white/10 shadow-lg"
                     aria-label="Close Scanner"
                 >
                     <Icon name="x" className="w-6 h-6" />
                 </button>
             </div>
 
-            {/* Scanner Container - fills available space */}
+            {/* Scanner Container */}
             <div id="reader" className="w-full h-full bg-black relative flex-1"></div>
 
-            {/* Helper Footer */}
-            <div className="absolute bottom-10 left-0 right-0 text-center z-20 pointer-events-none">
+            {/* Footer: Added pb-safe for Home Indicator */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] flex flex-col items-center bg-gradient-to-t from-black/90 to-transparent z-20 pointer-events-none">
                 <button 
                     onClick={onClose}
-                    className="pointer-events-auto text-white/90 text-sm font-medium bg-black/50 border border-white/20 px-6 py-2 rounded-full backdrop-blur-md hover:bg-black/70 transition-colors"
+                    className="pointer-events-auto text-white text-sm font-semibold bg-white/20 border border-white/30 px-8 py-3 rounded-full backdrop-blur-md hover:bg-white/30 transition-all active:scale-95"
                 >
                     Cancel Scan
                 </button>
                 {error && <p className="text-red-400 text-xs mt-3 bg-black/80 inline-block px-3 py-1 rounded">{error}</p>}
             </div>
 
-            {/* Style Overrides for Html5QrcodeScanner */}
+            {/* Style Overrides for Html5QrcodeScanner to look Native */}
             <style>{`
                 #reader {
                     border: none !important;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center; /* Centers the permission button */
+                    align-items: center;
                 }
                 #reader video {
                     object-fit: cover;
@@ -129,27 +129,34 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
                 #reader__header_message {
                     display: none !important;
                 }
-                /* Style the camera permission button */
+                /* Native-like Permission Button */
                 #reader__dashboard_section_csr button {
-                    background-color: #0d9488 !important;
+                    background-color: #0d9488 !important; /* Teal-600 */
                     color: white !important;
-                    padding: 12px 24px;
-                    border-radius: 8px;
+                    padding: 14px 28px;
+                    border-radius: 9999px; /* Pill shape */
                     border: none;
                     font-weight: 600;
                     font-size: 16px;
                     cursor: pointer;
-                    margin-top: 40px;
-                }
-                /* Hide "Scan an Image File" link if undesired, or style it */
-                #reader__dashboard_section_swaplink {
-                    color: white !important;
-                    text-decoration: underline;
                     margin-top: 20px;
-                    display: block;
-                    opacity: 0.8;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                    transition: transform 0.1s;
                 }
-                /* Hide the select element for camera if only one exists or to clean UI */
+                #reader__dashboard_section_csr button:active {
+                    transform: scale(0.95);
+                }
+                /* Style the "Scan an Image File" link */
+                #reader__dashboard_section_swaplink {
+                    color: rgba(255, 255, 255, 0.8) !important;
+                    text-decoration: none;
+                    margin-top: 24px;
+                    display: block;
+                    font-size: 14px;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+                    padding-bottom: 2px;
+                }
+                /* Hide the camera selection dropdown if it appears before scanning */
                 #reader__dashboard_section_csr span {
                     display: none !important;
                 }
