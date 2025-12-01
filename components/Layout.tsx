@@ -57,8 +57,8 @@ const Layout: React.FC<LayoutProps> = ({ currentPage, setCurrentPage, profile, c
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Header: Added pt-safe for iPhone Notch support */}
-      <header className={`${themeColor} shadow-md sticky top-0 z-10 transition-colors duration-500 pt-safe`}>
+      {/* Header: Added pt-safe for iPhone Notch support. Increased z-index to 50 to overlap content (like charts) */}
+      <header className={`${themeColor} shadow-md sticky top-0 z-50 transition-colors duration-500 pt-safe`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
               <div>
@@ -83,7 +83,7 @@ const Layout: React.FC<LayoutProps> = ({ currentPage, setCurrentPage, profile, c
       </main>
 
       {/* Nav: Added pb-safe for iPhone Home Indicator support */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 pb-safe">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 pb-safe">
         <div className="max-w-7xl mx-auto flex justify-around px-2 sm:px-6 lg:px-8">
           {navItems.map(item => (
               <NavButton 

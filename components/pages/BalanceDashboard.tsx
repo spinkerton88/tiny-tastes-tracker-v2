@@ -54,13 +54,24 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods, 
           "Other": "Carbs" // Defaulting 'Other' to carbs/treats bucket for simplicity
       };
 
+      // Helper for fuzzy matching keys in constants
+      const findConstantKey = (constantObj: Record<string, any>, searchName: string) => {
+          const upper = searchName.toUpperCase().trim();
+          if (constantObj[upper]) return upper;
+          // Try singular/plural
+          if (upper.endsWith('S') && constantObj[upper.slice(0, -1)]) return upper.slice(0, -1);
+          if (constantObj[upper + 'S']) return upper + 'S';
+          return null;
+      };
+
       recentLogs.forEach(log => {
-          // Find food category
           const foodName = log.id;
+          const foodNameLower = foodName.toLowerCase().trim();
           let foodCategoryName = "Other";
           
+          // Robust Category Lookup
           for (const cat of allFoods) {
-              if (cat.items.some(item => item.name === foodName)) {
+              if (cat.items.some(item => item.name.toLowerCase() === foodNameLower)) {
                   foodCategoryName = cat.category;
                   break;
               }
@@ -69,13 +80,18 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods, 
           const bucket = bucketMap[foodCategoryName];
           if (bucket) distribution[bucket]++;
           
-          // Find Food Color
-          const color = FOOD_COLORS[foodName];
-          if (color) colorsEaten.add(color);
+          // Robust Color Lookup
+          const colorKey = findConstantKey(FOOD_COLORS, foodName);
+          if (colorKey && FOOD_COLORS[colorKey]) {
+              colorsEaten.add(FOOD_COLORS[colorKey]);
+          }
           
-          // Find Nutrients
-          const nutrients = FOOD_NUTRIENT_MAPPING[foodName] || [];
-          nutrients.forEach(n => nutrientsConsumed.add(n));
+          // Robust Nutrient Lookup
+          const nutrientKey = findConstantKey(FOOD_NUTRIENT_MAPPING, foodName);
+          if (nutrientKey && FOOD_NUTRIENT_MAPPING[nutrientKey]) {
+              const nutrients = FOOD_NUTRIENT_MAPPING[nutrientKey];
+              nutrients.forEach(n => nutrientsConsumed.add(n));
+          }
       });
       
       // Find first missing critical nutrient
@@ -164,13 +180,16 @@ export const BalanceDashboard: React.FC<BalanceDashboardProps> = ({ triedFoods, 
               <div className="flex justify-between px-2">
                   {CRITICAL_NUTRIENTS.map(nutrient => {
                       const isMet = weeklyData.nutrientsConsumed.has(nutrient);
-                      const style = NUTRIENT_STYLES[nutrient] || { icon: 'star', text: 'text-gray-600', bg: 'bg-gray-100' };
+                      const style = NUTRIENT_STYLES[nutrient] || { icon: 'star', text: 'text-gray-600', bg: 'bg-gray-100', label: nutrient };
+                      // Use the configured short label (e.g. 'Vit C') if available, otherwise fallback
+                      const displayLabel = style.label || nutrient.split(' ')[0];
+                      
                       return (
                           <div key={nutrient} className="flex flex-col items-center gap-1" title={nutrient}>
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isMet ? `bg-${baseColor}-100 border-${baseColor}-200` : 'bg-white border-gray-200 grayscale opacity-50'}`}>
                                   <Icon name={style.icon} className={`w-4 h-4 ${isMet ? `text-${baseColor}-600` : 'text-gray-300'}`} />
                               </div>
-                              <span className={`text-[9px] font-bold ${isMet ? 'text-gray-700' : 'text-gray-300'}`}>{nutrient.split(' ')[0]}</span>
+                              <span className={`text-[9px] font-bold ${isMet ? 'text-gray-700' : 'text-gray-300'}`}>{displayLabel}</span>
                           </div>
                       )
                   })}
