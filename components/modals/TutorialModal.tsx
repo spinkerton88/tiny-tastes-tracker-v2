@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UserProfile } from '../../types';
 import Icon from '../ui/Icon';
@@ -9,23 +10,23 @@ interface TutorialModalProps {
 const tutorialSteps = [
     {
         icon: 'baby',
-        title: "Welcome to Tiny Tastes!",
-        description: "Your all-in-one companion for your baby's exciting food journey. Let's take a quick tour of the key features.",
+        title: "Welcome to Tiny Tastes",
+        description: "The intelligent companion that adapts to your child's age—from newborn days to toddler years.",
     },
     {
-        icon: 'grid-3x3',
-        title: 'Track the "100 Foods"',
-        description: "Easily log each new food your baby tries from our curated list. Watch your progress and celebrate every new taste!",
+        icon: 'moon',
+        title: "Newborn Mode (0-6m)",
+        description: "Track essential feeds, diapers, and growth. Ask 'Sage' AI about sleep schedules and development milestones.",
     },
     {
-        icon: 'notebook-pen',
-        title: 'Recipes & Meal Planning',
-        description: "Store your favorite baby-friendly recipes and plan your week's meals with our simple, visual meal planner.",
+        icon: 'carrot',
+        title: "Explorer Mode (6-12m)",
+        description: "Start solids safely with our '100 Foods' tracker. Log reactions, check allergens, and get serving tips.",
     },
     {
-        icon: 'sparkles',
-        title: 'AI-Powered Helper',
-        description: "Stuck for ideas? Use AI to suggest recipes from ingredients you have, or import a recipe just by taking a picture.",
+        icon: 'chef-hat',
+        title: "Toddler Mode (12m+)",
+        description: "Meal planning, recipe scanning, and AI-powered strategies to help your picky eater learn to love food.",
     },
 ];
 
