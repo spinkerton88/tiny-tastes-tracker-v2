@@ -211,10 +211,13 @@ const App: React.FC = () => {
                return;
           }
 
-          const matchedFoods = mapIngredientsToFoods(product.ingredientsText, flatFoodList);
+          // Merge standard foods with user's custom foods for lookup
+          const allKnownFoods = [...flatFoodList, ...customFoods.map(f => f.name)];
+          const matchedFoods = mapIngredientsToFoods(product.ingredientsText, allKnownFoods);
           
           if (matchedFoods.length === 0) {
-              alert(`Found product "${product.name}" but couldn't match any specific foods to our list. Try adding custom foods manually.`);
+              // FALLBACK: Open Add Custom Food modal if no matching ingredients found
+              setModalState({ type: 'ADD_CUSTOM_FOOD', initialName: product.name });
               return;
           }
 
@@ -475,6 +478,7 @@ const App: React.FC = () => {
                   onCreateRecipe={handleCreateRecipe}
                   baseColor={baseColorName}
                   initialFoods={modalState.initialFoods}
+                  customFoods={customFoods}
                />;
           case 'SCAN_BARCODE':
               return (

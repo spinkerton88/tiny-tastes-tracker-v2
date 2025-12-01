@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Recipe, RecipeFilter, LoggedItemData, FoodStatus } from '../../types';
+import { Recipe, RecipeFilter, LoggedItemData, FoodStatus, CustomFood } from '../../types';
 import { flatFoodList, allFoods, STATUS_CONFIG, BEHAVIOR_TAGS } from '../../constants';
 import { fetchProductByBarcode, mapIngredientsToFoods } from '../../services/barcodeService';
 import BarcodeScannerModal from './BarcodeScannerModal';
@@ -13,11 +13,12 @@ interface LogMealModalProps {
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     baseColor?: string;
     initialFoods?: string[];
+    customFoods?: CustomFood[];
 }
 
 type Step = 'SELECT' | 'REVIEW';
 
-const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal', initialFoods = [] }) => {
+const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, onCreateRecipe, baseColor = 'teal', initialFoods = [], customFoods = [] }) => {
     const [step, setStep] = useState<Step>('SELECT');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
@@ -51,8 +52,9 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
     }, [initialFoods]);
 
     const filteredFoods = useMemo(() => {
-        return (flatFoodList as string[]).filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
-    }, [searchQuery]);
+        const all = [...flatFoodList, ...customFoods.map(f => f.name)];
+        return all.filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
+    }, [searchQuery, customFoods]);
 
     // Initialize item data when a food is selected
     const toggleFood = (food: string) => {
@@ -90,7 +92,9 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
         const newSet = new Set(selectedFoods);
         const newData = { ...itemData };
 
-        (flatFoodList as string[]).forEach(food => {
+        const all = [...flatFoodList, ...customFoods.map(f => f.name)];
+
+        all.forEach(food => {
             const foodLower = food.toLowerCase();
             if (ingredients.some(i => i.toLowerCase().includes(foodLower))) {
                 newSet.add(food);
@@ -108,7 +112,8 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
         try {
             const product = await fetchProductByBarcode(code);
             if (product) {
-                const matchedFoods = mapIngredientsToFoods(product.ingredientsText, flatFoodList);
+                const all = [...flatFoodList, ...customFoods.map(f => f.name)];
+                const matchedFoods = mapIngredientsToFoods(product.ingredientsText, all);
                 
                 if (matchedFoods.length > 0) {
                      const newSet = new Set(selectedFoods);
@@ -182,7 +187,10 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
     // Helper to get emoji
     const getFoodEmoji = (name: string) => {
         const obj = allFoods.flatMap(c => c.items).find(f => f.name === name);
-        return obj?.emoji || '🍽️';
+        if (obj) return obj.emoji;
+        
+        const custom = customFoods.find(f => f.name === name);
+        return custom?.emoji || '🍽️';
     };
 
     return (
