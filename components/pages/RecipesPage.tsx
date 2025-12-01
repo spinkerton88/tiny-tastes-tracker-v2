@@ -362,9 +362,9 @@ const PlateBuilderView: React.FC<{
                                                 <div className="flex justify-between items-start"><h5 className="font-bold text-gray-800 text-sm group-hover:text-indigo-700">{recipe.title}</h5><Icon name="plus-circle" className="w-4 h-4 text-indigo-400 group-hover:text-indigo-600" /></div>
                                                 <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{recipe.ingredients.replace(/\n/g, ', ')}</p>
                                             </button>
-                                            <div className="absolute top-2 right-8 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {onEditRecipe && <button onClick={(e) => { e.stopPropagation(); onEditRecipe(recipe); }} className="p-1 bg-white border border-gray-200 rounded hover:bg-indigo-50 text-gray-400 hover:text-indigo-600"><Icon name="edit-2" className="w-3 h-3" /></button>}
-                                                {onDeleteRecipe && <button onClick={(e) => { e.stopPropagation(); handleDeleteRecipeWithConfirm(recipe.id, recipe.title); }} className="p-1 bg-white border border-gray-200 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"><Icon name="trash-2" className="w-3 h-3" /></button>}
+                                            <div className="absolute top-2 right-2 flex gap-1 z-10">
+                                                {onEditRecipe && <button onClick={(e) => { e.stopPropagation(); onEditRecipe(recipe); }} className="p-1 bg-white border border-gray-200 rounded hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 shadow-sm"><Icon name="edit-2" className="w-3 h-3" /></button>}
+                                                {onDeleteRecipe && <button onClick={(e) => { e.stopPropagation(); handleDeleteRecipeWithConfirm(recipe.id, recipe.title); }} className="p-1 bg-white border border-gray-200 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 shadow-sm"><Icon name="trash-2" className="w-3 h-3" /></button>}
                                             </div>
                                         </div>
                                     ))}
@@ -382,7 +382,7 @@ const PlateBuilderView: React.FC<{
                                                 <button onClick={() => addFoodToPlate(food)} className="w-full flex flex-col items-center justify-center p-3 bg-white border border-gray-200 rounded-xl hover:border-indigo-400 hover:shadow-sm transition-all active:scale-95">
                                                     <span className="text-2xl mb-1">{food.emoji}</span><span className="text-[10px] font-bold text-gray-700 text-center leading-tight line-clamp-2">{food.name}</span>
                                                 </button>
-                                                {isCustom && onDeleteCustomFood && <button onClick={(e) => { e.stopPropagation(); onDeleteCustomFood(food.name); }} className="absolute -top-1 -right-1 bg-white border border-gray-200 rounded-full p-1 text-gray-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Custom Food"><Icon name="trash-2" className="w-3 h-3" /></button>}
+                                                {isCustom && onDeleteCustomFood && <button onClick={(e) => { e.stopPropagation(); onDeleteCustomFood(food.name); }} className="absolute -top-1 -right-1 bg-white border border-gray-200 rounded-full p-1 text-gray-400 hover:text-red-500 hover:border-red-200 shadow-sm z-10" title="Delete Custom Food"><Icon name="trash-2" className="w-3 h-3" /></button>}
                                             </div>
                                         )
                                     })}

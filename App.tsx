@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
@@ -373,10 +372,28 @@ const App: React.FC = () => {
 
   const handleClearCheckedItems = () => {
       if (window.confirm("Clear all checked items? This will remove checked manual items.")) {
-          // 1. Remove checked manual items
-          setManualShoppingItems(prev => prev.filter(item => !shoppingCheckedItems[item.name]));
+          // 1. Remove checked manual items with robust string matching
+          setManualShoppingItems(prev => prev.filter(item => {
+              const normalizedItem = item.name.toLowerCase().trim();
+              
+              // Check exact match first
+              if (shoppingCheckedItems[item.name]) return false;
+              
+              // Check fuzzy match against all checked keys
+              // This handles cases where AI might have pluralized or slightly altered the displayed name
+              const isChecked = Object.keys(shoppingCheckedItems).some(key => {
+                  const normalizedKey = key.toLowerCase().trim();
+                  // Check for exact, plural, or singular matches
+                  return normalizedKey === normalizedItem || 
+                         normalizedKey === normalizedItem + 's' || 
+                         (normalizedKey.endsWith('s') && normalizedKey.slice(0, -1) === normalizedItem);
+              });
+              
+              // Keep item if NOT checked
+              return !isChecked;
+          }));
           
-          // 2. Clear checked status (so plan items show as unchecked next time, or effectively 'cleared' from view if filtered)
+          // 2. Clear checked status (so plan items show as unchecked next time)
           setShoppingCheckedItems({});
       }
   };
