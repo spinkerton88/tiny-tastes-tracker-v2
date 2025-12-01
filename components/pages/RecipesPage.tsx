@@ -214,9 +214,9 @@ const LogMealView: React.FC<{
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-            {/* Header / Date Controls */}
-            <div className="p-4 bg-gray-50 border-b grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col h-[calc(100dvh-13rem)] sm:h-[600px] w-full overflow-hidden relative">
+            {/* Header / Date Controls - Flex None */}
+            <div className="p-4 bg-gray-50 border-b grid grid-cols-2 gap-4 shrink-0 z-20 relative">
                 <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Date</label>
                     <input 
@@ -245,7 +245,7 @@ const LogMealView: React.FC<{
             {/* --- STEP 1: SELECT --- */}
             {step === 'SELECT' && (
                 <>
-                    <div className="flex border-b">
+                    <div className="flex border-b shrink-0 bg-white z-10 relative">
                         <button 
                             className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'foods' ? `border-b-2 border-${baseColor}-600 text-${baseColor}-600 bg-white` : 'text-gray-500 bg-gray-50 hover:bg-gray-100'}`}
                             onClick={() => setActiveTab('foods')}
@@ -260,7 +260,7 @@ const LogMealView: React.FC<{
                         </button>
                     </div>
 
-                    <div className="p-4 h-[400px] overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-white relative">
                         {activeTab === 'foods' ? (
                             <>
                                 <div className="relative mb-3">
@@ -311,14 +311,19 @@ const LogMealView: React.FC<{
                         )}
                     </div>
 
-                    {/* Footer for Step 1 */}
-                    <div className="p-4 border-t bg-gray-50">
+                    {/* Footer for Step 1 - Sticky Bottom */}
+                    <div className="p-4 border-t bg-gray-50 shrink-0 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] relative">
                         {/* Visual Tray */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar h-12 items-center">
-                            {selectedFoods.size === 0 ? <span className="text-sm text-gray-400 italic w-full text-center">Plate is empty...</span> : 
+                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar h-14 items-center px-1">
+                            {selectedFoods.size === 0 ? (
+                                <div className="w-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                                    <Icon name="utensils" className="w-4 h-4 mb-1" />
+                                    <span className="text-xs italic">Plate is empty...</span>
+                                </div>
+                            ) : 
                                 Array.from(selectedFoods).map((food: any) => (
-                                    <button key={food} onClick={() => toggleFood(food as string)} className="relative shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-sm animate-popIn">
-                                        <span className="text-lg">{getFoodEmoji(food as string)}</span>
+                                    <button key={food} onClick={() => toggleFood(food as string)} className="relative shrink-0 w-11 h-11 bg-white rounded-full flex items-center justify-center border-2 border-gray-100 shadow-sm animate-popIn">
+                                        <span className="text-xl leading-none">{getFoodEmoji(food as string)}</span>
                                         <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5"><Icon name="x" className="w-2 h-2 text-white" /></div>
                                     </button>
                                 ))
@@ -327,7 +332,7 @@ const LogMealView: React.FC<{
                         <button 
                             onClick={() => setStep('REVIEW')}
                             disabled={selectedFoods.size === 0}
-                            className={`w-full py-3 px-4 rounded-xl shadow-lg text-sm font-bold text-white transition-all flex justify-center items-center gap-2 ${selectedFoods.size > 0 ? `bg-${baseColor}-600 hover:bg-${baseColor}-700` : 'bg-gray-300 cursor-not-allowed'}`}
+                            className={`w-full py-3.5 px-4 rounded-xl shadow-md text-sm font-bold text-white transition-all flex justify-center items-center gap-2 ${selectedFoods.size > 0 ? `bg-${baseColor}-600 hover:bg-${baseColor}-700 active:scale-[0.98]` : 'bg-gray-300 cursor-not-allowed'}`}
                         >
                             Review & Log <Icon name="arrow-right" className="w-4 h-4" />
                         </button>
@@ -337,8 +342,8 @@ const LogMealView: React.FC<{
 
             {/* --- STEP 2: REVIEW --- */}
             {step === 'REVIEW' && (
-                <div className="flex flex-col h-[600px]">
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50/50">
+                <>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50/50 min-h-0">
                         <div className="space-y-3">
                             {Array.from(selectedFoods).map((food: any) => {
                                 const fName = food as string;
@@ -444,13 +449,13 @@ const LogMealView: React.FC<{
                         )}
                     </div>
 
-                    <div className="p-4 bg-white border-t flex gap-3">
+                    <div className="p-4 bg-white border-t flex gap-3 shrink-0 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                         <button onClick={() => setStep('SELECT')} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Back</button>
                         <button onClick={handleFinalSave} className={`flex-[2] py-3 text-sm font-bold text-white bg-${baseColor}-600 rounded-xl shadow-lg hover:bg-${baseColor}-700 transition-colors flex justify-center items-center gap-2`}>
                             <Icon name="check" className="w-5 h-5" /> Save Log
                         </button>
                     </div>
-                </div>
+                </>
             )}
         </div>
     );

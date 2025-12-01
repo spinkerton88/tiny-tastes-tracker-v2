@@ -17,28 +17,37 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
         const scannerId = "reader";
         if (!document.getElementById(scannerId)) return;
 
-        // Initialize the scanner with the core class (no default UI)
-        const html5QrCode = new Html5Qrcode(scannerId, false);
-        scannerRef.current = html5QrCode;
-
-        const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 },
-            // Aspect ratio isn't strictly necessary if we use CSS to cover, 
-            // but setting it helps the library select resolution.
-            // 1.0 is safe, or window ratio.
-            aspectRatio: 1.0, 
+        // Initialize with formats in the constructor (CRITICAL for non-QR codes)
+        // Enable native barcode detector for better performance
+        const html5QrCode = new Html5Qrcode(scannerId, {
             formatsToSupport: [
                 Html5QrcodeSupportedFormats.EAN_13,
                 Html5QrcodeSupportedFormats.EAN_8,
                 Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E
-            ]
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128
+            ],
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            },
+            verbose: false
+        });
+        
+        scannerRef.current = html5QrCode;
+
+        const config = { 
+            fps: 10,
+            // Removing qrbox makes it scan the full frame, which is much easier for the user
+            // even if we have a visual guide overlay.
+            aspectRatio: 1.0,
+            videoConstraints: {
+                facingMode: "environment",
+                focusMode: "continuous" // Attempt to force focus
+            }
         };
 
         const startScanner = async () => {
             try {
-                // This triggers the browser permission prompt
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
                     config,
@@ -51,7 +60,6 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
                                 html5QrCode.clear();
                                 onScanSuccess(decodedText);
                             }).catch(err => {
-                                // Even if stop fails, proceed
                                 console.warn("Stop failed", err);
                                 onScanSuccess(decodedText);
                             });
@@ -99,10 +107,9 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
                         <Icon name="scan-barcode" className="w-5 h-5 text-teal-400" />
                         Scan Product
                     </h3>
-                    <p className="text-xs text-gray-300 drop-shadow-sm">Align barcode in box</p>
+                    <p className="text-xs text-gray-300 drop-shadow-sm">Align barcode in window</p>
                 </div>
                 
-                {/* Larger touch target for Close button */}
                 <button 
                     onClick={onClose} 
                     className="pointer-events-auto bg-white/20 backdrop-blur-md p-2.5 rounded-full hover:bg-white/30 transition-colors text-white border border-white/10 shadow-lg"
@@ -115,6 +122,19 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
             {/* Scanner Container */}
             <div className="flex-1 relative w-full h-full bg-black overflow-hidden">
                  <div id="reader" className="w-full h-full"></div>
+                 
+                 {/* Visual Guide Overlay (Does not affect scanning area now) */}
+                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="w-64 h-64 border-2 border-white/50 rounded-lg relative">
+                        <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-teal-400 -mt-1 -ml-1"></div>
+                        <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-teal-400 -mt-1 -mr-1"></div>
+                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-teal-400 -mb-1 -ml-1"></div>
+                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-teal-400 -mb-1 -mr-1"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-0.5 bg-red-500/50 animate-pulse"></div>
+                        </div>
+                    </div>
+                 </div>
             </div>
 
             {/* Footer: Added pb-safe for Home Indicator */}
