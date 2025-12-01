@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Food, TriedFoodLog, FoodLogData } from '../../types';
+import { Food, TriedFoodLog, FoodLogData, AppMode } from '../../types';
 import { FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
 import { resizeImage } from '../../utils';
 import Icon from '../ui/Icon';
@@ -13,6 +13,7 @@ interface FoodLogModalProps {
   onShowGuide: (food: Food) => void;
   onIncrementTry: (foodName: string) => void;
   baseColor?: string;
+  appMode?: AppMode;
 }
 
 const reactionButtons = [
@@ -48,7 +49,8 @@ const LogFormView: React.FC<{
     onSave: (foodName: string, data: FoodLogData) => void;
     onClose: () => void;
     baseColor: string;
-}> = ({ food, existingLog, onSave, onClose, baseColor }) => {
+    appMode?: AppMode;
+}> = ({ food, existingLog, onSave, onClose, baseColor, appMode }) => {
     const [meal, setMeal] = useState(existingLog?.meal || '');
     const [reaction, setReaction] = useState(existingLog?.reaction || 0);
     const [allergy, setAllergy] = useState(existingLog?.allergyReaction || '');
@@ -63,6 +65,7 @@ const LogFormView: React.FC<{
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const hasAdverseReaction = allergy && allergy !== 'none';
+    const isToddler = appMode === 'TODDLER';
 
     const handleBiteSelection = (value: string) => {
         if (existingLog) {
@@ -177,27 +180,29 @@ const LogFormView: React.FC<{
                 </div>
             </div>
 
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">6. Behavior (Toddler Challenges)</label>
-                <div className="grid grid-cols-2 gap-2">
-                    {BEHAVIORAL_TAGS.map(tag => {
-                        const isSelected = behavioralTags.includes(tag);
-                        return (
-                            <button 
-                                key={tag} 
-                                type="button" 
-                                onClick={() => handleTagToggle(tag)}
-                                className={`text-xs p-2 rounded-lg border text-left transition-colors flex items-center gap-2 ${isSelected ? 'bg-orange-50 border-orange-300 text-orange-800' : 'bg-white border-gray-200 text-gray-600'}`}
-                            >
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300'}`}>
-                                    {isSelected && <Icon name="check" className="w-3 h-3 text-white" />}
-                                </div>
-                                {tag}
-                            </button>
-                        );
-                    })}
+            {isToddler && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">6. Behavior (Toddler Challenges)</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {BEHAVIORAL_TAGS.map(tag => {
+                            const isSelected = behavioralTags.includes(tag);
+                            return (
+                                <button 
+                                    key={tag} 
+                                    type="button" 
+                                    onClick={() => handleTagToggle(tag)}
+                                    className={`text-xs p-2 rounded-lg border text-left transition-colors flex items-center gap-2 ${isSelected ? 'bg-orange-50 border-orange-300 text-orange-800' : 'bg-white border-gray-200 text-gray-600'}`}
+                                >
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300'}`}>
+                                        {isSelected && <Icon name="check" className="w-3 h-3 text-white" />}
+                                    </div>
+                                    {tag}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
+            )}
             
             {/* Messy Face Photo Input */}
             <div>
@@ -241,7 +246,9 @@ const LogFormView: React.FC<{
             </div>
 
             <div>
-                <label htmlFor="notes-input" className="block text-sm font-medium text-gray-700">8. Notes (Optional):</label>
+                <label htmlFor="notes-input" className="block text-sm font-medium text-gray-700">
+                    {isToddler ? '8. Notes (Optional):' : 'Notes (Optional):'}
+                </label>
                 <textarea id="notes-input" value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`} placeholder="e.g., Gagged a lot at first..."></textarea>
             </div>
 
@@ -325,7 +332,7 @@ const LogSummaryView: React.FC<{
 
 // --- Main Component ---
 
-const FoodLogModal: React.FC<FoodLogModalProps> = ({ food, existingLog, onClose, onSave, onShowGuide, onIncrementTry, baseColor = 'teal' }) => {
+const FoodLogModal: React.FC<FoodLogModalProps> = ({ food, existingLog, onClose, onSave, onShowGuide, onIncrementTry, baseColor = 'teal', appMode }) => {
     const [isEditing, setIsEditing] = useState(!existingLog);
     const nutrients = FOOD_NUTRIENT_MAPPING[food.name] || [];
 
@@ -369,6 +376,7 @@ const FoodLogModal: React.FC<FoodLogModalProps> = ({ food, existingLog, onClose,
                         onSave={onSave} 
                         onClose={onClose}
                         baseColor={baseColor}
+                        appMode={appMode}
                     />
                 ) : (
                     <LogSummaryView 

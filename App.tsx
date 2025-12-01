@@ -452,6 +452,7 @@ const App: React.FC = () => {
                   onToggleShoppingItem={handleToggleShoppingItem}
                   onClearCheckedShoppingItems={handleClearCheckedItems}
                   baseColor={baseColorName}
+                  appMode={mode}
               />;
           case 'learn':
               return <LearnPage mode={mode} baseColor={baseColorName} />;
@@ -514,6 +515,7 @@ const App: React.FC = () => {
                        }
                   }}
                   baseColor={baseColorName}
+                  appMode={mode}
               />;
           case 'HOW_TO_SERVE':
               return <HowToServeModal 

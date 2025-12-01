@@ -1,6 +1,5 @@
-
-import React, { useState, useMemo } from 'react';
-import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood, LoggedItemData, FoodStatus, SavedStrategy, ManualShoppingItem } from '../../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood, LoggedItemData, FoodStatus, SavedStrategy, ManualShoppingItem, AppMode } from '../../types';
 import { allFoods, BEHAVIOR_TAGS } from '../../constants';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
@@ -33,6 +32,7 @@ interface RecipesPageProps {
     onToggleShoppingItem?: (name: string, isChecked: boolean) => void;
     onClearCheckedShoppingItems?: () => void;
     baseColor?: string;
+    appMode?: AppMode;
 }
 
 const formatDateString = (date: Date) => date.toISOString().split('T')[0];
@@ -535,7 +535,16 @@ const HistoryView: React.FC<{
 };
 
 const RecipesPage: React.FC<RecipesPageProps> = (props) => {
-    const [mode, setMode] = useState<'log' | 'history' | 'plan' | 'recipes'>('log');
+    const isToddler = props.appMode === 'TODDLER';
+    const [mode, setMode] = useState<'log' | 'history' | 'plan' | 'recipes'>(() => isToddler ? 'log' : 'recipes');
+    
+    // Ensure we switch to a visible tab if mode changes
+    useEffect(() => {
+        if (!isToddler && (mode === 'log' || mode === 'history')) {
+            setMode('recipes');
+        }
+    }, [isToddler, mode]);
+
     const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
     const [editingLog, setEditingLog] = useState<{ originalDate: string, originalMeal: string, items: TriedFoodLog[] } | null>(null);
     const [itemsToPlan, setItemsToPlan] = useState<TriedFoodLog[] | null>(null);
@@ -581,14 +590,18 @@ const RecipesPage: React.FC<RecipesPageProps> = (props) => {
     return (
         <div className="h-full flex flex-col">
              <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl mb-4 shrink-0 mx-2 mt-2 sm:mx-0 sm:mt-0 overflow-x-auto no-scrollbar">
-                <button onClick={() => { setMode('log'); setEditingLog(null); }} className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-2 ${mode === 'log' ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'}`}><Icon name="utensils" className="w-4 h-4" /> <span className="hidden sm:inline">Plate</span> Builder</button>
+                {isToddler && (
+                    <button onClick={() => { setMode('log'); setEditingLog(null); }} className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-2 ${mode === 'log' ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'}`}><Icon name="utensils" className="w-4 h-4" /> <span className="hidden sm:inline">Plate</span> Builder</button>
+                )}
                 <button onClick={() => setMode('plan')} className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-2 ${mode === 'plan' ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'}`}><Icon name="calendar" className="w-4 h-4" /> Plan</button>
-                <button onClick={() => setMode('history')} className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-2 ${mode === 'history' ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'}`}><Icon name="clock" className="w-4 h-4" /> History</button>
+                {isToddler && (
+                    <button onClick={() => setMode('history')} className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-2 ${mode === 'history' ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'}`}><Icon name="clock" className="w-4 h-4" /> History</button>
+                )}
                 <button onClick={() => setMode('recipes')} className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-2 ${mode === 'recipes' ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-700'}`}><Icon name="book" className="w-4 h-4" /> Recipes</button>
             </div>
 
             <div className="flex-1 overflow-hidden relative px-2 sm:px-0">
-                {mode === 'log' && (
+                {mode === 'log' && isToddler && (
                     <PlateBuilderView 
                         recipes={props.recipes}
                         customFoods={props.customFoods}
@@ -619,7 +632,7 @@ const RecipesPage: React.FC<RecipesPageProps> = (props) => {
                     />
                 )}
 
-                {mode === 'history' && (
+                {mode === 'history' && isToddler && (
                     <div className="h-full overflow-y-auto pb-24">
                         <HistoryView 
                             triedFoods={props.triedFoods || []} 
