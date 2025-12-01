@@ -292,6 +292,16 @@ const App: React.FC = () => {
       setRecipes(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
   };
 
+  const handleDeleteRecipe = (id: string) => {
+      setRecipes(prev => prev.filter(r => r.id !== id));
+  };
+
+  const handleDeleteCustomFood = (name: string) => {
+      if (window.confirm(`Are you sure you want to delete "${name}" from your food list?`)) {
+          setCustomFoods(prev => prev.filter(f => f.name !== name));
+      }
+  };
+
   const saveMealToPlan = (date: string, meal: string, recipeId: string, recipeTitle: string) => {
       setMealPlan(prev => ({
           ...prev,
@@ -353,6 +363,8 @@ const App: React.FC = () => {
                   onUpdateBatchLog={handleUpdateBatchLog}
                   onCreateRecipe={handleCreateRecipe}
                   onEditRecipe={(recipe) => setModalState({ type: 'ADD_RECIPE', recipeData: recipe })}
+                  onDeleteRecipe={handleDeleteRecipe}
+                  onDeleteCustomFood={handleDeleteCustomFood}
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
                   onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
                   onScanBarcode={mode === 'TODDLER' ? () => setModalState({ type: 'SCAN_BARCODE' }) : undefined}

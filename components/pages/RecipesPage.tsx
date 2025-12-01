@@ -20,7 +20,9 @@ interface RecipesPageProps {
     onBatchLog?: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string, strategy?: string) => void;
     onUpdateBatchLog?: (originalDate: string, originalMeal: string, items: LoggedItemData[], newDate: string, newMeal: string, photo?: string, notes?: string, strategy?: string) => void;
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
-    onEditRecipe?: (recipeData: Recipe) => void; // Uses the same modal type as add, but pre-filled
+    onEditRecipe?: (recipeData: Recipe) => void; 
+    onDeleteRecipe?: (id: string) => void;
+    onDeleteCustomFood?: (name: string) => void;
     onFoodClick?: (food: Food) => void;
     onAddCustomFood?: (initialName: string) => void;
     onScanBarcode?: () => void;
@@ -28,6 +30,9 @@ interface RecipesPageProps {
 }
 
 const formatDateString = (date: Date) => date.toISOString().split('T')[0];
+
+const PORTION_UNITS = ['serving', 'tbsp', 'cup', 'oz', 'slice', 'piece', 'bowl', 'pouch', 'handful'];
+const DEFAULT_STRATEGY_TYPES = ["The Bridge", "The Stealth Mode", "The Fun Factor", "Repeated Exposure", "Food Chaining"];
 
 // --- HELPER COMPONENTS ---
 
@@ -51,14 +56,6 @@ const getFoodEmoji = (name: string, customFoods: CustomFood[] = []) => {
 };
 
 // --- PLATE BUILDER VIEW ---
-
-const PORTION_SIZES = [
-    { label: '1 tbsp', value: '1 tbsp' },
-    { label: '¼ cup', value: '0.25 cup' },
-    { label: '½ cup', value: '0.5 cup' },
-    { label: '1 cup', value: '1 cup' },
-    { label: '1 unit', value: '1 unit' },
-];
 
 const CONSUMPTION_LEVELS = [
     { label: 'All', value: 'all', icon: 'check-circle', color: 'text-green-600', bg: 'bg-green-100' },
@@ -84,7 +81,9 @@ const PlateBuilderView: React.FC<{
     savedStrategies?: SavedStrategy[],
     onSave: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string, strategy?: string) => void, 
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
-    onEditRecipe?: (recipe: Recipe) => void; // To edit a saved plate from the pantry
+    onEditRecipe?: (recipe: Recipe) => void; 
+    onDeleteRecipe?: (id: string) => void;
+    onDeleteCustomFood?: (name: string) => void;
     onAddCustomFood?: (name: string) => void;
     onScanBarcode?: () => void;
     baseColor: string;
@@ -94,7 +93,7 @@ const PlateBuilderView: React.FC<{
     editingLog?: { originalDate: string, originalMeal: string, items: TriedFoodLog[] } | null;
     onCancelEdit?: () => void;
     onUpdateLog?: (originalDate: string, originalMeal: string, items: LoggedItemData[], newDate: string, newMeal: string, photo?: string, notes?: string, strategy?: string) => void;
-}> = ({ recipes, customFoods = [], savedStrategies = [], onSave, onCreateRecipe, onEditRecipe, onAddCustomFood, onScanBarcode, baseColor, date, setDate, setMode, editingLog, onCancelEdit, onUpdateLog }) => {
+}> = ({ recipes, customFoods = [], savedStrategies = [], onSave, onCreateRecipe, onEditRecipe, onDeleteRecipe, onDeleteCustomFood, onAddCustomFood, onScanBarcode, baseColor, date, setDate, setMode, editingLog, onCancelEdit, onUpdateLog }) => {
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
     const [selectedFoods, setSelectedFoods] = useState<LoggedItemData[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -119,8 +118,8 @@ const PlateBuilderView: React.FC<{
             
             const convertedItems: LoggedItemData[] = editingLog.items.map(log => ({
                 food: log.id,
-                status: 'eaten', // Status is derived from consumption in UI usually, but keep simple
-                tags: [], // Tags not fully reconstructible if flat list? Behavioral tags:
+                status: 'eaten', 
+                tags: [], 
                 behavioralTags: log.behavioralTags || [],
                 portion: log.portion,
                 consumption: log.consumption
@@ -166,8 +165,6 @@ const PlateBuilderView: React.FC<{
         
         ingredients.forEach(rawName => {
             const match = pantryFoods.find(f => rawName.toLowerCase().includes(f.name.toLowerCase()));
-            // If match found, use it. If not, use the raw text as a "Custom" food placeholder? 
-            // For now, simpler matching.
             const foodName = match ? match.name : rawName;
             
             if (!selectedFoods.some(f => f.food === foodName)) {
@@ -191,6 +188,21 @@ const PlateBuilderView: React.FC<{
         setSelectedFoods(prev => prev.map((item, i) => i === index ? { ...item, ...updates } : item));
     };
 
+    // Helper for Portion Input
+    const handlePortionChange = (index: number, amount: string, unit: string) => {
+        const newVal = `${amount} ${unit}`.trim();
+        updateItem(index, { portion: newVal });
+    };
+
+    const parsePortion = (portionStr?: string) => {
+        if (!portionStr) return { amount: '1', unit: 'serving' };
+        const parts = portionStr.split(' ');
+        if (parts.length >= 2) {
+            return { amount: parts[0], unit: parts.slice(1).join(' ') };
+        }
+        return { amount: parts[0], unit: 'serving' }; // Fallback
+    };
+
     const toggleBehavioralTag = (index: number, tag: string) => {
         const item = selectedFoods[index];
         const currentTags = item.behavioralTags || [];
@@ -203,6 +215,12 @@ const PlateBuilderView: React.FC<{
     const removeItem = (index: number) => {
         setSelectedFoods(prev => prev.filter((_, i) => i !== index));
         if (activeItemIndex === index) setActiveItemIndex(null);
+    };
+
+    const handleDeleteRecipeWithConfirm = (id: string, title: string) => {
+        if (window.confirm(`Delete "${title}"?`)) {
+            if (onDeleteRecipe) onDeleteRecipe(id);
+        }
     };
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,26 +350,24 @@ const PlateBuilderView: React.FC<{
                                 <button onClick={() => removeItem(activeItemIndex)} className="text-red-500 p-1 hover:bg-red-50 rounded"><Icon name="trash-2" className="w-4 h-4" /></button>
                             </div>
                             
-                            {/* Portion Control */}
+                            {/* Portion Control (Updated with Input + Select) */}
                             <div className="mb-3">
                                 <label className="text-[10px] uppercase font-bold text-indigo-400 mb-1 block">Portion Served</label>
-                                <div className="flex flex-wrap gap-1.5 items-center">
-                                    {PORTION_SIZES.map(size => (
-                                        <button 
-                                            key={size.value}
-                                            onClick={() => updateItem(activeItemIndex, { portion: size.value })}
-                                            className={`text-xs px-2 py-1 rounded border transition-colors ${selectedFoods[activeItemIndex].portion === size.value ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200'}`}
-                                        >
-                                            {size.label}
-                                        </button>
-                                    ))}
+                                <div className="flex gap-2">
                                     <input 
-                                        type="text" 
-                                        className="text-xs px-2 py-1 rounded border border-gray-300 w-20 focus:ring-1 focus:ring-indigo-500" 
-                                        placeholder="Custom..." 
-                                        value={selectedFoods[activeItemIndex].portion || ''}
-                                        onChange={(e) => updateItem(activeItemIndex, { portion: e.target.value })}
+                                        type="number" 
+                                        className="w-20 text-sm rounded border border-gray-300 focus:ring-indigo-500 py-1"
+                                        placeholder="1"
+                                        value={parsePortion(selectedFoods[activeItemIndex].portion).amount}
+                                        onChange={(e) => handlePortionChange(activeItemIndex, e.target.value, parsePortion(selectedFoods[activeItemIndex].portion).unit)}
                                     />
+                                    <select
+                                        className="flex-1 text-sm rounded border border-gray-300 focus:ring-indigo-500 py-1"
+                                        value={parsePortion(selectedFoods[activeItemIndex].portion).unit}
+                                        onChange={(e) => handlePortionChange(activeItemIndex, parsePortion(selectedFoods[activeItemIndex].portion).amount, e.target.value)}
+                                    >
+                                        {PORTION_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                                    </select>
                                 </div>
                             </div>
 
@@ -413,7 +429,7 @@ const PlateBuilderView: React.FC<{
                             className="w-full text-xs border-gray-200 rounded-lg bg-gray-50 focus:bg-white transition-colors"
                         />
 
-                        {/* Strategy Selector */}
+                        {/* Strategy Selector - With Defaults */}
                         <div className="relative">
                             <select 
                                 value={selectedStrategy}
@@ -421,9 +437,16 @@ const PlateBuilderView: React.FC<{
                                 className="w-full text-xs border-gray-200 rounded-lg bg-gray-50 focus:bg-white text-gray-600 appearance-none py-2 px-3"
                             >
                                 <option value="">Did you use a strategy?</option>
-                                {savedStrategies.map(s => (
-                                    <option key={s.id} value={s.id}>{s.title} ({s.type})</option>
-                                ))}
+                                <optgroup label="My Saved Strategies">
+                                    {savedStrategies.map(s => (
+                                        <option key={s.id} value={s.title}>{s.title} ({s.type})</option>
+                                    ))}
+                                </optgroup>
+                                <optgroup label="Strategy Types">
+                                    {DEFAULT_STRATEGY_TYPES.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </optgroup>
                             </select>
                             <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                                 <Icon name="chevron-down" className="w-3 h-3 text-gray-400" />
@@ -500,27 +523,38 @@ const PlateBuilderView: React.FC<{
                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Saved Plates</h4>
                                 <div className="grid grid-cols-2 gap-2">
                                     {recipes.map(recipe => (
-                                        <button 
-                                            key={recipe.id}
-                                            onClick={() => addRecipeToPlate(recipe)}
-                                            className="text-left p-3 bg-white border border-indigo-100 rounded-xl shadow-sm hover:border-indigo-300 transition-colors group relative"
-                                        >
-                                            <div className="flex justify-between items-start">
-                                                <h5 className="font-bold text-gray-800 text-sm group-hover:text-indigo-700">{recipe.title}</h5>
+                                        <div key={recipe.id} className="relative group">
+                                            <button 
+                                                onClick={() => addRecipeToPlate(recipe)}
+                                                className="w-full text-left p-3 bg-white border border-indigo-100 rounded-xl shadow-sm hover:border-indigo-300 transition-colors"
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <h5 className="font-bold text-gray-800 text-sm group-hover:text-indigo-700">{recipe.title}</h5>
+                                                    <Icon name="plus-circle" className="w-4 h-4 text-indigo-400 group-hover:text-indigo-600" />
+                                                </div>
+                                                <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{recipe.ingredients.replace(/\n/g, ', ')}</p>
+                                            </button>
+                                            
+                                            {/* Action Buttons for Recipe */}
+                                            <div className="absolute top-2 right-8 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 {onEditRecipe && (
-                                                    <div 
+                                                    <button 
                                                         onClick={(e) => { e.stopPropagation(); onEditRecipe(recipe); }}
-                                                        className="p-1 hover:bg-indigo-50 rounded text-gray-400 hover:text-indigo-600"
+                                                        className="p-1 bg-white border border-gray-200 rounded hover:bg-indigo-50 text-gray-400 hover:text-indigo-600"
                                                     >
                                                         <Icon name="edit-2" className="w-3 h-3" />
-                                                    </div>
+                                                    </button>
+                                                )}
+                                                {onDeleteRecipe && (
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteRecipeWithConfirm(recipe.id, recipe.title); }}
+                                                        className="p-1 bg-white border border-gray-200 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
+                                                    >
+                                                        <Icon name="trash-2" className="w-3 h-3" />
+                                                    </button>
                                                 )}
                                             </div>
-                                            <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{recipe.ingredients.replace(/\n/g, ', ')}</p>
-                                            <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Icon name="plus-circle" className="w-5 h-5 text-indigo-500" />
-                                            </div>
-                                        </button>
+                                        </div>
                                     ))}
                                 </div>
                              </div>
@@ -531,16 +565,30 @@ const PlateBuilderView: React.FC<{
                             <>
                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Foods</h4>
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                    {pantryFoods.map(food => (
-                                        <button
-                                            key={food.name}
-                                            onClick={() => addFoodToPlate(food)}
-                                            className="flex flex-col items-center justify-center p-3 bg-white border border-gray-200 rounded-xl hover:border-indigo-400 hover:shadow-sm transition-all active:scale-95"
-                                        >
-                                            <span className="text-2xl mb-1">{food.emoji}</span>
-                                            <span className="text-[10px] font-bold text-gray-700 text-center leading-tight line-clamp-2">{food.name}</span>
-                                        </button>
-                                    ))}
+                                    {pantryFoods.map(food => {
+                                        // Check if food is custom to show delete button
+                                        const isCustom = customFoods.some(c => c.name === food.name);
+                                        return (
+                                            <div key={food.name} className="relative group">
+                                                <button
+                                                    onClick={() => addFoodToPlate(food)}
+                                                    className="w-full flex flex-col items-center justify-center p-3 bg-white border border-gray-200 rounded-xl hover:border-indigo-400 hover:shadow-sm transition-all active:scale-95"
+                                                >
+                                                    <span className="text-2xl mb-1">{food.emoji}</span>
+                                                    <span className="text-[10px] font-bold text-gray-700 text-center leading-tight line-clamp-2">{food.name}</span>
+                                                </button>
+                                                {isCustom && onDeleteCustomFood && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onDeleteCustomFood(food.name); }}
+                                                        className="absolute -top-1 -right-1 bg-white border border-gray-200 rounded-full p-1 text-gray-400 hover:text-red-500 hover:border-red-200 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        title="Delete Custom Food"
+                                                    >
+                                                        <Icon name="trash-2" className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                                 {pantryFoods.length === 0 && (
                                     <div className="text-center py-8">
@@ -658,6 +706,8 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
     onUpdateBatchLog,
     onCreateRecipe,
     onEditRecipe,
+    onDeleteRecipe,
+    onDeleteCustomFood,
     onAddCustomFood,
     onScanBarcode,
     baseColor = 'teal'
@@ -717,8 +767,8 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
 
     return (
         <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col">
-            {/* Top Nav */}
-            <div className="flex border-b border-gray-200 overflow-x-auto shrink-0 bg-white sticky top-0 z-20">
+            {/* Top Nav - Removed 'sticky top-0 z-20' to prevent overlap issue */}
+            <div className="flex border-b border-gray-200 overflow-x-auto shrink-0 bg-white">
                 <button onClick={() => setActiveTab('log')} className={`px-4 py-3 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === 'log' ? `border-${baseColor}-600 text-${baseColor}-600` : 'border-transparent text-gray-500'}`}>
                     <Icon name="disc-3" className="w-4 h-4 inline-block mr-2" /> Log Meal
                 </button>
@@ -743,6 +793,8 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
                         onSave={onBatchLog}
                         onCreateRecipe={onCreateRecipe}
                         onEditRecipe={onEditRecipe}
+                        onDeleteRecipe={onDeleteRecipe}
+                        onDeleteCustomFood={onDeleteCustomFood}
                         onAddCustomFood={onAddCustomFood}
                         onScanBarcode={onScanBarcode}
                         baseColor={baseColor}
@@ -829,14 +881,16 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
                                          ))}
                                      </div>
                                      <p className="text-xs text-gray-500 line-clamp-2">{recipe.ingredients}</p>
-                                     {onEditRecipe && (
-                                         <div 
-                                            onClick={(e) => { e.stopPropagation(); onEditRecipe(recipe); }}
-                                            className="absolute top-2 right-2 p-1.5 bg-gray-100 rounded-full text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                                         >
-                                             <Icon name="edit-2" className="w-4 h-4" />
-                                         </div>
-                                     )}
+                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                         {onEditRecipe && (
+                                             <div 
+                                                onClick={(e) => { e.stopPropagation(); onEditRecipe(recipe); }}
+                                                className="p-1.5 bg-gray-100 rounded-full text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
+                                             >
+                                                 <Icon name="edit-2" className="w-4 h-4" />
+                                             </div>
+                                         )}
+                                     </div>
                                  </div>
                              ))}
                              {recipes.length === 0 && <EmptyState illustration={<Icon name="book" className="w-12 h-12 text-gray-300"/>} title="No Saved Plates" message="Create reusable plates to make logging faster." />}
