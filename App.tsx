@@ -222,13 +222,22 @@ const App: React.FC = () => {
                   initialFoods: matchedFoods 
               });
           } else {
-              // FALLBACK: Treat as a Recipe/Preset if no simple ingredients found
-              // This allows saving complex pouches/meals as a single "Recipe" unit
+              // FALLBACK: Treat as a Recipe/Preset if no simple ingredients found.
+              // Convert comma-separated ingredients into a newline-separated bullet list
+              // This ensures that when the recipe is used later, it correctly identifies multiple items.
+              const rawIngredients = product.ingredientsText || product.name || '';
+              const formattedIngredients = rawIngredients
+                  .split(',')
+                  .map(i => i.trim())
+                  .filter(i => i.length > 0)
+                  .map(i => `- ${i}`)
+                  .join('\n');
+
               setModalState({ 
                   type: 'ADD_RECIPE', 
                   recipeData: {
                       title: product.name,
-                      ingredients: product.ingredientsText || product.name,
+                      ingredients: formattedIngredients,
                       instructions: 'Ready to serve.', // Default instruction
                       tags: ['Store Bought', 'Scanned Product'],
                       mealTypes: ['snack']

@@ -11,7 +11,8 @@ export const fetchProductByBarcode = async (barcode: string) => {
         name: data.product.product_name,
         image: data.product.image_front_url,
         // The API returns ingredients_text_en (e.g., "Apples, Spinach, Water")
-        ingredientsText: data.product.ingredients_text_en || '' 
+        // Fallback to ingredients_text if _en is missing
+        ingredientsText: data.product.ingredients_text_en || data.product.ingredients_text || '' 
       };
     }
     return null;
@@ -22,6 +23,8 @@ export const fetchProductByBarcode = async (barcode: string) => {
 };
 
 export const mapIngredientsToFoods = (ingredientText: string, allFoodsList: string[]) => {
+  if (!ingredientText) return [];
+  
   // Normalize and clean the text
   const cleanText = ingredientText
     .toLowerCase()
