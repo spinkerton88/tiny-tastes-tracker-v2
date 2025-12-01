@@ -61,6 +61,38 @@ const getFoodEmoji = (name: string) => {
     return obj?.emoji || '🍽️';
 };
 
+const WeekNavigator: React.FC<{ 
+    weekStart: Date; 
+    onPrev: () => void; 
+    onNext: () => void; 
+    onCurrent: () => void; 
+    baseColor: string;
+}> = ({ weekStart, onPrev, onNext, onCurrent, baseColor }) => {
+    const endOfWeek = new Date(weekStart);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    
+    const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    return (
+        <div className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-100 mb-4">
+            <button onClick={onPrev} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                <Icon name="chevron-left" className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col items-center">
+                <span className="font-bold text-gray-800 text-sm">
+                    {formatDate(weekStart)} - {formatDate(endOfWeek)}
+                </span>
+                <button onClick={onCurrent} className={`text-xs font-medium text-${baseColor}-600 hover:underline`}>
+                    Back to Today
+                </button>
+            </div>
+            <button onClick={onNext} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                <Icon name="chevron-right" className="w-5 h-5" />
+            </button>
+        </div>
+    );
+};
+
 const LogMealView: React.FC<{ 
     recipes: Recipe[], 
     triedFoods: TriedFoodLog[],
@@ -441,7 +473,7 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
     onScanBarcode,
     baseColor = 'teal'
 }) => {
-    const [activeTab, setActiveTab] = useState<'plan' | 'recipes' | 'log'>('log');
+    const [activeTab, setActiveTab] = useState<'plan' | 'recipes' | 'log' | 'history'>('log');
     const [weekOffset, setWeekOffset] = useState(0);
     // Local state for LogMealView inside this page
     const [planDate, setPlanDate] = useState(new Date().toISOString().split('T')[0]);
@@ -455,6 +487,9 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
                 <button onClick={() => setActiveTab('log')} className={`px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'log' ? `border-${baseColor}-600 text-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                     Log Meal
                 </button>
+                <button onClick={() => setActiveTab('history')} className={`px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'history' ? `border-${baseColor}-600 text-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    Past Meals
+                </button>
                 <button onClick={() => setActiveTab('plan')} className={`px-4 py-2 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'plan' ? `border-${baseColor}-600 text-${baseColor}-600` : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                     Meal Plan
                 </button>
@@ -462,6 +497,75 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
                     My Recipes
                 </button>
             </div>
+
+            {activeTab === 'history' && (
+                <div className="bg-white rounded-lg shadow p-4">
+                    <div className="flex justify-between items-center mb-4">
+                         <h3 className="font-bold text-gray-800">Weekly Meal History</h3>
+                    </div>
+                    <WeekNavigator 
+                        weekStart={weekStart} 
+                        onPrev={() => setWeekOffset(o => o - 1)} 
+                        onNext={() => setWeekOffset(o => o + 1)} 
+                        onCurrent={() => setWeekOffset(0)}
+                        baseColor={baseColor}
+                    />
+                    <div className="space-y-4">
+                        {[0, 1, 2, 3, 4, 5, 6].map(dayOffset => {
+                            const date = new Date(weekStart);
+                            date.setDate(date.getDate() + dayOffset);
+                            const dateStr = formatDateString(date);
+                            const dayLogs = triedFoods.filter(f => f.date === dateStr);
+                            const isToday = dateStr === formatDateString(new Date());
+                            
+                            // Group logs by meal
+                            const meals: Record<string, TriedFoodLog[]> = { breakfast: [], lunch: [], dinner: [], snack: [] };
+                            dayLogs.forEach(log => {
+                                const m = log.meal.toLowerCase();
+                                if (meals[m]) meals[m].push(log);
+                            });
+
+                            const hasLogs = dayLogs.length > 0;
+
+                            return (
+                                <div key={dateStr} className={`border rounded-lg p-3 ${isToday ? `bg-${baseColor}-50 border-${baseColor}-200` : 'border-gray-100'} ${!hasLogs && !isToday ? 'opacity-60' : ''}`}>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className={`font-semibold text-sm ${isToday ? `text-${baseColor}-800` : 'text-gray-700'}`}>
+                                            {date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                        </h4>
+                                        {isToday && <span className={`text-[10px] font-bold bg-${baseColor}-100 text-${baseColor}-700 px-2 py-0.5 rounded-full`}>Today</span>}
+                                    </div>
+                                    {hasLogs ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                                            {['breakfast', 'lunch', 'dinner', 'snack'].map(meal => {
+                                                const items = meals[meal];
+                                                if (items.length === 0) return null;
+                                                return (
+                                                    <div key={meal} className="bg-white border border-gray-200 rounded p-2 text-sm shadow-sm">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <p className="text-xs text-gray-400 capitalize font-bold">{meal}</p>
+                                                            {items.some(i => i.messyFaceImage) && <Icon name="camera" className="w-3 h-3 text-gray-400" />}
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {items.map((item, idx) => (
+                                                                <span key={idx} className="text-gray-800 text-xs">
+                                                                    {item.id}{idx < items.length - 1 ? ',' : ''}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-gray-400 italic py-2">No meals logged</p>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
 
             {activeTab === 'plan' && (
                 <div className="bg-white rounded-lg shadow p-4">
@@ -471,6 +575,13 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
                             <Icon name="shopping-cart" className="w-4 h-4"/> Shopping List
                          </button>
                     </div>
+                    <WeekNavigator 
+                        weekStart={weekStart} 
+                        onPrev={() => setWeekOffset(o => o - 1)} 
+                        onNext={() => setWeekOffset(o => o + 1)} 
+                        onCurrent={() => setWeekOffset(0)}
+                        baseColor={baseColor}
+                    />
                     <div className="space-y-4">
                         {[0, 1, 2, 3, 4, 5, 6].map(dayOffset => {
                             const date = new Date(weekStart);

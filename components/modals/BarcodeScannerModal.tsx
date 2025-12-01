@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import Icon from '../ui/Icon';
 
 interface BarcodeScannerModalProps {
@@ -10,59 +10,79 @@ interface BarcodeScannerModalProps {
 
 const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onScanSuccess }) => {
     const [error, setError] = useState<string | null>(null);
-    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const isScanningRef = useRef<boolean>(false);
 
     useEffect(() => {
         const scannerId = "reader";
-        
         if (!document.getElementById(scannerId)) return;
 
-        // Calculate aspect ratio to try and fill screen
-        const aspectRatio = window.innerWidth / window.innerHeight;
+        // Initialize the scanner with the core class (no default UI)
+        const html5QrCode = new Html5Qrcode(scannerId, false);
+        scannerRef.current = html5QrCode;
 
-        const scanner = new Html5QrcodeScanner(
-            scannerId,
-            { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                // Use a vertical aspect ratio for mobile to better fill the screen
-                aspectRatio: aspectRatio < 1 ? 0.75 : 1.33,
-                formatsToSupport: [
-                    Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.UPC_A,
-                    Html5QrcodeSupportedFormats.UPC_E
-                ],
-                showTorchButtonIfSupported: true,
-                rememberLastUsedCamera: true
-            },
-            /* verbose= */ false
-        );
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            // Aspect ratio isn't strictly necessary if we use CSS to cover, 
+            // but setting it helps the library select resolution.
+            // 1.0 is safe, or window ratio.
+            aspectRatio: 1.0, 
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E
+            ]
+        };
 
-        scannerRef.current = scanner;
-
-        scanner.render(
-            (decodedText) => {
-                if (scannerRef.current) {
-                    try {
-                        scannerRef.current.clear();
-                    } catch (e) {
-                        console.warn("Failed to clear scanner on success", e);
+        const startScanner = async () => {
+            try {
+                // This triggers the browser permission prompt
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    config,
+                    (decodedText) => {
+                        // Success
+                        if (isScanningRef.current) {
+                            isScanningRef.current = false;
+                            // Stop immediately to freeze on the frame/result
+                            html5QrCode.stop().then(() => {
+                                html5QrCode.clear();
+                                onScanSuccess(decodedText);
+                            }).catch(err => {
+                                // Even if stop fails, proceed
+                                console.warn("Stop failed", err);
+                                onScanSuccess(decodedText);
+                            });
+                        }
+                    },
+                    (errorMessage) => {
+                        // Frame error, ignore
                     }
-                }
-                onScanSuccess(decodedText);
-            },
-            (errorMessage) => {
-                // Ignore frame-by-frame errors
+                );
+                isScanningRef.current = true;
+            } catch (err) {
+                console.error("Error starting scanner", err);
+                setError("Camera permission denied or unavailable. Please check your settings.");
             }
-        );
+        };
+
+        // Small timeout to ensure DOM is ready and previous instances cleared
+        const timer = setTimeout(() => {
+            startScanner();
+        }, 100);
 
         return () => {
+            clearTimeout(timer);
+            isScanningRef.current = false;
             if (scannerRef.current) {
-                try {
+                if (scannerRef.current.isScanning) {
+                    scannerRef.current.stop().then(() => {
+                        scannerRef.current?.clear();
+                    }).catch(err => console.error("Cleanup error", err));
+                } else {
                     scannerRef.current.clear();
-                } catch (e) {
-                    console.error("Error clearing scanner on unmount", e);
                 }
             }
         };
@@ -93,7 +113,9 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
             </div>
 
             {/* Scanner Container */}
-            <div id="reader" className="w-full h-full bg-black relative flex-1"></div>
+            <div className="flex-1 relative w-full h-full bg-black overflow-hidden">
+                 <div id="reader" className="w-full h-full"></div>
+            </div>
 
             {/* Footer: Added pb-safe for Home Indicator */}
             <div className="absolute bottom-0 left-0 right-0 p-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] flex flex-col items-center bg-gradient-to-t from-black/90 to-transparent z-20 pointer-events-none">
@@ -103,65 +125,15 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
                 >
                     Cancel Scan
                 </button>
-                {error && <p className="text-red-400 text-xs mt-3 bg-black/80 inline-block px-3 py-1 rounded">{error}</p>}
+                {error && <p className="text-red-400 text-xs mt-3 bg-black/80 inline-block px-3 py-1 rounded text-center">{error}</p>}
             </div>
 
-            {/* Style Overrides for Html5QrcodeScanner to look Native */}
+            {/* CSS to ensure the video element fills the container */}
             <style>{`
-                #reader {
-                    border: none !important;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center; /* Centers the permission button */
-                    align-items: center;
-                }
                 #reader video {
                     object-fit: cover;
-                    width: 100% !important;
-                    height: 100% !important;
-                    border-radius: 0 !important;
-                }
-                /* Hide status text */
-                #reader__status_span {
-                    display: none !important;
-                }
-                /* Hide header info */
-                #reader__header_message {
-                    display: none !important;
-                }
-                /* Native-like Permission Button */
-                #reader__dashboard_section_csr button {
-                    background-color: #0d9488 !important; /* Teal-600 */
-                    color: white !important;
-                    padding: 14px 28px;
-                    border-radius: 9999px; /* Pill shape */
-                    border: none;
-                    font-weight: 600;
-                    font-size: 16px;
-                    cursor: pointer;
-                    margin-top: 20px;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                    transition: transform 0.1s;
-                }
-                #reader__dashboard_section_csr button:active {
-                    transform: scale(0.95);
-                }
-                /* Style the "Scan an Image File" link */
-                #reader__dashboard_section_swaplink {
-                    color: rgba(255, 255, 255, 0.8) !important;
-                    text-decoration: none;
-                    margin-top: 24px;
-                    display: block;
-                    font-size: 14px;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-                    padding-bottom: 2px;
-                }
-                /* Hide the camera selection dropdown if it appears before scanning */
-                #reader__dashboard_section_csr span {
-                    display: none !important;
-                }
-                #reader__scan_region {
-                    min-height: 300px;
+                    width: 100%;
+                    height: 100%;
                 }
             `}</style>
         </div>
