@@ -248,13 +248,18 @@ Then list 3 short, relevant follow-up questions that the user might want to ask 
 
 export const analyzeFoodWithGemini = async (foodName: string): Promise<CustomFoodDetails & { emoji: string }> => {
     try {
-        const prompt = `Analyze the food "${foodName}" for a baby (6-12 months) starting solid foods (Baby Led Weaning). 
-        Respond ONLY with a JSON object with the following properties:
-        - "safety_rating": strictly one of "Safe", "Use Caution", or "Avoid".
-        - "allergen_info": string describing if it is a common allergen (Top 9) or "No common allergens".
-        - "texture_recommendation": one concise sentence on how to serve it safely (e.g., "Steam until soft" or "Serve as mash").
-        - "nutrition_highlight": one key vitamin or nutritional benefit (e.g., "High in Iron").
-        - "emoji": a single emoji representing this food.`;
+        const prompt = `Analyze the food item "${foodName}" for a baby (6-12 months) starting solid foods.
+        
+        Context for reasoning:
+        - Distinguish between a WHOLE single ingredient (e.g. "Raw Apple", "Broccoli Floret") vs a PRE-PACKAGED PRODUCT/BLEND (e.g. "Pouch", "Yogurt Blend", "Cereal", "Puffs", "Once Upon a Farm", "Serenity Kids").
+        - If it is a pre-packaged blend or pouch, the advice must be relevant to that format (e.g. "Serve on a spoon" rather than "Steam and mash").
+        
+        Respond ONLY with a JSON object:
+        - "safety_rating": strictly one of "Safe", "Use Caution", or "Avoid". (Pouches/Purees are usually "Safe").
+        - "allergen_info": Check for common allergens (Dairy, Soy, Nut, Wheat, Egg, Fish). If it's a specific brand product, try to infer allergens from the name (e.g. "Yogurt" -> Dairy). If unknown, say "Check label for allergens".
+        - "texture_recommendation": Concise serving advice. If product/pouch: "Squeeze onto a spoon or let baby hold pouch". If whole food: "Cook until soft".
+        - "nutrition_highlight": One key benefit (e.g. "Good source of Iron", "Vitamin Blend", "Probiotics").
+        - "emoji": A single emoji. Use 🥣 for pouches/blends/yogurts if a specific ingredient emoji doesn't fit the whole product.`;
 
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
