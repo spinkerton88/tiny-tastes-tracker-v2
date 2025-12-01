@@ -16,6 +16,8 @@ const HIDDEN_CATEGORIES = [
     { value: 'Vegetables', label: 'Vegetables' },
     { value: 'Fruits', label: 'Fruits' },
     { value: 'Protein', label: 'Protein / Meat' },
+    { value: 'Grains', label: 'Carbs / Grains' },
+    { value: 'Dairy', label: 'Dairy' },
 ];
 
 const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed, userProfile }) => {
@@ -35,7 +37,7 @@ const AiSuggestModal: React.FC<AiSuggestModalProps> = ({ onClose, onRecipeParsed
             
             let finalPrompt = prompt;
             if (hiddenCategory !== 'none') {
-                finalPrompt = `Create a recipe that hides ${hiddenCategory} using these ingredients: ${prompt}. The child is picky and dislikes ${hiddenCategory}, so mask the flavor/texture.`;
+                finalPrompt = `Create a recipe that hides ${hiddenCategory} using these ingredients: ${prompt}. The child is picky and dislikes ${hiddenCategory}, so mask the flavor/texture completely.`;
             }
 
             const recipeData = await suggestRecipe(finalPrompt, ageInMonths);

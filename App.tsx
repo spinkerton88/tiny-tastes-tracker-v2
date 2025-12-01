@@ -312,6 +312,20 @@ const App: React.FC = () => {
       }));
       setModalState({ type: null });
   };
+
+  const removeMealFromPlan = (date: string, meal: string) => {
+      setMealPlan(prev => {
+          const newPlan = { ...prev };
+          if (newPlan[date]) {
+              delete newPlan[date][meal];
+              // Cleanup empty dates
+              if (Object.keys(newPlan[date]).length === 0) {
+                  delete newPlan[date];
+              }
+          }
+          return newPlan;
+      });
+  };
   
   const handleSaveStrategy = (strategy: SavedStrategy) => {
       setSavedStrategies(prev => [...prev, strategy]);
@@ -358,6 +372,7 @@ const App: React.FC = () => {
                   onShowSuggestRecipe={() => setModalState({ type: 'SUGGEST_RECIPE' })}
                   onViewRecipe={(recipe) => setModalState({ type: 'VIEW_RECIPE', recipe })}
                   onAddToPlan={(date, meal) => setModalState({ type: 'SELECT_RECIPE', date, meal })}
+                  onRemoveFromPlan={removeMealFromPlan}
                   onShowShoppingList={() => setModalState({ type: 'SHOPPING_LIST' })}
                   onBatchLog={handleBatchLogMeal}
                   onUpdateBatchLog={handleUpdateBatchLog}
