@@ -19,6 +19,7 @@ interface RecipesPageProps {
     onBatchLog?: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => void;
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     onFoodClick?: (food: Food) => void;
+    onAddCustomFood?: (initialName: string) => void;
     onScanBarcode?: () => void;
     baseColor?: string;
 }
@@ -56,9 +57,12 @@ const StarRatingDisplay: React.FC<{ rating: number }> = ({ rating }) => {
 };
 
 // HELPER: Get emoji
-const getFoodEmoji = (name: string) => {
+const getFoodEmoji = (name: string, customFoods: CustomFood[] = []) => {
     const obj = allFoods.flatMap(c => c.items).find(f => f.name === name);
-    return obj?.emoji || '🍽️';
+    if (obj) return obj.emoji;
+    
+    const custom = customFoods.find(f => f.name === name);
+    return custom?.emoji || '🍽️';
 };
 
 const WeekNavigator: React.FC<{ 
@@ -100,10 +104,11 @@ const LogMealView: React.FC<{
     onSave: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => void, 
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     onFoodClick?: (food: Food) => void;
+    onAddCustomFood?: (name: string) => void;
     baseColor: string;
     date: string;
     setDate: (date: string) => void;
-}> = ({ recipes, triedFoods, customFoods = [], onSave, onCreateRecipe, onFoodClick, baseColor, date, setDate }) => {
+}> = ({ recipes, triedFoods, customFoods = [], onSave, onCreateRecipe, onFoodClick, onAddCustomFood, baseColor, date, setDate }) => {
     const [step, setStep] = useState<'SELECT' | 'REVIEW'>('SELECT');
     const [meal, setMeal] = useState<RecipeFilter>('lunch');
     
@@ -120,8 +125,12 @@ const LogMealView: React.FC<{
     const [presetName, setPresetName] = useState('');
 
     const filteredFoods = useMemo(() => {
-        return (flatFoodList as string[]).filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
-    }, [searchQuery]);
+        const all = [...flatFoodList, ...customFoods.map(f => f.name)];
+        // Remove duplicates and sort? For now just filter.
+        // flatFoodList is standard, customFoods are user added.
+        // We should deduplicate if custom food overrides standard name (though modal prevents exact dupes usually).
+        return Array.from(new Set(all)).filter(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
+    }, [searchQuery, customFoods]);
 
     const toggleFood = (food: string) => {
         const newSet = new Set(selectedFoods);
@@ -142,7 +151,9 @@ const LogMealView: React.FC<{
         const newSet = new Set(selectedFoods);
         const newData = { ...itemData };
 
-        (flatFoodList as string[]).forEach(food => {
+        const all = [...flatFoodList, ...customFoods.map(f => f.name)];
+
+        all.forEach(food => {
             const foodLower = food.toLowerCase();
             if (ingredients.some(i => i.toLowerCase().includes(foodLower))) {
                 newSet.add(food);
@@ -263,32 +274,58 @@ const LogMealView: React.FC<{
                     <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-white relative">
                         {activeTab === 'foods' ? (
                             <>
-                                <div className="relative mb-3">
-                                    <Icon name="search" className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Search foods..." 
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className={`w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
-                                    />
+                                <div className="flex gap-2 mb-3">
+                                    <div className="relative flex-1">
+                                        <Icon name="search" className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search foods..." 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className={`w-full pl-9 rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`}
+                                        />
+                                    </div>
+                                    {onAddCustomFood && (
+                                        <button 
+                                            onClick={() => onAddCustomFood(searchQuery)}
+                                            className={`flex-shrink-0 bg-${baseColor}-600 text-white p-2 rounded-md shadow-sm hover:bg-${baseColor}-700 transition-colors flex items-center justify-center`}
+                                            title="Add Custom Food"
+                                        >
+                                            <Icon name="plus" className="w-5 h-5" />
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {filteredFoods.map((food: string) => {
-                                        const isSelected = selectedFoods.has(food);
-                                        return (
+                                {filteredFoods.length > 0 ? (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {filteredFoods.map((food: string) => {
+                                            const isSelected = selectedFoods.has(food);
+                                            return (
+                                                <button 
+                                                    key={food} 
+                                                    onClick={() => toggleFood(food)}
+                                                    className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${isSelected ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-200 hover:border-gray-300'}`}
+                                                >
+                                                    <span className="text-xl">{getFoodEmoji(food, customFoods)}</span>
+                                                    <span className={`text-sm font-medium truncate ${isSelected ? `text-${baseColor}-900` : 'text-gray-700'}`}>{food}</span>
+                                                    {isSelected && <Icon name="check" className={`ml-auto w-4 h-4 text-${baseColor}-600`} />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <p className="text-sm text-gray-500 mb-4">No foods found matching "{searchQuery}"</p>
+                                        {onAddCustomFood && searchQuery && (
                                             <button 
-                                                key={food} 
-                                                onClick={() => toggleFood(food)}
-                                                className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${isSelected ? `bg-${baseColor}-50 border-${baseColor}-500 ring-1 ring-${baseColor}-500` : 'bg-white border-gray-200 hover:border-gray-300'}`}
+                                                onClick={() => onAddCustomFood(searchQuery)}
+                                                className={`inline-flex items-center gap-2 px-4 py-2 bg-${baseColor}-600 text-white rounded-md shadow-sm hover:bg-${baseColor}-700 transition-colors text-sm font-medium`}
                                             >
-                                                <span className="text-xl">{getFoodEmoji(food)}</span>
-                                                <span className={`text-sm font-medium truncate ${isSelected ? `text-${baseColor}-900` : 'text-gray-700'}`}>{food}</span>
-                                                {isSelected && <Icon name="check" className={`ml-auto w-4 h-4 text-${baseColor}-600`} />}
+                                                <Icon name="plus-circle" className="w-4 h-4" />
+                                                Add "{searchQuery}"
                                             </button>
-                                        );
-                                    })}
-                                </div>
+                                        )}
+                                    </div>
+                                )}
                             </>
                         ) : (
                             <div className="space-y-3">
@@ -323,7 +360,7 @@ const LogMealView: React.FC<{
                             ) : 
                                 Array.from(selectedFoods).map((food: any) => (
                                     <button key={food} onClick={() => toggleFood(food as string)} className="relative shrink-0 w-11 h-11 bg-white rounded-full flex items-center justify-center border-2 border-gray-100 shadow-sm animate-popIn">
-                                        <span className="text-xl leading-none">{getFoodEmoji(food as string)}</span>
+                                        <span className="text-xl leading-none">{getFoodEmoji(food as string, customFoods)}</span>
                                         <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5"><Icon name="x" className="w-2 h-2 text-white" /></div>
                                     </button>
                                 ))
@@ -356,7 +393,7 @@ const LogMealView: React.FC<{
                                     <div key={fName} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white shadow-sm ${config.color}`}>
                                         <div className="flex items-center justify-between p-3">
                                             <div className="flex items-center gap-3">
-                                                <span className="text-2xl">{getFoodEmoji(fName)}</span>
+                                                <span className="text-2xl">{getFoodEmoji(fName, customFoods)}</span>
                                                 <span className="font-bold text-gray-800">{fName}</span>
                                             </div>
                                             <div className="flex bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
@@ -475,6 +512,7 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
     onBatchLog,
     onCreateRecipe,
     onFoodClick,
+    onAddCustomFood,
     onScanBarcode,
     baseColor = 'teal'
 }) => {
@@ -692,6 +730,7 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
                     onSave={onBatchLog}
                     onCreateRecipe={onCreateRecipe}
                     onFoodClick={onFoodClick}
+                    onAddCustomFood={onAddCustomFood}
                     baseColor={baseColor}
                     date={planDate}
                     setDate={setPlanDate}

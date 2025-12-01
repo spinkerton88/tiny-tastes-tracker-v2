@@ -12,13 +12,14 @@ interface OpenFoodFactsResponse {
     status: number;
     product: {
         product_name: string;
+        brands?: string;
         ingredients_text: string;
         ingredients_tags?: string[];
         image_url?: string;
     };
 }
 
-export const fetchProductIngredients = async (barcode: string): Promise<{ productName: string; matchedFoods: string[]; imageUrl?: string } | null> => {
+export const fetchProductIngredients = async (barcode: string): Promise<{ productName: string; brand?: string; ingredientsText: string; matchedFoods: string[]; imageUrl?: string } | null> => {
     try {
         const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
         const data: OpenFoodFactsResponse = await response.json();
@@ -53,6 +54,8 @@ export const fetchProductIngredients = async (barcode: string): Promise<{ produc
 
         return {
             productName: product.product_name || "Unknown Snack",
+            brand: product.brands,
+            ingredientsText: product.ingredients_text || "",
             matchedFoods: Array.from(matchedFoods),
             imageUrl: product.image_url
         };

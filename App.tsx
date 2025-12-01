@@ -30,7 +30,7 @@ import TutorialModal from './components/modals/TutorialModal';
 import { useAppMode } from './hooks/useAppMode';
 import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData } from './types';
 import { DEFAULT_MILESTONES, BADGES_LIST, flatFoodList } from './constants';
-import { fetchProductByBarcode, mapIngredientsToFoods } from './services/barcodeService';
+import { fetchProductIngredients } from './services/openFoodFactsService';
 
 // Lazy load the scanner modal to prevent initialization errors if the library isn't fully ready
 const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal'));
@@ -204,37 +204,32 @@ const App: React.FC = () => {
       setModalState({ type: null });
       
       try {
-          const product = await fetchProductByBarcode(barcode);
+          const product = await fetchProductIngredients(barcode);
 
           if (!product) {
                alert(`Product not found or error fetching details.`);
                return;
           }
-
-          // Merge standard foods with user's custom foods for lookup
-          const allKnownFoods = [...flatFoodList, ...customFoods.map(f => f.name)];
-          const matchedFoods = mapIngredientsToFoods(product.ingredientsText, allKnownFoods);
           
           // Logic Upgrade: 
-          // 1. If it maps perfectly to 1 raw ingredient (e.g. Scanned "Bag of Carrots" -> "CARROTS"), use that.
-          // 2. Otherwise, treat it as a "Custom Food Product" (Pouch, Snack, Blend) and open the Custom Food modal
-          //    with data pre-filled for AI analysis.
+          // 1. If we matched exactly 1 food and the name is somewhat similar, assume it's a raw ingredient.
+          // 2. Otherwise, treat it as a "Custom Food Product" (Pouch, Snack, Blend).
           
-          if (matchedFoods.length === 1 && matchedFoods[0].toLowerCase() === product.name.toLowerCase()) {
+          if (product.matchedFoods.length === 1 && product.productName.toLowerCase().includes(product.matchedFoods[0].toLowerCase())) {
               // Perfect single match
               setModalState({ 
                   type: 'LOG_MEAL', 
-                  initialFoods: matchedFoods 
+                  initialFoods: product.matchedFoods 
               });
           } else {
               // Complex product or partial match -> Open Custom Food Modal for AI Analysis
               setModalState({ 
                   type: 'ADD_CUSTOM_FOOD', 
                   scannedData: {
-                      name: product.name,
+                      name: product.productName,
                       brand: product.brand,
                       ingredientsText: product.ingredientsText,
-                      image: product.image
+                      image: product.imageUrl
                   }
               });
           }
@@ -318,6 +313,7 @@ const App: React.FC = () => {
                   onBatchLog={handleBatchLogMeal}
                   onCreateRecipe={handleCreateRecipe}
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
+                  onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
                   onScanBarcode={mode === 'TODDLER' ? () => setModalState({ type: 'SCAN_BARCODE' }) : undefined}
                   baseColor={baseColorName}
               />;
@@ -493,6 +489,7 @@ const App: React.FC = () => {
                   initialFoods={modalState.initialFoods}
                   customFoods={customFoods}
                   enableScanner={mode === 'TODDLER'}
+                  onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
                />;
           case 'SCAN_BARCODE':
               return (

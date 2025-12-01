@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Recipe, RecipeFilter, LoggedItemData, FoodStatus, CustomFood } from '../../types';
 import { flatFoodList, allFoods, STATUS_CONFIG, BEHAVIOR_TAGS } from '../../constants';
-import { fetchProductByBarcode, mapIngredientsToFoods } from '../../services/barcodeService';
+import { fetchProductIngredients } from '../../services/openFoodFactsService';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import Icon from '../ui/Icon';
 
@@ -111,17 +111,14 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
     const handleLocalBarcodeScan = async (code: string) => {
         setIsScanning(false);
         try {
-            const product = await fetchProductByBarcode(code);
-            if (product) {
-                const all = [...flatFoodList, ...customFoods.map(f => f.name)];
-                const matchedFoods = mapIngredientsToFoods(product.ingredientsText, all);
-                
-                if (matchedFoods.length > 0) {
+            const result = await fetchProductIngredients(code);
+            if (result) {
+                if (result.matchedFoods.length > 0) {
                      const newSet = new Set(selectedFoods);
                      const newData = { ...itemData };
                      let addedCount = 0;
 
-                     matchedFoods.forEach(food => {
+                     result.matchedFoods.forEach(food => {
                          if (!newSet.has(food)) {
                              newSet.add(food);
                              if (!newData[food]) {
@@ -134,13 +131,13 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                      setSelectedFoods(newSet);
                      setItemData(newData);
                      
-                     setPresetName(product.name);
+                     setPresetName(result.productName);
                      setSaveAsPreset(true);
                      setActiveTab('foods');
 
-                     alert(`Found ${addedCount} ingredients in ${product.name}!`);
+                     alert(`Found ${addedCount} ingredients in ${result.productName}!`);
                 } else {
-                    alert(`Scanned ${product.name} but couldn't match any specific foods to our list. Try adding custom foods manually.`);
+                    alert(`Scanned ${result.productName} but couldn't match any specific foods to our list. Try adding custom foods manually.`);
                 }
             } else {
                 alert("Product not found.");
