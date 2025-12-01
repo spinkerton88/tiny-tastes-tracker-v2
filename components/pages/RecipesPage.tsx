@@ -19,6 +19,7 @@ interface RecipesPageProps {
     onBatchLog?: (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string) => void;
     onCreateRecipe?: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'rating'>) => void;
     onFoodClick?: (food: Food) => void;
+    onScanBarcode?: () => void;
     baseColor?: string;
 }
 
@@ -437,6 +438,7 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
     onBatchLog,
     onCreateRecipe,
     onFoodClick,
+    onScanBarcode,
     baseColor = 'teal'
 }) => {
     const [activeTab, setActiveTab] = useState<'plan' | 'recipes' | 'log'>('log');
@@ -528,6 +530,11 @@ const RecipesPage: React.FC<RecipesPageProps> = ({
                              <button onClick={onShowImportRecipe} className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200" title="Import from Photo">
                                  <Icon name="camera" className="w-5 h-5"/>
                              </button>
+                             {onScanBarcode && (
+                                <button onClick={onScanBarcode} className="p-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200" title="Scan Barcode">
+                                    <Icon name="scan-barcode" className="w-5 h-5"/>
+                                </button>
+                             )}
                              <button onClick={onShowAddRecipe} className={`flex items-center gap-2 px-4 py-2 bg-${baseColor}-600 text-white rounded-lg shadow hover:bg-${baseColor}-700`}>
                                  <Icon name="plus" className="w-4 h-4"/> Add Recipe
                              </button>

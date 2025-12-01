@@ -2,6 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Recipe, RecipeFilter, LoggedItemData, FoodStatus } from '../../types';
 import { flatFoodList, allFoods, STATUS_CONFIG, BEHAVIOR_TAGS } from '../../constants';
+import { fetchProductByBarcode, mapIngredientsToFoods } from '../../services/barcodeService';
+import BarcodeScannerModal from './BarcodeScannerModal';
 import Icon from '../ui/Icon';
 
 interface LogMealModalProps {
@@ -25,6 +27,9 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFoods, setSelectedFoods] = useState<Set<string>>(new Set(initialFoods));
     
+    // Scanner State
+    const [isScanning, setIsScanning] = useState(false);
+
     // Detailed Item Data (Status + Tags)
     const [itemData, setItemData] = useState<Record<string, { status: FoodStatus; tags: Set<string> }>>({});
     
@@ -98,6 +103,48 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
         setActiveTab('foods');
     };
 
+    const handleLocalBarcodeScan = async (code: string) => {
+        setIsScanning(false);
+        try {
+            const product = await fetchProductByBarcode(code);
+            if (product) {
+                const matchedFoods = mapIngredientsToFoods(product.ingredientsText, flatFoodList);
+                
+                if (matchedFoods.length > 0) {
+                     const newSet = new Set(selectedFoods);
+                     const newData = { ...itemData };
+                     let addedCount = 0;
+
+                     matchedFoods.forEach(food => {
+                         if (!newSet.has(food)) {
+                             newSet.add(food);
+                             if (!newData[food]) {
+                                newData[food] = { status: 'eaten', tags: new Set() };
+                             }
+                             addedCount++;
+                         }
+                     });
+
+                     setSelectedFoods(newSet);
+                     setItemData(newData);
+                     
+                     setPresetName(product.name);
+                     setSaveAsPreset(true);
+                     setActiveTab('foods');
+
+                     alert(`Found ${addedCount} ingredients in ${product.name}!`);
+                } else {
+                    alert(`Scanned ${product.name} but couldn't match any specific foods to our list. Try adding custom foods manually.`);
+                }
+            } else {
+                alert("Product not found.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error scanning barcode.");
+        }
+    };
+
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -152,7 +199,12 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                             {step === 'SELECT' ? 'Select foods' : 'How did it go?'}
                         </p>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><Icon name="x" /></button>
+                    <div className="flex items-center gap-2">
+                         <button onClick={() => setIsScanning(true)} className={`text-${baseColor}-600 bg-${baseColor}-50 hover:bg-${baseColor}-100 p-2 rounded-full transition-colors`} title="Scan Barcode">
+                            <Icon name="scan-barcode" className="w-5 h-5" />
+                        </button>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2"><Icon name="x" /></button>
+                    </div>
                 </div>
 
                 {/* --- STEP 1: SELECT --- */}
@@ -342,6 +394,13 @@ const LogMealModal: React.FC<LogMealModalProps> = ({ recipes, onClose, onSave, o
                     </div>
                 )}
             </div>
+
+            {isScanning && (
+                <BarcodeScannerModal 
+                    onClose={() => setIsScanning(false)}
+                    onScanSuccess={handleLocalBarcodeScan}
+                />
+            )}
         </div>
     );
 };

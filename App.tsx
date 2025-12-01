@@ -29,8 +29,8 @@ import TutorialModal from './components/modals/TutorialModal';
 
 import { useAppMode } from './hooks/useAppMode';
 import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData } from './types';
-import { DEFAULT_MILESTONES, BADGES_LIST } from './constants';
-import { fetchProductIngredients } from './services/openFoodFactsService';
+import { DEFAULT_MILESTONES, BADGES_LIST, flatFoodList } from './constants';
+import { fetchProductByBarcode, mapIngredientsToFoods } from './services/barcodeService';
 
 // Lazy load the scanner modal to prevent initialization errors if the library isn't fully ready
 const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal'));
@@ -204,22 +204,25 @@ const App: React.FC = () => {
       setModalState({ type: null });
       
       try {
-          // Show quick loading toast/alert if needed
-          const productData = await fetchProductIngredients(barcode);
+          const product = await fetchProductByBarcode(barcode);
+
+          if (!product) {
+               alert(`Product not found or error fetching details.`);
+               return;
+          }
+
+          const matchedFoods = mapIngredientsToFoods(product.ingredientsText, flatFoodList);
           
-          if (!productData || productData.matchedFoods.length === 0) {
-              alert(`Found product "${productData?.productName || 'Unknown'}" but couldn't match any specific foods to our list. Try adding custom foods manually.`);
+          if (matchedFoods.length === 0) {
+              alert(`Found product "${product.name}" but couldn't match any specific foods to our list. Try adding custom foods manually.`);
               return;
           }
 
           // Open Log Meal Modal with pre-selected foods
           setModalState({ 
               type: 'LOG_MEAL', 
-              initialFoods: productData.matchedFoods 
+              initialFoods: matchedFoods 
           });
-          
-          // Optional: Show a success message about what was found
-          // alert(`Found: ${productData.matchedFoods.join(', ')}`);
 
       } catch (error) {
           console.error(error);
@@ -300,6 +303,7 @@ const App: React.FC = () => {
                   onBatchLog={handleBatchLogMeal}
                   onCreateRecipe={handleCreateRecipe}
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
+                  onScanBarcode={() => setModalState({ type: 'SCAN_BARCODE' })}
                   baseColor={baseColorName}
               />;
           case 'learn':
