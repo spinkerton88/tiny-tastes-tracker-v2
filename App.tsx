@@ -7,6 +7,7 @@ import LearnPage from './components/pages/LearnPage';
 import ProfilePage from './components/pages/LogPage';
 import ToddlerPickyEater from './components/pages/ToddlerPickyEater';
 import BalanceDashboard from './components/pages/BalanceDashboard';
+import NewbornPage from './components/pages/NewbornPage';
 
 import FoodLogModal from './components/modals/FoodLogModal';
 import HowToServeModal from './components/modals/HowToServeModal';
@@ -27,7 +28,7 @@ import LogMealModal from './components/modals/LogMealModal';
 import TutorialModal from './components/modals/TutorialModal';
 
 import { useAppMode } from './hooks/useAppMode';
-import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem } from './types';
+import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem, FeedLog, DiaperLog, SleepLog } from './types';
 import { DEFAULT_MILESTONES, BADGES_LIST, flatFoodList } from './constants';
 import { fetchProductIngredients } from './services/openFoodFactsService';
 
@@ -82,6 +83,20 @@ const App: React.FC = () => {
       return saved ? JSON.parse(saved) : {};
   });
 
+  // Newborn Mode Logs
+  const [feedLogs, setFeedLogs] = useState<FeedLog[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-feedLogs');
+      return saved ? JSON.parse(saved) : [];
+  });
+  const [diaperLogs, setDiaperLogs] = useState<DiaperLog[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-diaperLogs');
+      return saved ? JSON.parse(saved) : [];
+  });
+  const [sleepLogs, setSleepLogs] = useState<SleepLog[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-sleepLogs');
+      return saved ? JSON.parse(saved) : [];
+  });
+
   const [currentPage, setCurrentPage] = useState('tracker');
   const [modalState, setModalState] = useState<ModalState>({ type: null });
 
@@ -100,6 +115,11 @@ const App: React.FC = () => {
   // Shopping List Persistence Effects
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-manualShopping', JSON.stringify(manualShoppingItems)), [manualShoppingItems]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-shoppingChecked', JSON.stringify(shoppingCheckedItems)), [shoppingCheckedItems]);
+
+  // Newborn Persistence
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-feedLogs', JSON.stringify(feedLogs)), [feedLogs]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-diaperLogs', JSON.stringify(diaperLogs)), [diaperLogs]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-sleepLogs', JSON.stringify(sleepLogs)), [sleepLogs]);
 
   // Handle Mode Change redirects
   useEffect(() => {
@@ -125,6 +145,7 @@ const App: React.FC = () => {
       }
   };
 
+  // ... (existing helper functions like checkBadges, handleSaveFoodLog, etc.)
   const checkBadges = (currentTried: TriedFoodLog[]) => {
       const triedCount = new Set(currentTried.map(f => f.id)).size;
       const currentBadges = userProfile?.badges || BADGES_LIST;
@@ -179,7 +200,6 @@ const App: React.FC = () => {
       }
   };
 
-  // Updated to support detailed items
   const handleBatchLogMeal = (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string, strategy?: string) => {
       const newLogs: TriedFoodLog[] = items.map(item => {
           let reaction = 6; // Default to "Liked" (6/7)
@@ -216,15 +236,12 @@ const App: React.FC = () => {
   };
 
   const handleUpdateBatchLog = (originalDate: string, originalMeal: string, items: LoggedItemData[], newDate: string, newMeal: string, photo?: string, notes?: string, strategy?: string) => {
-      // 1. Filter out all old logs for that date/meal combination
       const filteredTried = triedFoods.filter(f => !(f.date === originalDate && f.meal === originalMeal));
       
-      // 2. Generate new logs
       const newLogs: TriedFoodLog[] = items.map(item => {
           let reaction = 6;
           let moreThanOneBite = true;
           
-          // Re-use logic for reaction based on status/consumption
           if (item.status === 'refused' || item.consumption === 'none') {
               reaction = 1;
               moreThanOneBite = false;
@@ -250,13 +267,11 @@ const App: React.FC = () => {
           };
       });
 
-      // 3. Save
       const updatedTried = [...filteredTried, ...newLogs];
       setTriedFoods(updatedTried);
   };
 
   const handleBarcodeScan = async (barcode: string) => {
-      // Close scan modal immediately
       setModalState({ type: null });
       
       try {
@@ -268,7 +283,6 @@ const App: React.FC = () => {
           }
           
           if (product.matchedFoods.length === 1 && product.productName.toLowerCase().includes(product.matchedFoods[0].toLowerCase())) {
-              // Perfect single match
               setModalState({ 
                   type: 'LOG_MEAL', 
                   initialFoods: product.matchedFoods 
@@ -331,7 +345,6 @@ const App: React.FC = () => {
           const newPlan = { ...prev };
           if (newPlan[date]) {
               delete newPlan[date][meal];
-              // Cleanup empty dates
               if (Object.keys(newPlan[date]).length === 0) {
                   delete newPlan[date];
               }
@@ -348,7 +361,6 @@ const App: React.FC = () => {
       setSavedStrategies(prev => prev.filter(s => s.id !== id));
   };
 
-  // --- Shopping List Handlers ---
   const handleAddManualItem = (name: string) => {
       const newItem: ManualShoppingItem = {
           id: crypto.randomUUID(),
@@ -372,30 +384,33 @@ const App: React.FC = () => {
 
   const handleClearCheckedItems = () => {
       if (window.confirm("Clear all checked items? This will remove checked manual items.")) {
-          // 1. Remove checked manual items with robust string matching
           setManualShoppingItems(prev => prev.filter(item => {
               const normalizedItem = item.name.toLowerCase().trim();
-              
-              // Check exact match first
               if (shoppingCheckedItems[item.name]) return false;
-              
-              // Check fuzzy match against all checked keys
-              // This handles cases where AI might have pluralized or slightly altered the displayed name
               const isChecked = Object.keys(shoppingCheckedItems).some(key => {
                   const normalizedKey = key.toLowerCase().trim();
-                  // Check for exact, plural, or singular matches
                   return normalizedKey === normalizedItem || 
                          normalizedKey === normalizedItem + 's' || 
                          (normalizedKey.endsWith('s') && normalizedKey.slice(0, -1) === normalizedItem);
               });
-              
-              // Keep item if NOT checked
               return !isChecked;
           }));
-          
-          // 2. Clear checked status (so plan items show as unchecked next time)
           setShoppingCheckedItems({});
       }
+  };
+
+  // --- Newborn Action Handlers ---
+  const handleLogFeed = (feed: FeedLog) => {
+      setFeedLogs(prev => [feed, ...prev]);
+  };
+  const handleLogDiaper = (diaper: DiaperLog) => {
+      setDiaperLogs(prev => [diaper, ...prev]);
+  };
+  const handleLogSleep = (sleep: SleepLog) => {
+      setSleepLogs(prev => [sleep, ...prev]);
+  };
+  const handleUpdateSleepLog = (updatedLog: SleepLog) => {
+      setSleepLogs(prev => prev.map(log => log.id === updatedLog.id ? updatedLog : log));
   };
 
   const renderPage = () => {
@@ -483,13 +498,22 @@ const App: React.FC = () => {
                   baseColor={baseColorName}
               />;
           case 'feed':
-          case 'diapers':
+          case 'diapers': // Keep ID for legacy persistence safety, but UI links to health_check in utils.ts
+          case 'health_check':
+          case 'sleep_growth':
           case 'growth':
-              return (
-                  <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                      <p>Feature coming soon for Newborn Mode!</p>
-                  </div>
-              );
+              return <NewbornPage 
+                  currentPage={currentPage}
+                  feedLogs={feedLogs}
+                  diaperLogs={diaperLogs}
+                  sleepLogs={sleepLogs}
+                  onLogFeed={handleLogFeed}
+                  onLogDiaper={handleLogDiaper}
+                  onLogSleep={handleLogSleep}
+                  onUpdateSleepLog={handleUpdateSleepLog}
+                  baseColor={baseColorName}
+                  userProfile={userProfile}
+              />;
           default:
               return <div className="p-4">Page not found</div>;
       }
@@ -499,6 +523,7 @@ const App: React.FC = () => {
       const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
 
       switch (modalState.type) {
+          // ... (keep all existing cases)
           case 'LOG_FOOD':
               const existingLog = triedFoods.find(l => l.id === modalState.food.name);
               return <FoodLogModal 

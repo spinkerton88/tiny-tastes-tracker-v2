@@ -62,6 +62,44 @@ export interface TriedFoodLog extends FoodLogData {
     id: string; // The food name
 }
 
+// --- Newborn Mode Types ---
+export interface FeedLog {
+    id: string;
+    type: 'breast' | 'bottle';
+    side?: 'left' | 'right'; // for breast
+    amount?: number; // oz for bottle
+    durationSeconds?: number; // for breast
+    timestamp: string;
+    notes?: string;
+}
+
+export interface DiaperLog {
+    id: string;
+    type: 'wet' | 'dirty' | 'mixed';
+    timestamp: string;
+    notes?: string;
+}
+
+export interface SleepLog {
+    id: string;
+    type: 'sleep';
+    startTime: string;
+    endTime?: string;
+    notes?: string;
+}
+
+export interface DailyLogAnalysis {
+    overall_status: "Normal" | "Watch Closely" | "Contact Pediatrician";
+    data_points: {
+        metric: string;
+        value_logged: number;
+        normal_range: string;
+        status: "Normal" | "Low" | "High";
+        guidance: string;
+    }[];
+    disclaimer_warning: string;
+}
+
 export interface Recipe {
     id: string;
     title: string;

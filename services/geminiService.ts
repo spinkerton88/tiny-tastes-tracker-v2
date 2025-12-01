@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Recipe, FoodSubstitute, CustomFoodDetails } from '../types';
+import { Recipe, FoodSubstitute, CustomFoodDetails, DailyLogAnalysis } from '../types';
 import { flatFoodList } from '../constants';
 
 const API_KEY = process.env.API_KEY;
@@ -424,4 +424,119 @@ Output JSON:
     console.error("Error getting nutrient gap suggestions:", error);
     throw new Error("Failed to get suggestions.");
   }
+};
+
+export interface SleepPrediction {
+    prediction_status: "Ready" | "Insufficient Data";
+    next_sweet_spot_start: string;
+    average_wake_window_minutes: number;
+    reasoning_summary: string;
+    troubleshooting_tip: string;
+}
+
+export const predictSleepWindow = async (currentTime: string, lastWakeTime: string, sleepLogSummary: string): Promise<SleepPrediction> => {
+    try {
+        const systemInstruction = `System Role: You are a pediatric sleep science assistant named "Sage." Your goal is to identify a stable wake window pattern and predict the most biologically optimal time for a baby to fall asleep naturally, known as the "Sleep Sweet Spot." Base your recommendations on typical infant sleep physiology and the provided recent data.
+
+Input:
+- Current Time: [HH:MM AM/PM]
+- Last Wake Time: [The timestamp of the most recent wake-up]
+- Sleep Log Data (Past 48 hrs): [Array of recent wake-up/nap patterns]
+
+Task:
+1. Analyze the provided sleep data (which is in 24-hour time format).
+2. Calculate the average, minimum, and maximum **Wake Window** (time between waking and next sleep).
+3. Determine a recommended 15-minute "Sleep Sweet Spot" start time for the next nap, targeting the average wake window found.
+4. Provide a supportive explanation and one troubleshooting tip.
+
+JSON Structure:
+{
+  "prediction_status": "Ready" | "Insufficient Data",
+  "next_sweet_spot_start": "HH:MM AM/PM",
+  "average_wake_window_minutes": Number,
+  "reasoning_summary": "Based on the last X windows, the baby's average wake window is Y minutes.",
+  "troubleshooting_tip": "A brief tip if the baby misses the sweet spot."
+}`;
+
+        const prompt = `Current Time: ${currentTime}\nLast Wake Time: ${lastWakeTime}\nSleep Log Data: ${sleepLogSummary}`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [{ parts: [{ text: prompt }] }],
+            config: {
+                systemInstruction: systemInstruction,
+                responseMimeType: "application/json",
+            },
+        });
+
+        const text = response.text.trim();
+        return JSON.parse(text);
+    } catch (error) {
+        console.error("Error predicting sleep window:", error);
+        throw new Error("Failed to predict sleep window.");
+    }
+};
+
+export const analyzeDailyLogTotals = async (ageDescription: string, data: { wetDiapers: number, dirtyDiapers: number, totalFeedOz?: number, totalFeeds: number }): Promise<DailyLogAnalysis> => {
+    try {
+        const systemInstruction = `System Role: You are a pediatric log analyst named "Sage." Your priority is to ensure the logged data is within expected benchmarks for infant safety and development (0-6 months). Do not give medical advice. Only provide data comparison and guidance for when to contact a doctor. You must rely on real-time data from authoritative sources like the WHO, AAP, or CDC. 
+
+Input:
+- Baby Age: ${ageDescription}
+- Daily Totals (Last 24 hours): ${JSON.stringify(data)}
+
+Task:
+1. Compare the input data against the established safety minimums and averages for a baby of this age for Wet Diapers, Dirty Diapers, and Total Fluid Intake (if available) or Total Feeds.
+2. Determine if any value falls into a "Red Flag" (below minimum requirement) or "Normal" range.
+3. Structure the output clearly with simple statuses.
+
+JSON Structure:
+{
+  "overall_status": "Normal" | "Watch Closely" | "Contact Pediatrician",
+  "data_points": [
+    {
+      "metric": "Wet Diapers",
+      "value_logged": Number,
+      "normal_range": "Minimum X to Y per day",
+      "status": "Normal" | "Low",
+      "guidance": "Encourage more feeds if output is low."
+    },
+    {
+      "metric": "Dirty Diapers",
+      "value_logged": Number,
+      "normal_range": "Minimum X per day",
+      "status": "Normal" | "Low" | "High",
+      "guidance": "Brief, non-alarming guidance."
+    }
+    // Include Fluid Intake or Total Feeds metric if applicable
+  ],
+  "disclaimer_warning": "This tool is for informational comparison only. Always contact your doctor immediately with health concerns."
+}`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [{ parts: [{ text: "Analyze daily logs" }] }],
+            config: {
+                systemInstruction: systemInstruction,
+                tools: [{googleSearch: {}}],
+                responseMimeType: "application/json",
+            },
+        });
+
+        // The tool result text might contain the JSON we need, but sometimes it comes in parts.
+        // The standard response.text accessor should handle concatenation.
+        let text = response.text;
+        
+        // Remove markdown formatting if present
+        if (text && text.startsWith('```json')) {
+            text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (text && text.startsWith('```')) {
+            text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        return JSON.parse(text || "{}");
+    } catch (error) {
+        console.error("Error analyzing daily logs:", error);
+        throw new Error("Failed to analyze daily logs.");
+    }
 };

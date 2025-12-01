@@ -81,8 +81,8 @@ export const getModeConfig = (mode: AppMode): AppModeConfig => {
                 borderColor: 'border-rose-200',
                 navItems: [
                     { id: 'feed', label: 'Log Feed', icon: 'milk' },
-                    { id: 'diapers', label: 'Diapers', icon: 'baby' },
-                    { id: 'growth', label: 'Growth', icon: 'ruler' },
+                    { id: 'health_check', label: 'Is it Normal?', icon: 'activity' },
+                    { id: 'sleep_growth', label: 'Sleep & Growth', icon: 'ruler' },
                     { id: 'learn', label: 'Learn', icon: 'book-open' },
                     { id: 'profile', label: 'Profile', icon: 'user' }
                 ],
