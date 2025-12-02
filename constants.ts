@@ -33,7 +33,7 @@ export const GREEN_VEGETABLES = [
 
 export const FOOD_COLORS: Record<string, string> = {
     // RED
-    "TOMATOES": "red", "STRAWBERRIES": "red", "RASPBERRIES": "red", "APPLES": "red", "WATERMELON": "red", "RED PEPPER": "red", "CHERRIES": "red", "POMEGRANATE": "red", "BEETS": "red", // Beets can be red/purple, usually distinct but red fits rainbow often
+    "TOMATOES": "red", "STRAWBERRIES": "red", "RASPBERRIES": "red", "APPLES": "red", "WATERMELON": "red", "RED PEPPER": "red", "CHERRIES": "red", "POMEGRANATE": "red", "BEETS": "red",
     
     // ORANGE
     "CARROTS": "orange", "SWEET POTATO": "orange", "ORANGE": "orange", "MANGO": "orange", "PEACHES": "orange", "CANTALOUPE": "orange", "PAPAYA": "orange", "PUMPKIN": "orange", "BUTTERNUT SQUASH": "orange", "APRICOT": "orange",
@@ -49,7 +49,6 @@ export const FOOD_COLORS: Record<string, string> = {
 };
 
 export const BADGES_LIST: Badge[] = [
-    // Category Specific
     { 
         id: 'green_machine', 
         title: 'The Green Machine', 
@@ -74,7 +73,6 @@ export const BADGES_LIST: Badge[] = [
         isUnlocked: false,
         color: 'text-blue-600 bg-blue-100 border-blue-200'
     },
-    // Numeric Milestones
     { id: 'tried_10', title: '10 Foods Down!', description: 'You are off to a great start.', icon: 'star', isUnlocked: false, color: 'text-teal-600 bg-teal-100 border-teal-200' },
     { id: 'tried_20', title: '20 Foods Tried', description: 'Building that palate!', icon: 'utensils', isUnlocked: false, color: 'text-indigo-600 bg-indigo-100 border-indigo-200' },
     { id: 'tried_30', title: '30 Foods Milestone', description: 'Getting adventurous.', icon: 'compass', isUnlocked: false, color: 'text-violet-600 bg-violet-100 border-violet-200' },
@@ -84,7 +82,6 @@ export const BADGES_LIST: Badge[] = [
     { id: 'tried_70', title: '70 Foods', description: 'Serious foodie in the making.', icon: 'chef-hat', isUnlocked: false, color: 'text-rose-600 bg-rose-100 border-rose-200' },
     { id: 'tried_80', title: '80 Foods', description: 'Only 20 to go!', icon: 'flame', isUnlocked: false, color: 'text-orange-600 bg-orange-100 border-orange-200' },
     { id: 'tried_90', title: '90 Foods', description: 'The finish line is in sight.', icon: 'zap', isUnlocked: false, color: 'text-yellow-600 bg-yellow-100 border-yellow-200' },
-    // Completion
     { 
         id: '100_club', 
         title: 'The 100 Club', 
@@ -122,7 +119,7 @@ export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
     // Eggs
     "EGGS": ["Egg"],
     
-    // Wheat/Gluten (Simplified to Wheat for Top 9 tracking)
+    // Wheat/Gluten
     "KAMUT": ["Wheat"],
     "PASTA": ["Wheat"],
     "COUSCOUS": ["Wheat"],
@@ -130,7 +127,7 @@ export const FOOD_ALLERGY_MAPPING: Record<string, string[]> = {
     "FARRO": ["Wheat"],
     "BULGUR": ["Wheat"],
     "FREEKEH": ["Wheat"],
-    "WAFFLES": ["Wheat", "Egg", "Dairy", "Lactose"], 
+    "WAFFLES": ["Wheat", "Egg", "Dairy"], 
     "HEALTHY MUFFINS": ["Wheat", "Egg"], 
     "GNOCCHI": ["Wheat"],
     "TORTILLA": ["Wheat"],
@@ -386,125 +383,97 @@ export const allFoods: FoodCategory[] = [
 export const flatFoodList = allFoods.flatMap(cat => cat.items.map(item => item.name));
 export const totalFoodCount = flatFoodList.length;
 
+// Updated foodGuideData to cover more items
 export const foodGuideData: { [key: string]: { allergyRisk: string; chokingRisk: string; serve6to8: string; serve9to12: string; } } = {
     "ASPARAGUS": { allergyRisk: "Low", chokingRisk: "Low (when soft-cooked)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Steam or roast whole asparagus spears until very tender. Offer the whole spear for baby to gnaw on. The fibrous end is tough to chew through, reducing risk.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving whole, soft-cooked spears. As pincer grasp develops, you can chop the soft-cooked tips and stems into small, bite-sized pieces.</p>" },
+    "AVOCADO": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Offer large, ripe wedges that baby can grip with their whole hand (palmar grasp). You can roll the wedge in hemp seeds or crushed cereal to make it less slippery.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut into smaller, bite-sized chunks as baby develops their pincer grasp.</p>" },
+    "BANANA": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Offer half a peeled banana. You can leave a bit of peel on the bottom to help baby grip it (wash peel first). Or push a finger down the center to split it into natural thirds.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut into small slices or chunks.</p>" },
+    "SWEET POTATO": { allergyRisk: "Low", chokingRisk: "Low (when soft)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Steam or roast wedges until very soft. They should be easily squashed between your fingers.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut into smaller cubes. You can also mash it.</p>" },
+    "CARROTS": { allergyRisk: "Low", chokingRisk: "High (if raw)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p><strong>MUST be cooked soft.</strong> Steam or roast whole carrots until they are completely soft. Do not serve raw.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut cooked carrots into small pieces. Grated raw carrot is also okay.</p>" },
+    "BROCCOLI": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Steam large florets until soft. The 'handle' (stalk) is easy for babies to hold.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chop into smaller pieces, including the florets.</p>" },
+    "BUTTERNUT SQUASH": { allergyRisk: "Low", chokingRisk: "Low (cooked)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Roast large crescent-shaped wedges until soft. Remove seeds and skin. The natural curve makes it easy for baby to hold.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut into small, bite-sized cubes.</p>" },
+    "CAULIFLOWER": { allergyRisk: "Low", chokingRisk: "Low (cooked)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Steam large florets until soft. Baby can hold the stem.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chop into small pieces.</p>" },
+    "ZUCCHINI": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Steam large spears or wedges until soft. If the skin is tough, peel it off in stripes.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chopped pieces or half-moons.</p>" },
+    "BELL PEPPERS": { allergyRisk: "Low", chokingRisk: "Low (cooked)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Roast large quarters until skin peels off easily. Remove skin and serve soft strips.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chopped cooked peppers.</p>" },
+    "EGGS": { allergyRisk: "High (Common Allergen)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve omelet strips roughly the size of two adult fingers. Ensure egg is fully cooked.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Scrambled eggs or hard-boiled egg pieces.</p>" },
+    "PEANUT BUTTER": { allergyRisk: "High (Common Allergen)", chokingRisk: "High (if thick)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p><strong>Never serve plain thick peanut butter.</strong> Thin it out with water, breastmilk, or formula, or stir it into oatmeal/yogurt.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Spread thinly on toast strips.</p>" },
+    "YOGURT": { allergyRisk: "High (Dairy)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve plain, whole-milk yogurt on a pre-loaded spoon for baby to grab, or let them use their hands.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue with pre-loaded spoons or practice dipping fruit.</p>" },
+    "SALMON": { allergyRisk: "High (Fish)", chokingRisk: "Low (bones)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Cook until well-done and flake it to ensure there are absolutely no bones. Serve large flakes.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue serving flakes or mix into mashed potatoes.</p>" },
+    "CHICKEN": { allergyRisk: "Low", chokingRisk: "Medium", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve a large drumstick (skin and cartilage removed) for baby to gnaw on, or slow-cooked shredded thigh meat.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chopped pieces of soft chicken or ground chicken.</p>" },
+    "APPLE": { allergyRisk: "Low", chokingRisk: "High (raw)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p><strong>Cook until soft.</strong> Steam or bake wedges. Do not serve raw slices.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Grated raw apple or very thin slices.</p>" },
+    "BLUEBERRIES": { allergyRisk: "Low", chokingRisk: "High (whole)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p><strong>Flatten or quarter</strong> every single berry. Never serve whole round berries.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Continue to flatten or quarter.</p>" },
+    "STRAWBERRIES": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve large, whole berries (larger than baby's mouth) so they can gnaw on them.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chop into small pieces.</p>" },
+    "OATMEAL": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve thick enough to stick to a spoon (pre-load spoon) or roll into balls.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Baby can practice scooping with a spoon or eating oatmeal fingers.</p>" },
+    "PASTA": { allergyRisk: "High (Wheat/Egg)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Large pasta shapes like Fusilli or Penne cooked very soft. Serve plain or with a little oil/sauce.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut up spaghetti or continue with shapes. Macaroni is great for pincer grasp.</p>" },
+    "WATERMELON": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Remove seeds. Serve large rectangular strips with rind removed.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut into bite-sized pieces.</p>" },
+    "TOFU": { allergyRisk: "High (Soy)", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve large strips of firm tofu. It is soft and easy to gum.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut into cubes.</p>" },
+    "CUCUMBER": { allergyRisk: "Low", chokingRisk: "Medium", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve long, wide spears with the skin removed if it's tough. Avoid round slices.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Small pieces or thin half-moons.</p>" },
+    "CHEESE": { allergyRisk: "High (Dairy)", chokingRisk: "Medium", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Grated cheese or very thin slices. Avoid cubes.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Small pieces or shreds.</p>" },
+    "BREAD": { allergyRisk: "High (Wheat)", chokingRisk: "Medium (gummy)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Toast lightly and serve in strips. Soft bread can ball up and cause gagging, toast holds shape better.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Small pieces of toast with toppings.</p>" },
+    "BEEF, GROUND": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Cook into meatballs or logs that are easy to hold.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Crumbled ground beef.</p>" },
+    "ORANGE": { allergyRisk: "Low", chokingRisk: "Medium (membranes)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Cut into wedges with the membrane and peel removed (supremes).</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut segments into smaller pieces.</p>" },
+    "TOMATOES": { allergyRisk: "Low (Acidic)", chokingRisk: "Medium (Cherry tomatoes)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Large wedges of big tomatoes. If serving cherry tomatoes, <strong>quarter them lengthwise</strong>.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Small pieces.</p>" },
+    "PEARS": { allergyRisk: "Low", chokingRisk: "Low (if ripe)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>If very soft/ripe, serve in large halves/quarters. If hard, steam until soft.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Small bite-sized pieces.</p>" },
+    "MUSHROOMS": { allergyRisk: "Low", chokingRisk: "Medium (if rubbery)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Cook very well (sauté or steam) until soft. Serve large whole caps or large slices.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chopped cooked mushrooms.</p>" },
+    "ONION": { allergyRisk: "Low", chokingRisk: "Low (cooked)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Roast large wedges until sweet and soft.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chopped cooked onion mixed into other dishes.</p>" },
+    "CORN": { allergyRisk: "Low", chokingRisk: "Medium (loose kernels)", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Serve on the cob! Baby can gnaw on the kernels.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Cut kernels off the cob. Flatten them slightly if possible.</p>" },
+    "EGGPLANT": { allergyRisk: "Low", chokingRisk: "Low", serve6to8: "<h4 class='font-semibold'>6-8 Months:</h4><p>Roast strips or rounds until very soft. Leave skin on to help it hold together, or peel if preferred.</p>", serve9to12: "<h4 class='font-semibold mt-4'>9-12 Months:</h4><p>Chopped cooked eggplant.</p>" }
 };
 
-export const LEARNING_RESOURCES = {
+export const recommendationData: Record<string, { title: string; message: string; foods: string[] }> = {
+    too_young: {
+        title: "Preparing for Solids",
+        message: "Your baby is getting ready! Watch for signs like sitting up unassisted and bringing toys to their mouth. Consult your pediatrician before starting.",
+        foods: []
+    },
+    '6_months': {
+        title: "6 Months: First Tastes",
+        message: "Focus on iron-rich foods and easy-to-hold shapes (strips). Let baby explore textures.",
+        foods: ["AVOCADO", "SWEET POTATO", "BANANA", "BROCCOLI", "BEEF, SLICED", "OATMEAL"]
+    },
+    '7_8_months': {
+        title: "7-8 Months: Allergens & Flavors",
+        message: "Introduce top allergens one at a time. Mix flavors and offer lumpy mashed textures.",
+        foods: ["EGGS", "PEANUT BUTTER", "SALMON", "YOGURT", "TOFU", "STRAWBERRIES"]
+    },
+    '9_11_months': {
+        title: "9-11 Months: Pincer Grasp",
+        message: "Baby is using thumb and forefinger. Offer smaller, bite-sized pieces (like a chickpea).",
+        foods: ["BLUEBERRIES", "PEAS", "MOZZARELLA", "PASTA", "CHICKPEAS", "BEEF, GROUND", "CORN"]
+    },
+    '12_plus': {
+        title: "12+ Months: Table Foods",
+        message: "Baby can eat most family meals! Watch sodium/sugar. Continue offering variety.",
+        foods: ["TOMATOES", "MUSHROOMS", "SPINACH", "SHRIMP", "BELL PEPPERS"]
+    }
+};
+
+export const LEARNING_RESOURCES: Record<string, { guides: {title: string, icon: string, content: string}[], research: {title: string, icon: string, content: string}[] }> = {
     NEWBORN: {
         guides: [
-            {
-                title: "Feeding Basics (0-6m)",
-                icon: "milk",
-                content: `<p><strong>Breast or Formula?</strong> Both are excellent. "Fed is best." Newborns eat every 2-3 hours. Watch for hunger cues like rooting (turning head) or sucking on hands, rather than waiting for crying.</p><p><strong>Burping:</strong> Essential to prevent gas. Try burping mid-feed and after.</p>`
-            },
-            {
-                title: "Sleep & Routine",
-                icon: "moon",
-                content: `<p>Newborns don't have a circadian rhythm yet. They sleep 14-17 hours a day in short bursts.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Day/Night Reversal:</strong> Keep days bright/noisy and nights dark/quiet to help them adjust.</li><li><strong>Safe Sleep:</strong> Always on their back, on a firm surface, with no loose bedding or toys (AAP Guidelines).</li></ul>`
-            }
+            { title: "Breastfeeding 101", icon: "milk", content: "Focus on a deep latch. Feed on demand and watch for hunger cues like rooting or sucking on hands." },
+            { title: "Formula Safety", icon: "droplet", content: "Always follow preparation instructions exactly. Use boiled water (cooled) if recommended." }
         ],
         research: [
-            {
-                title: "Vitamin D Drops",
-                icon: "sun",
-                content: `<p>The AAP recommends <strong>400 IU of Vitamin D daily</strong> for all breastfed infants starting shortly after birth, as breast milk alone often doesn't provide enough to prevent rickets.</p>`
-            },
-            {
-                title: "Growth Spurts",
-                icon: "trending-up",
-                content: `<p>Expect frequent "cluster feeding" (eating every hour) around <strong>3 weeks, 6 weeks, and 3 months</strong>. This signals the body to produce more milk for a growing baby.</p>`
-            }
+            { title: "Sleep Cycles", icon: "moon", content: "Newborns have shorter sleep cycles (approx 45-50 mins) and spend more time in active sleep." }
         ]
     },
     EXPLORER: {
         guides: [
-            { 
-                title: "How Many Meals a Day?", 
-                icon: "utensils-crossed",
-                content: `<p>Follow your baby's lead! This is a general guide, but every baby is different. Focus on exploration, not volume.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>~6 Months:</strong> Start with <strong>1 meal</strong> a day. This is just for practice. Timing doesn't matter, just pick a time when baby is happy, rested, and not starving.</li><li><strong>~7-8 Months:</strong> When baby seems to be getting the hang of it, you can move to <strong>2 meals</strong> a day.</li><li><strong>~9-11 Months:</strong> Baby is likely a pro by now and can handle <strong>3 meals</strong> a day, often at the same time as the family (breakfast, lunch, dinner).</li></ul><p class="mt-2"><strong>Remember:</strong> Breastmilk or formula is still their primary source of nutrition until age 1.</p>`
-            }
+            { title: "Gagging vs Choking", icon: "alert-triangle", content: "Gagging is loud and red; choking is silent and blue. Gagging is a safety reflex." },
+            { title: "The 100 Foods Challenge", icon: "trophy", content: "Exposing baby to 100 foods before age 1 reduces pickiness and potential allergies." }
         ],
         research: [
-            { 
-                title: "1. Key Signs of Readiness", 
-                icon: "clipboard-check",
-                content: `<p>Age alone isn't the only factor. Before starting any solids (purées or BLW), your baby should meet <strong>all</strong> of these milestones, which typically happen around 6 months:</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Sits Independently:</strong> Baby can sit in a high chair unassisted or with minimal support and has good head and neck control. This is crucial for safely managing food and swallowing.</li><li><strong>Lost Tongue-Thrust Reflex:</strong> Baby no longer automatically pushes food out of their mouth with their tongue. You can test this by offering a (safe) empty spoon; if they push it out, they're likely not ready.</li><li><strong>Interest in Food:</strong> Baby watches you eat with interest, leans forward, and may try to grab food from your plate.</li><li><strong>Can Grab and Hold:</strong> Baby has developed the motor skills to pick up pieces of food and bring them to their mouth.</li></ul>`
-            },
-            {
-                title: "2. Introducing Top Allergens",
-                icon: "bean",
-                content: `<p>Current guidelines have changed: experts now recommend introducing top allergenic foods <strong>early and often</strong> (after 6 months and once a few other foods have been tolerated) to help *prevent* allergies.</p><p>The top 9 allergens account for ~90% of food allergies:</p><ol class="list-decimal list-outside space-y-2 pl-5"><li>Cow's Milk (e.g., in yogurt, cheese)</li><li>Egg (fully cooked, e.g., scrambled or in a muffin)</li><li>Peanuts (NEVER whole. Offer as a thin paste on toast or watered down.)</li><li>Tree Nuts (e.g., almond, walnut. Offer as nut butter, same as peanuts.)</li><li>Fish (e.g., soft, flaky salmon)</li><li>Shellfish (e.g., minced shrimp)</li><li>Soy (e.g., tofu, edamame)</li><li>Wheat (e.g., toast, pasta)</li><li>Sesame (e.g., tahini swirled into yogurt)</li></ol><p><strong>SafetyProtocol:</strong> Introduce one allergen at a time. Wait 3-5 days before introducing another new allergen to watch for any reaction (hives, vomiting, swelling, wheezing). Once an allergen is successfully introduced, keep offering it regularly (e.g., 2-3 times a week) to maintain tolerance.</p>`
-            },
-            {
-                title: "3. The Importance of Iron",
-                icon: "beef",
-                content: `<p>This is a common concern with BLW. At 6 months, a baby's natural iron stores (which they built up in the womb) begin to deplete. Breast milk is naturally low in iron. While formula and iron-fortified cereals are packed with it, BLW babies may not consume large quantities of cereal.</p><p>It is <strong>essential</strong> to offer iron-rich foods at every meal.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Heme Iron (Easily Absorbed):</strong> Beef (slow-cooked strips, ground beef), chicken (dark meat), turkey (dark meat), salmon, sardines.</li><li><strong>Non-Heme Iron:</strong> Lentils, tofu, chickpeas, black beans, edamame, eggs, iron-fortified oatmeal/cereal (can be used in muffins or pancakes).</li></ul><p><strong>Pro-Tip:</strong> Pair non-heme iron foods with a food high in Vitamin C to dramatically boost absorption! (e.g., lentils with tomatoes, tofu with bell peppers, oatmeal with strawberries).</p>`
-            },
-            {
-                title: "4. Reputable Sources",
-                icon: "book-text",
-                content: `<p>For more detailed information, you can look up guidelines from these trusted organizations:</p><ul class="list-disc list-outside space-y-2 pl-5"><li>American Academy of Pediatrics (AAP)</li><li>Centers for Disease Control and Prevention (CDC)</li><li>World Health Organization (WHO)</li><li>Solid Starts (A popular, comprehensive app and website)</li></ul>`
-            }
+            { title: "Iron Importance", icon: "battery-charging", content: "Iron stores from birth deplete around 6 months, making dietary iron crucial." }
         ]
     },
     TODDLER: {
         guides: [
-            {
-                title: "Saying Goodbye to Bottles",
-                icon: "milk-off",
-                content: `<p><strong>Goal:</strong> Wean off bottles by 12-15 months to protect teeth and speech development.</p><p><strong>Strategy:</strong> Transition to open cups or straw cups with meals. You can start by diluting milk in the bottle with water, while offering full-strength milk in a cup.</p>`
-            },
-            {
-                title: "Taming Tantrums",
-                icon: "frown",
-                content: `<p>Toddlers often have "big feelings" but limited vocabulary. Tantrums are normal.</p><ul class="list-disc list-outside space-y-2 pl-5"><li><strong>Validation:</strong> "I see you are mad the banana broke."</li><li><strong>Choices:</strong> "Do you want the red plate or blue plate?" gives them a sense of control.</li></ul>`
-            },
-            {
-                title: "Portion Sizes",
-                icon: "pie-chart",
-                content: `<p>Toddlers eat less than you think! Their growth slows down after age 1. A serving size is roughly <strong>1 tablespoon per year of age</strong> (e.g., 1 tbsp of peas for a 1-year-old). Trust their hunger cues.</p>`
-            }
+            { title: "Division of Responsibility", icon: "scale", content: "You decide what, when, and where; they decide how much and whether to eat." },
+            { title: "Food Throwing", icon: "x-circle", content: "It's normal testing of boundaries. Calmly remove the food if it continues." }
         ],
         research: [
-            {
-                title: "Sugar Guidelines (AHA)",
-                icon: "candy-off",
-                content: `<p>The American Heart Association recommends <strong>zero added sugars</strong> for children under age 2. This helps shape their taste preferences away from overly sweet foods early on.</p>`
-            },
-            {
-                title: "Cow's Milk Limit",
-                icon: "milk",
-                content: `<p>While whole milk is great for fats and calcium, limit it to <strong>16-24 oz per day</strong>. Too much milk can fill them up, leading to "milk anemia" because they aren't eating enough iron-rich solid foods.</p>`
-            }
+            { title: "Neophobia", icon: "frown", content: "Fear of new foods peaks around 18-24 months. Keep offering without pressure." }
         ]
-    }
-};
-
-export const recommendationData: Record<string, { title: string; message: string; foods: string[] }> = {
-    "too_young": {
-        title: "Wait a bit longer",
-        message: "Ideally, wait until around 6 months when baby shows all signs of readiness.",
-        foods: []
-    },
-    "6_months": {
-        title: "6 Months: Simple Starters",
-        message: "Focus on iron-rich foods and easy-to-hold pieces. Introduce allergens one at a time.",
-        foods: ["AVOCADO", "SWEET POTATO", "BANANA", "BROCCOLI", "BEEF, SLICED", "CARROTS", "EGGPLANT", "ZUCCHINI", "OATMEAL"]
-    },
-    "7_8_months": {
-        title: "7-8 Months: Expanding Horizons",
-        message: "Baby is getting the hang of it! Introduce more flavors, textures, and allergens.",
-        foods: ["EGGS", "SALMON", "YOGURT", "TOFU", "PEACHES", "PEARS", "PEANUT BUTTER", "CHICKEN", "LENTILS", "BEETS"]
-    },
-    "9_11_months": {
-        title: "9-11 Months: Pincer Grasp Practice",
-        message: "Offer smaller bite-sized pieces as baby develops their pincer grasp.",
-        foods: ["BLUEBERRIES", "PEAS", "BLACK BEANS", "MOZZARELLA", "PASTA", "TURKEY", "BROWN RICE", "CORN", "SNAP PEAS"]
-    },
-    "12_plus": {
-        title: "12+ Months: Toddler Meals",
-        message: "Baby can eat most family meals. Watch sodium and sugar.",
-        foods: ["TOMATOES", "MUSHROOMS", "GRAPES", "STRAWBERRIES", "ORANGE", "BREAD", "SHRIMP", "PORK", "BELL PEPPERS"]
     }
 };
