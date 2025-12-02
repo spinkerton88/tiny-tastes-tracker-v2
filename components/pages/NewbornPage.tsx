@@ -18,6 +18,7 @@ interface NewbornPageProps {
     onLogMedicine?: (log: MedicineLog) => void;
     baseColor?: string;
     userProfile?: UserProfile | null;
+    onUpdateProfile?: (profile: UserProfile) => void;
 }
 
 // Helper to format time passed
@@ -454,13 +455,6 @@ const SleepGrowthView: React.FC<{ sleepLogs: SleepLog[] }> = ({ sleepLogs }) => 
                 .filter(log => new Date(log.startTime) >= twoDaysAgo && log.endTime)
                 .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()); // Sort Ascending for sequential processing
 
-            // Find last wake time (End time of the most recent completed sleep OR start time of current active sleep? 
-            // Wait, prediction is for NEXT sleep. So we need last known WAKE time.)
-            // Assuming the latest log with endTime is the last sleep period.
-            // If the very latest log has NO endTime, the baby is currently asleep, so prediction is invalid.
-            
-            const lastLog = sleepLogs[0]; // sleepLogs are typically passed sorted descending in other views, but let's re-verify.
-            // Let's sort DESC to find latest
             const sortedDesc = [...sleepLogs].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
             const latest = sortedDesc[0];
 
@@ -471,11 +465,6 @@ const SleepGrowthView: React.FC<{ sleepLogs: SleepLog[] }> = ({ sleepLogs }) => 
             }
 
             const lastWakeTime = latest ? latest.endTime : new Date().toISOString();
-            
-            // Format log summary for AI
-            // We need wake windows: Time between (Previous Sleep End) and (Current Sleep Start)
-            // AI prompt expects: Array of recent wake-up/nap patterns. 
-            // We'll send raw logs simplified.
             const logSummary = recentLogs.map(l => `Sleep: ${new Date(l.startTime).toLocaleTimeString()} - Wake: ${new Date(l.endTime!).toLocaleTimeString()}`).join('\n');
 
             const result = await predictSleepWindow(
@@ -601,13 +590,15 @@ const SleepGrowthView: React.FC<{ sleepLogs: SleepLog[] }> = ({ sleepLogs }) => 
     );
 };
 
-const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaperLogs, sleepLogs, medicineLogs = [], onLogFeed, onLogDiaper, onLogSleep, onUpdateSleepLog, onLogMedicine, baseColor = 'rose', userProfile }) => {
+const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaperLogs, sleepLogs, medicineLogs = [], onLogFeed, onLogDiaper, onLogSleep, onUpdateSleepLog, onLogMedicine, baseColor = 'rose', userProfile, onUpdateProfile }) => {
     // --- States for Modals ---
     const [showBreastTimer, setShowBreastTimer] = useState(false);
     const [showBottleModal, setShowBottleModal] = useState(false);
     const [showDiaperModal, setShowDiaperModal] = useState(false);
     const [showMedicineModal, setShowMedicineModal] = useState(false);
     const [showFeedOptions, setShowFeedOptions] = useState(false);
+
+    const feedInterval = userProfile?.feedIntervalHours || 3;
 
     // --- Derived Data for Dashboard ---
     const lastFeed = feedLogs[0];
@@ -618,7 +609,9 @@ const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaper
     // Check if currently sleeping
     const isSleeping = lastSleep && !lastSleep.endTime;
 
-    const nextFeedTime = lastFeed ? new Date(new Date(lastFeed.timestamp).getTime() + (2.5 * 60 * 60 * 1000)) : null; // Approx 2.5 hours later
+    const nextFeedTime = lastFeed 
+        ? new Date(new Date(lastFeed.timestamp).getTime() + (feedInterval * 60 * 60 * 1000)) 
+        : null;
 
     const triggerHaptic = () => {
         if (navigator.vibrate) navigator.vibrate(50);
@@ -643,6 +636,12 @@ const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaper
         }
     };
 
+    const handleUpdateInterval = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (onUpdateProfile && userProfile) {
+            onUpdateProfile({ ...userProfile, feedIntervalHours: Number(e.target.value) });
+        }
+    };
+
     if (currentPage === 'sleep_growth' || currentPage === 'growth') {
         return <SleepGrowthView sleepLogs={sleepLogs} />;
     }
@@ -655,44 +654,127 @@ const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaper
         <div className="flex flex-col h-[calc(100vh-140px)] relative">
             {/* 1. Dashboard Banner */}
             <div className="bg-gradient-to-r from-rose-50 to-white p-5 rounded-2xl shadow-sm border border-rose-100 mb-6">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-bold text-rose-900">Baby Status</h2>
                     <span className="text-xs font-semibold bg-white px-2 py-1 rounded-full text-rose-400 shadow-sm border border-rose-50">
                         {new Date().toLocaleDateString()}
                     </span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2">
-                    {/* Last Feed */}
-                    <div className="bg-white p-3 rounded-xl border border-rose-100 shadow-sm flex flex-col items-center text-center">
-                        <Icon name="milk" className="w-5 h-5 text-rose-400 mb-1" />
-                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Last Fed</span>
-                        <span className="text-sm font-bold text-gray-800">{lastFeed ? timeSince(lastFeed.timestamp) : '--'}</span>
-                        {lastFeed && <span className="text-[10px] text-gray-500">{lastFeed.type === 'bottle' ? `${lastFeed.amount}oz` : `${Math.floor((lastFeed.durationSeconds || 0)/60)}m`}</span>}
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                    {/* Sleep Status (Top Left - Larger) */}
+                    <div className={`p-4 rounded-xl border shadow-inner flex items-center justify-between transition-colors ${isSleeping ? 'bg-indigo-100 border-indigo-200' : 'bg-gray-50 border-gray-100'} col-span-2 sm:col-span-1`}>
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${isSleeping ? 'bg-indigo-200 text-indigo-700' : 'bg-amber-100 text-amber-500'}`}>
+                                <Icon name={isSleeping ? "moon" : "sun"} className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <span className={`text-[10px] font-bold uppercase tracking-wide block ${isSleeping ? "text-indigo-700" : "text-gray-400"}`}>Status</span>
+                                <span className={`text-base font-bold ${isSleeping ? "text-indigo-900" : "text-gray-800"}`}>
+                                    {isSleeping ? 'Asleep' : 'Awake'}
+                                </span>
+                            </div>
+                        </div>
+                        {isSleeping && <span className="text-xs font-bold text-indigo-600 animate-pulse">Zzz...</span>}
                     </div>
 
-                    {/* Last Diaper */}
-                    <div className="bg-white p-3 rounded-xl border border-rose-100 shadow-sm flex flex-col items-center text-center">
-                        <Icon name="baby" className="w-5 h-5 text-blue-400 mb-1" />
-                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Diaper</span>
-                        <span className="text-sm font-bold text-gray-800">{lastDiaper ? timeSince(lastDiaper.timestamp) : '--'}</span>
-                        {lastDiaper && <span className="text-[10px] text-gray-500 capitalize">{lastDiaper.type}</span>}
+                    {/* Next Feed (Top Right - Interactive) */}
+                    <div className="bg-white p-4 rounded-xl border border-rose-100 shadow-sm flex flex-col justify-center col-span-2 sm:col-span-1">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Next Feed</span>
+                            <div className="relative">
+                                <select 
+                                    value={feedInterval} 
+                                    onChange={handleUpdateInterval} 
+                                    className="appearance-none bg-rose-50 text-rose-600 text-[10px] font-bold py-0.5 pl-2 pr-4 rounded border border-rose-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-rose-300"
+                                >
+                                    <option value="1.5">1.5h</option>
+                                    <option value="2">2h</option>
+                                    <option value="2.5">2.5h</option>
+                                    <option value="3">3h</option>
+                                    <option value="3.5">3.5h</option>
+                                    <option value="4">4h</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 text-rose-500">
+                                    <Icon name="chevron-down" className="w-2.5 h-2.5" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Icon name="clock" className="w-4 h-4 text-rose-300" />
+                            <span className="text-lg font-bold text-gray-800">
+                                {nextFeedTime ? nextFeedTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                            </span>
+                        </div>
                     </div>
 
-                    {/* Sleep Status */}
-                    <div className={`p-3 rounded-xl border shadow-inner flex flex-col items-center text-center transition-colors ${isSleeping ? 'bg-indigo-100 border-indigo-200' : 'bg-gray-50 border-gray-100'}`}>
-                        <Icon name={isSleeping ? "moon" : "sun"} className={`w-5 h-5 mb-1 ${isSleeping ? "text-indigo-600" : "text-amber-500"}`} />
-                        <span className={`text-[10px] font-bold uppercase tracking-wide ${isSleeping ? "text-indigo-700" : "text-gray-400"}`}>Status</span>
-                        <span className={`text-sm font-bold ${isSleeping ? "text-indigo-900" : "text-gray-800"}`}>
-                            {isSleeping ? 'Asleep' : 'Awake'}
-                        </span>
-                        {isSleeping && <span className="text-[10px] text-indigo-700 opacity-80 animate-pulse">Zzz...</span>}
+                    {/* Last Feed (Bottom Left) */}
+                    <div className="bg-white p-3 rounded-xl border border-rose-50 shadow-sm flex flex-col justify-center">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Last Fed</span>
+                        <div className="flex items-center gap-2">
+                            <Icon name="milk" className="w-4 h-4 text-rose-400" />
+                            <span className="text-sm font-bold text-gray-800">{lastFeed ? timeSince(lastFeed.timestamp) : '--'}</span>
+                        </div>
+                        {lastFeed && <span className="text-[10px] text-gray-400 mt-0.5 ml-6">{lastFeed.type === 'bottle' ? `${lastFeed.amount}oz` : `${Math.floor((lastFeed.durationSeconds || 0)/60)}m`}</span>}
+                    </div>
+
+                    {/* Last Diaper (Bottom Right) */}
+                    <div className="bg-white p-3 rounded-xl border border-blue-50 shadow-sm flex flex-col justify-center">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Last Diaper</span>
+                        <div className="flex items-center gap-2">
+                            <Icon name="baby" className="w-4 h-4 text-blue-400" />
+                            <span className="text-sm font-bold text-gray-800">{lastDiaper ? timeSince(lastDiaper.timestamp) : '--'}</span>
+                        </div>
+                        {lastDiaper && <span className="text-[10px] text-gray-400 mt-0.5 ml-6 capitalize">{lastDiaper.type}</span>}
                     </div>
                 </div>
             </div>
 
-            {/* 2. Recent History List (Scrollable Area) */}
-            <div className="flex-1 overflow-y-auto -mx-4 px-4 pb-32">
+            {/* 2. Quick Actions Grid (Moved from bottom) */}
+            <div className="grid grid-cols-4 gap-3 mb-6">
+                <button 
+                    onClick={handleFeedClick}
+                    className="flex flex-col items-center gap-2 p-3 bg-white border border-rose-100 rounded-xl shadow-sm hover:bg-rose-50 transition-colors active:scale-95"
+                >
+                    <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center text-rose-600">
+                        <Icon name="milk" className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-gray-700">Feed</span>
+                </button>
+
+                <button 
+                    onClick={() => { triggerHaptic(); setShowDiaperModal(true); }}
+                    className="flex flex-col items-center gap-2 p-3 bg-white border border-blue-100 rounded-xl shadow-sm hover:bg-blue-50 transition-colors active:scale-95"
+                >
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                        <Icon name="droplet" className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-gray-700">Diaper</span>
+                </button>
+
+                <button 
+                    onClick={handleSleepClick}
+                    className="flex flex-col items-center gap-2 p-3 bg-white border border-indigo-100 rounded-xl shadow-sm hover:bg-indigo-50 transition-colors active:scale-95"
+                >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isSleeping ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-600'}`}>
+                        <Icon name={isSleeping ? "sun" : "moon"} className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-gray-700">{isSleeping ? 'Wake' : 'Sleep'}</span>
+                </button>
+
+                <button 
+                    onClick={() => { triggerHaptic(); setShowMedicineModal(true); }}
+                    className="flex flex-col items-center gap-2 p-3 bg-white border border-teal-100 rounded-xl shadow-sm hover:bg-teal-50 transition-colors active:scale-95"
+                >
+                    <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600">
+                        <Icon name="pill" className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-gray-700">Meds</span>
+                </button>
+            </div>
+
+            {/* 3. Recent History List (Scrollable Area) */}
+            <div className="flex-1 overflow-y-auto -mx-4 px-4 pb-20">
                 <h3 className="text-sm font-bold text-gray-500 mb-3 px-1">Today's Logs</h3>
                 {[...feedLogs, ...diaperLogs, ...sleepLogs, ...medicineLogs]
                     .sort((a, b) => new Date((b as any).timestamp || (b as any).startTime).getTime() - new Date((a as any).timestamp || (a as any).startTime).getTime())
@@ -751,72 +833,33 @@ const NewbornPage: React.FC<NewbornPageProps> = ({ currentPage, feedLogs, diaper
                     })}
             </div>
 
-            {/* 3. One-Tap Quick Log (Sticky Bottom) */}
-            <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 pb-safe grid grid-cols-4 gap-3 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                
-                {/* FEED BUTTON */}
-                <button 
-                    onClick={handleFeedClick}
-                    className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-                >
-                    <div className="w-14 h-14 bg-rose-500 rounded-2xl shadow-lg shadow-rose-200 flex items-center justify-center text-white">
-                        <Icon name="milk" className="w-7 h-7" />
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-600">Feed</span>
-                </button>
-
-                {/* DIAPER BUTTON */}
-                <button 
-                    onClick={() => { triggerHaptic(); setShowDiaperModal(true); }}
-                    className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-                >
-                    <div className="w-14 h-14 bg-blue-500 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-center text-white">
-                        <Icon name="droplet" className="w-7 h-7" />
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-600">Diaper</span>
-                </button>
-
-                {/* SLEEP BUTTON */}
-                <button 
-                    onClick={handleSleepClick}
-                    className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-                >
-                    <div className={`w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center text-white transition-colors ${isSleeping ? 'bg-indigo-600 shadow-indigo-300 ring-2 ring-indigo-200' : 'bg-indigo-500 shadow-indigo-200'}`}>
-                        {isSleeping ? <Icon name="sun" className="w-7 h-7 animate-spin-slow" /> : <Icon name="moon" className="w-7 h-7" />}
-                    </div>
-                    <span className={`text-[10px] font-bold ${isSleeping ? 'text-indigo-600' : 'text-gray-600'}`}>
-                        {isSleeping ? 'Wake' : 'Sleep'}
-                    </span>
-                </button>
-
-                {/* MEDICINE BUTTON (Replacing generic More) */}
-                <button 
-                    onClick={() => { triggerHaptic(); setShowMedicineModal(true); }}
-                    className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-                >
-                    <div className="w-14 h-14 bg-teal-500 rounded-2xl shadow-lg shadow-teal-200 flex items-center justify-center text-white">
-                        <Icon name="pill" className="w-7 h-7" />
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-600">Meds</span>
-                </button>
-            </div>
-
             {/* Overlays */}
             {showFeedOptions && (
-                <div className="absolute bottom-24 left-4 p-4 bg-white rounded-xl shadow-xl border border-gray-100 z-20 w-48 animate-popIn origin-bottom-left">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Feed Type</h4>
-                    <button onClick={() => { setShowFeedOptions(false); setShowBreastTimer(true); }} className="w-full text-left p-2 hover:bg-rose-50 rounded-lg text-rose-700 font-bold mb-1 flex items-center gap-2">
-                        <Icon name="clock" className="w-4 h-4"/> Timer (Breast)
-                    </button>
-                    <button onClick={() => { setShowFeedOptions(false); setShowBottleModal(true); }} className="w-full text-left p-2 hover:bg-rose-50 rounded-lg text-rose-700 font-bold flex items-center gap-2">
-                        <Icon name="milk" className="w-4 h-4"/> Bottle Amount
-                    </button>
-                    <div className="absolute bottom-[-8px] left-6 w-4 h-4 bg-white transform rotate-45 border-r border-b border-gray-100"></div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4">
+                    <div className="bg-white rounded-xl shadow-xl border border-gray-100 w-full max-w-sm overflow-hidden animate-popIn">
+                        <div className="p-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+                            <h4 className="text-sm font-bold text-rose-800 uppercase">Select Feed Type</h4>
+                            <button onClick={() => setShowFeedOptions(false)} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
+                        </div>
+                        <div className="p-2">
+                            <button onClick={() => { setShowFeedOptions(false); setShowBreastTimer(true); }} className="w-full text-left p-3 hover:bg-gray-50 rounded-lg flex items-center gap-3 transition-colors">
+                                <div className="p-2 bg-rose-100 text-rose-600 rounded-full"><Icon name="clock" className="w-5 h-5"/></div>
+                                <div>
+                                    <span className="block font-bold text-gray-800">Breastfeeding Timer</span>
+                                    <span className="text-xs text-gray-500">Track duration and side</span>
+                                </div>
+                            </button>
+                            <button onClick={() => { setShowFeedOptions(false); setShowBottleModal(true); }} className="w-full text-left p-3 hover:bg-gray-50 rounded-lg flex items-center gap-3 transition-colors">
+                                <div className="p-2 bg-rose-100 text-rose-600 rounded-full"><Icon name="milk" className="w-5 h-5"/></div>
+                                <div>
+                                    <span className="block font-bold text-gray-800">Bottle Log</span>
+                                    <span className="text-xs text-gray-500">Track amount in oz/ml</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
-
-            {/* Click outside to close feed options */}
-            {showFeedOptions && <div className="fixed inset-0 z-10" onClick={() => setShowFeedOptions(false)}></div>}
 
             {showBreastTimer && (
                 <BreastfeedingModal 

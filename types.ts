@@ -146,6 +146,7 @@ export interface UserProfile {
     badges?: Badge[];
     preferredMode?: AppMode;
     safeFoods?: string[];
+    feedIntervalHours?: number; // NEW: Preferred feeding interval
 }
 
 export interface MealPlan {

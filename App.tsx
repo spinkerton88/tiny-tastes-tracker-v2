@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
@@ -523,6 +524,7 @@ const App: React.FC = () => {
                   onLogMedicine={handleLogMedicine}
                   baseColor={baseColorName}
                   userProfile={userProfile}
+                  onUpdateProfile={setUserProfile}
               />;
           default:
               return <div className="p-4">Page not found</div>;
