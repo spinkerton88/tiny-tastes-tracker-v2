@@ -519,13 +519,12 @@ JSON Structure:
             config: {
                 systemInstruction: systemInstruction,
                 tools: [{googleSearch: {}}],
-                responseMimeType: "application/json",
             },
         });
 
         // The tool result text might contain the JSON we need, but sometimes it comes in parts.
         // The standard response.text accessor should handle concatenation.
-        let text = response.text;
+        let text = response.text?.trim();
         
         // Remove markdown formatting if present
         if (text && text.startsWith('```json')) {
@@ -573,11 +572,10 @@ Output JSON:
             config: {
                 systemInstruction: systemInstruction,
                 tools: [{googleSearch: {}}],
-                responseMimeType: "application/json",
             },
         });
 
-        let text = response.text;
+        let text = response.text?.trim();
         if (text && text.startsWith('```json')) {
             text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
         } else if (text && text.startsWith('```')) {
