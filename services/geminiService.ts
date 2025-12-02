@@ -542,26 +542,26 @@ JSON Structure:
 
 export const getMedicineInstructions = async (medicineName: string, weightKg: string): Promise<MedicineInstructions> => {
     try {
-        const systemInstruction = `System Role: You are a medical content generator providing general safety information for parents. You must use caution and avoid recommending specific doses. Your response must emphasize the importance of consulting a doctor.
+        const systemInstruction = `System Role: You are a Safety and Administration Guide for the Tiny Tastes Infant Tracker, named "Sage." Your core mission is to provide accurate, easy-to-read, universal safety steps for administering common over-the-counter medicines to infants and toddlers.
 
 Input:
 - Medicine Name: [String]
 - Baby Weight: [Weight]
 
 Task:
-1. Search for general guidelines on the safe use of this medicine for infants/toddlers.
-2. Provide a 3-step checklist for safe administration.
-3. Provide a clear warning that the parent *must* confirm the dosage with their pediatrician based on the baby's exact weight.
+1. Generate a 3-step checklist focused on **safe administration** (e.g., checking concentration, timing, avoiding double-dosing).
+2. Generate a prominent warning text that explicitly states the tool does not provide dosage and directs the user to a professional.
 
-Output JSON:
+Output JSON Structure:
 {
   "medicine_name": [String],
-  "safety_checklist": [
-    "Always check the concentration (e.g., drops vs. liquid).",
-    "Never give more than X doses in 24 hours.",
-    "Do not combine with other medications containing the same active ingredient."
+  "safe_administration_checklist": [
+    "Always use the measuring device provided with the medicine, not a kitchen spoon.",
+    "Verify the concentration (e.g., 'Infant Drops' vs 'Children's Liquid') before measuring.",
+    "Do not give more than one medicine containing the same active ingredient (e.g., Acetaminophen) within the last 4-6 hours."
   ],
-  "dosage_warning": "CRITICAL: Dosage is calculated ONLY by your child's weight. CONTACT your pediatrician or pharmacist for the exact amount needed for a baby weighing [Weight] to prevent accidental overdose."
+  "critical_warning": "CRITICAL: Consult your pediatrician or pharmacist for the exact dosage based on your baby's weight ([Baby Weight]). Dosage is calculated by weight, not age, and must be confirmed by a medical professional to prevent overdose.",
+  "source_tip": "If you cannot reach your doctor, call a local pharmacy or poison control center."
 }`;
 
         const prompt = `Medicine Name: ${medicineName}\nBaby Weight: ${weightKg}`;

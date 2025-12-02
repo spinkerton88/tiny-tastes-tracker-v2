@@ -248,16 +248,26 @@ const MedicineModal: React.FC<{ onClose: () => void, onSave: (med: MedicineLog) 
                     {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
 
                     {instructions && (
-                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2 text-sm animate-fadeIn">
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3 text-sm animate-fadeIn">
                             <div className="flex items-start gap-2">
                                 <Icon name="alert-triangle" className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                                <p className="font-bold text-orange-800 text-xs">{instructions.dosage_warning}</p>
+                                <p className="font-bold text-orange-800 text-xs leading-relaxed">{instructions.critical_warning}</p>
                             </div>
-                            <ul className="list-disc pl-5 space-y-1 text-gray-700 text-xs">
-                                {instructions.safety_checklist.map((item, idx) => (
-                                    <li key={idx}>{item}</li>
-                                ))}
-                            </ul>
+                            
+                            <div className="bg-white/60 p-2 rounded border border-orange-100">
+                                <p className="text-xs font-bold text-orange-700 uppercase mb-1">Safe Administration Checklist:</p>
+                                <ul className="list-disc pl-4 space-y-1 text-gray-700 text-xs">
+                                    {instructions.safe_administration_checklist.map((item, idx) => (
+                                        <li key={idx}>{item}</li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            {instructions.source_tip && (
+                                <p className="text-[10px] text-gray-500 italic border-t border-orange-200 pt-2 flex items-center gap-1">
+                                    <Icon name="phone" className="w-3 h-3" /> {instructions.source_tip}
+                                </p>
+                            )}
                         </div>
                     )}
 

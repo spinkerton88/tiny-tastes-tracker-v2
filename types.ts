@@ -99,8 +99,9 @@ export interface MedicineLog {
 
 export interface MedicineInstructions {
     medicine_name: string;
-    safety_checklist: string[];
-    dosage_warning: string;
+    safe_administration_checklist: string[];
+    critical_warning: string;
+    source_tip: string;
 }
 
 export interface DailyLogAnalysis {
