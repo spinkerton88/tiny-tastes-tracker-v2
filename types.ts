@@ -1,5 +1,5 @@
 
-export type Page = 'tracker' | 'recommendations' | 'recipes' | 'learn' | 'profile';
+export type Page = 'tracker' | 'recommendations' | 'recipes' | 'learn' | 'profile' | 'growth';
 export type Filter = 'all' | 'to_try' | 'tried';
 export type RecipeFilter = 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type TextureStage = 'puree' | 'mashed' | 'finger_food';
@@ -65,10 +65,12 @@ export interface TriedFoodLog extends FoodLogData {
 // --- Newborn Mode Types ---
 export interface FeedLog {
     id: string;
-    type: 'breast' | 'bottle';
-    side?: 'left' | 'right'; // for breast
-    amount?: number; // oz for bottle
+    type: 'breast' | 'bottle' | 'pump';
+    side?: 'left' | 'right' | 'both'; // for breast
+    amount?: number; // oz for bottle/pump
     durationSeconds?: number; // for breast
+    leftDuration?: number; // split duration
+    rightDuration?: number; // split duration
     timestamp: string;
     notes?: string;
 }
@@ -94,6 +96,16 @@ export interface MedicineLog {
     amount?: string; // e.g. "2.5ml"
     unit?: string;
     timestamp: string;
+    notes?: string;
+}
+
+export interface GrowthLog {
+    id: string;
+    date: string;
+    weightLb?: number; // Whole pounds
+    weightOz?: number; // Ounces
+    heightIn?: number; // Inches
+    headCircumferenceIn?: number; // Inches
     notes?: string;
 }
 

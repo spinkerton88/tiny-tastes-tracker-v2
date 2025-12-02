@@ -9,6 +9,7 @@ import ProfilePage from './components/pages/LogPage';
 import ToddlerPickyEater from './components/pages/ToddlerPickyEater';
 import BalanceDashboard from './components/pages/BalanceDashboard';
 import NewbornPage from './components/pages/NewbornPage';
+import ToddlerGrowthPage from './components/pages/ToddlerGrowthPage';
 
 import FoodLogModal from './components/modals/FoodLogModal';
 import HowToServeModal from './components/modals/HowToServeModal';
@@ -29,7 +30,7 @@ import LogMealModal from './components/modals/LogMealModal';
 import TutorialModal from './components/modals/TutorialModal';
 
 import { useAppMode } from './hooks/useAppMode';
-import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem, FeedLog, DiaperLog, SleepLog, MedicineLog } from './types';
+import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem, FeedLog, DiaperLog, SleepLog, MedicineLog, GrowthLog } from './types';
 import { DEFAULT_MILESTONES, BADGES_LIST, flatFoodList } from './constants';
 import { fetchProductIngredients } from './services/openFoodFactsService';
 
@@ -101,6 +102,11 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('tiny-tastes-tracker-medicineLogs');
       return saved ? JSON.parse(saved) : [];
   });
+  // Growth Logs
+  const [growthLogs, setGrowthLogs] = useState<GrowthLog[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-growthLogs');
+      return saved ? JSON.parse(saved) : [];
+  });
 
   const [currentPage, setCurrentPage] = useState('tracker');
   const [modalState, setModalState] = useState<ModalState>({ type: null });
@@ -126,6 +132,7 @@ const App: React.FC = () => {
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-diaperLogs', JSON.stringify(diaperLogs)), [diaperLogs]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-sleepLogs', JSON.stringify(sleepLogs)), [sleepLogs]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-medicineLogs', JSON.stringify(medicineLogs)), [medicineLogs]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-growthLogs', JSON.stringify(growthLogs)), [growthLogs]);
 
   // Handle Mode Change redirects
   useEffect(() => {
@@ -421,6 +428,12 @@ const App: React.FC = () => {
   const handleLogMedicine = (med: MedicineLog) => {
       setMedicineLogs(prev => [med, ...prev]);
   }
+  const handleLogGrowth = (log: GrowthLog) => {
+      setGrowthLogs(prev => [log, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  }
+  const handleDeleteGrowth = (id: string) => {
+      setGrowthLogs(prev => prev.filter(l => l.id !== id));
+  }
 
   const renderPage = () => {
       const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
@@ -469,12 +482,8 @@ const App: React.FC = () => {
                   onEditRecipe={(recipe) => setModalState({ type: 'ADD_RECIPE', recipeData: recipe })}
                   onDeleteRecipe={handleDeleteRecipe}
                   onDeleteCustomFood={handleDeleteCustomFood}
-                  onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
                   onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
-                  onScanBarcode={mode === 'TODDLER' ? () => setModalState({ type: 'SCAN_BARCODE' }) : undefined}
-                  onAddManualShoppingItem={handleAddManualItem}
-                  onToggleShoppingItem={handleToggleShoppingItem}
-                  onClearCheckedShoppingItems={handleClearCheckedItems}
+                  onScanBarcode={() => setModalState({ type: 'SCAN_BARCODE' })}
                   baseColor={baseColorName}
                   appMode={mode}
               />;
@@ -485,13 +494,36 @@ const App: React.FC = () => {
                   userProfile={userProfile}
                   triedFoods={triedFoods}
                   milestones={milestones}
-                  onSaveProfile={setUserProfile}
+                  onSaveProfile={handleSaveProfile}
                   onResetData={handleResetData}
                   onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
                   onUpdateMilestone={(m) => setMilestones(prev => prev.map(mil => mil.id === m.id ? m : mil))}
                   onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
                   baseColor={baseColorName}
               />;
+          // NEWBORN PAGES
+          case 'feed':
+          case 'health_check':
+          case 'sleep_growth':
+              return <NewbornPage 
+                  currentPage={currentPage}
+                  feedLogs={feedLogs}
+                  diaperLogs={diaperLogs}
+                  sleepLogs={sleepLogs}
+                  medicineLogs={medicineLogs}
+                  growthLogs={growthLogs}
+                  onLogFeed={handleLogFeed}
+                  onLogDiaper={handleLogDiaper}
+                  onLogSleep={handleLogSleep}
+                  onUpdateSleepLog={handleUpdateSleepLog}
+                  onLogMedicine={handleLogMedicine}
+                  onLogGrowth={handleLogGrowth}
+                  onDeleteGrowth={handleDeleteGrowth}
+                  baseColor={baseColorName}
+                  userProfile={userProfile}
+                  onUpdateProfile={setUserProfile}
+              />;
+          // TODDLER PAGES
           case 'picky_eater':
               return <ToddlerPickyEater 
                   baseColor={baseColorName}
@@ -502,204 +534,228 @@ const App: React.FC = () => {
                   onUpdateSafeFoods={setSafeFoods}
               />;
           case 'balance':
-              return <BalanceDashboard 
-                  triedFoods={triedFoods}
-                  baseColor={baseColorName}
-              />;
-          case 'feed':
-          case 'diapers': // Keep ID for legacy persistence safety, but UI links to health_check in utils.ts
-          case 'health_check':
-          case 'sleep_growth':
-          case 'growth':
-              return <NewbornPage 
-                  currentPage={currentPage}
-                  feedLogs={feedLogs}
-                  diaperLogs={diaperLogs}
-                  sleepLogs={sleepLogs}
-                  medicineLogs={medicineLogs}
-                  onLogFeed={handleLogFeed}
-                  onLogDiaper={handleLogDiaper}
-                  onLogSleep={handleLogSleep}
-                  onUpdateSleepLog={handleUpdateSleepLog}
-                  onLogMedicine={handleLogMedicine}
-                  baseColor={baseColorName}
-                  userProfile={userProfile}
-                  onUpdateProfile={setUserProfile}
+              return <BalanceDashboard triedFoods={triedFoods} baseColor={baseColorName} />;
+          case 'growth': // Toddler specific growth route
+              return <ToddlerGrowthPage 
+                  growthLogs={growthLogs} 
+                  onLogGrowth={handleLogGrowth} 
+                  onDeleteGrowth={handleDeleteGrowth} 
+                  baseColor={baseColorName} 
               />;
           default:
-              return <div className="p-4">Page not found</div>;
-      }
-  };
-
-  const renderModal = () => {
-      const baseColorName = config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '');
-
-      switch (modalState.type) {
-          // ... (keep all existing cases)
-          case 'LOG_FOOD':
-              const existingLog = triedFoods.find(l => l.id === modalState.food.name);
-              return <FoodLogModal 
-                  food={modalState.food} 
-                  existingLog={existingLog}
-                  onClose={() => setModalState({ type: null })}
-                  onSave={handleSaveFoodLog}
-                  onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: true })}
-                  onIncrementTry={(foodName) => {
-                       const log = triedFoods.find(f => f.id === foodName);
-                       if (log) {
-                           const updatedLog = { ...log, tryCount: (log.tryCount || 1) + 1 };
-                           setTriedFoods(prev => prev.map(f => f.id === foodName ? updatedLog : f));
-                       }
-                  }}
-                  baseColor={baseColorName}
-                  appMode={mode}
-              />;
-          case 'HOW_TO_SERVE':
-              return <HowToServeModal 
-                  food={modalState.food} 
-                  onClose={() => {
-                      if (modalState.returnToLog) {
-                          setModalState({ type: 'LOG_FOOD', food: modalState.food });
-                      } else {
-                          setModalState({ type: null });
-                      }
-                  }}
-              />;
-          case 'ADD_RECIPE':
-              return <RecipeModal 
-                  onClose={() => setModalState({ type: null })}
-                  onSave={(recipe) => {
-                      if (modalState.recipeData?.id) {
-                          handleUpdateRecipe(modalState.recipeData.id, recipe);
-                      } else {
-                          handleCreateRecipe(recipe);
-                      }
-                      setModalState({ type: null });
-                  }}
-                  initialData={modalState.recipeData}
-              />;
-          case 'VIEW_RECIPE':
-              return <ViewRecipeModal 
-                  recipe={modalState.recipe}
-                  onClose={() => setModalState({ type: null })}
-                  onDelete={(id) => {
-                      setRecipes(prev => prev.filter(r => r.id !== id));
-                      setModalState({ type: null });
-                  }}
-                  onUpdateRating={(id, rating) => handleUpdateRecipe(id, { rating })}
-              />;
-          case 'IMPORT_RECIPE':
-              return <AiImportModal 
-                  onClose={() => setModalState({ type: null })}
-                  onRecipeParsed={(recipe) => setModalState({ type: 'ADD_RECIPE', recipeData: recipe })}
-              />;
-          case 'SUGGEST_RECIPE':
-              return <AiSuggestModal
-                  onClose={() => setModalState({ type: null })}
-                  onRecipeParsed={(recipe) => setModalState({ type: 'ADD_RECIPE', recipeData: recipe })}
-                  userProfile={userProfile}
-              />;
-          case 'SELECT_RECIPE':
-              return <SelectRecipeModal 
-                  recipes={recipes} 
-                  meal={modalState.meal}
-                  onClose={() => setModalState({ type: null })}
-                  onSelect={(recipe) => saveMealToPlan(modalState.date, modalState.meal, recipe.id, recipe.title)}
-              />;
-          case 'SHOPPING_LIST':
-              return <ShoppingListModal
-                  recipes={recipes}
-                  mealPlan={mealPlan}
-                  triedFoods={triedFoods}
-                  manualItems={manualShoppingItems}
-                  checkedItems={shoppingCheckedItems}
-                  onAddManualItem={handleAddManualItem}
-                  onToggleItem={handleToggleShoppingItem}
-                  onClearChecked={handleClearCheckedItems}
-                  onClose={() => setModalState({ type: null })}
-              />;
-          case 'SUBSTITUTES':
-              return <SubstitutesModal 
-                  food={modalState.food}
-                  userProfile={userProfile}
-                  onClose={() => setModalState({ type: null })}
-                  onSelectSubstitute={(food) => setModalState({ type: 'LOG_FOOD', food })}
-              />;
-          case 'DOCTOR_REPORT':
-              return <DoctorReportModal 
-                  userProfile={userProfile}
-                  triedFoods={triedFoods}
-                  onClose={() => setModalState({ type: null })}
-              />;
-          case 'FLAVOR_PAIRING':
-              return <FlavorPairingModal
-                  triedFoods={triedFoods}
-                  onClose={() => setModalState({ type: null })}
-              />;
-          case 'ALLERGEN_ALERT':
-              return <AllergenAlertModal 
-                  foodName={modalState.foodName}
-                  allergens={modalState.allergens}
-                  onClose={() => setModalState({ type: null })}
-              />;
-          case 'BADGE_UNLOCKED':
-              return <BadgeUnlockedModal 
-                  badge={modalState.badge}
-                  onClose={() => setModalState({ type: null })}
-              />;
-          case 'CERTIFICATE':
-              return <CertificateModal
-                  babyName={modalState.babyName}
-                  date={modalState.date}
-                  onClose={() => setModalState({ type: null })}
-              />;
-          case 'ADD_CUSTOM_FOOD':
-              return <CustomFoodModal
-                  initialName={modalState.initialName}
-                  scannedData={modalState.scannedData}
-                  onClose={() => setModalState({ type: null })}
-                  onSave={(food) => {
-                      setCustomFoods(prev => [...prev, food]);
-                      setModalState({ type: null });
-                  }}
-              />;
-          case 'LOG_MEAL':
-               return <LogMealModal
-                  recipes={recipes}
-                  onClose={() => setModalState({ type: null })}
-                  onSave={(items, date, meal, photo, notes) => handleBatchLogMeal(items, date, meal, photo, notes)}
-                  onCreateRecipe={handleCreateRecipe}
-                  baseColor={baseColorName}
-                  initialFoods={modalState.initialFoods}
+              return <TrackerPage 
+                  triedFoods={triedFoods} 
                   customFoods={customFoods}
-                  enableScanner={mode === 'TODDLER'}
+                  onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
+                  userProfile={userProfile}
+                  onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, customDetails: (food as CustomFood).isCustom ? (food as CustomFood).details : undefined })}
                   onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
-               />;
-          case 'SCAN_BARCODE':
-              return (
-                  <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[999]"><div className="spinner w-8 h-8 border-white"></div></div>}>
-                      <BarcodeScannerModal
-                          onClose={() => setModalState({ type: null })}
-                          onScanSuccess={handleBarcodeScan}
-                      />
-                  </Suspense>
-              );
-          default:
-              return null;
+                  onScanBarcode={mode === 'TODDLER' ? () => setModalState({ type: 'SCAN_BARCODE' }) : undefined}
+                  baseColor={baseColorName}
+              />;
       }
   };
 
   return (
     <Layout 
-        currentPage={currentPage} 
-        setCurrentPage={setCurrentPage} 
-        profile={userProfile} 
-        progress={{ triedCount: new Set(triedFoods.map(f => f.id)).size, totalCount: 100 }}
-        mode={mode}
-        config={config}
+      currentPage={currentPage} 
+      setCurrentPage={setCurrentPage} 
+      profile={userProfile} 
+      progress={{ triedCount: new Set(triedFoods.map(f => f.id)).size, totalCount: flatFoodList.length + customFoods.length }}
+      mode={mode}
+      config={config}
     >
-      {userProfile ? renderPage() : <TutorialModal onSave={handleSaveProfile} />}
-      {renderModal()}
+      <Suspense fallback={<div className="p-4 text-center">Loading...</div>}>
+        {renderPage()}
+      </Suspense>
+
+      {/* Modals */}
+      {modalState.type === 'LOG_FOOD' && (
+        <FoodLogModal 
+          food={modalState.food} 
+          existingLog={triedFoods.find(f => f.id === modalState.food.name && f.date === new Date().toISOString().split('T')[0] && !f.meal)} // Simplified check, ideally pass specific log
+          onClose={() => setModalState({ type: null })}
+          onSave={handleSaveFoodLog}
+          onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: true, customDetails: (food as CustomFood).isCustom ? (food as CustomFood).details : undefined })}
+          onIncrementTry={(id) => {
+              const log = triedFoods.find(f => f.id === id);
+              if (log) {
+                  const updatedLog = { ...log, tryCount: (log.tryCount || 1) + 1 };
+                  setTriedFoods(prev => prev.map(f => f.id === id ? updatedLog : f));
+              }
+          }}
+          baseColor={config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '')}
+          appMode={mode}
+        />
+      )}
+
+      {modalState.type === 'HOW_TO_SERVE' && (
+        <HowToServeModal 
+          food={modalState.food} 
+          onClose={() => {
+              if (modalState.returnToLog) {
+                  setModalState({ type: 'LOG_FOOD', food: modalState.food });
+              } else {
+                  setModalState({ type: null });
+              }
+          }} 
+        />
+      )}
+
+      {modalState.type === 'ADD_RECIPE' && (
+          <RecipeModal 
+            onClose={() => setModalState({ type: null })} 
+            onSave={(data) => {
+                if (modalState.recipeData?.id) {
+                    handleUpdateRecipe(modalState.recipeData.id, data);
+                } else {
+                    handleCreateRecipe(data);
+                }
+                setModalState({ type: null });
+            }}
+            initialData={modalState.recipeData}
+          />
+      )}
+
+      {modalState.type === 'VIEW_RECIPE' && (
+          <ViewRecipeModal 
+            recipe={modalState.recipe}
+            onClose={() => setModalState({ type: null })}
+            onDelete={(id) => { handleDeleteRecipe(id); setModalState({ type: null }); }}
+            onUpdateRating={(id, rating) => handleUpdateRecipe(id, { rating })}
+          />
+      )}
+
+      {modalState.type === 'IMPORT_RECIPE' && (
+          <AiImportModal 
+            onClose={() => setModalState({ type: null })}
+            onRecipeParsed={(data) => {
+                setModalState({ type: 'ADD_RECIPE', recipeData: data });
+            }}
+          />
+      )}
+
+      {modalState.type === 'SUGGEST_RECIPE' && (
+          <AiSuggestModal 
+            onClose={() => setModalState({ type: null })}
+            userProfile={userProfile}
+            onRecipeParsed={(data) => {
+                setModalState({ type: 'ADD_RECIPE', recipeData: data });
+            }}
+          />
+      )}
+
+      {modalState.type === 'SHOPPING_LIST' && (
+          <ShoppingListModal 
+            recipes={recipes}
+            mealPlan={mealPlan}
+            triedFoods={triedFoods}
+            manualItems={manualShoppingItems}
+            checkedItems={shoppingCheckedItems}
+            onAddManualItem={handleAddManualItem}
+            onToggleItem={handleToggleShoppingItem}
+            onClearChecked={handleClearCheckedItems}
+            onClose={() => setModalState({ type: null })}
+          />
+      )}
+
+      {modalState.type === 'SELECT_RECIPE' && (
+          <SelectRecipeModal 
+            recipes={recipes}
+            meal={modalState.meal}
+            onClose={() => setModalState({ type: null })}
+            onSelect={(recipe) => saveMealToPlan(modalState.date, modalState.meal, recipe.id, recipe.title)}
+          />
+      )}
+
+      {modalState.type === 'SUBSTITUTES' && (
+          <SubstitutesModal 
+            food={modalState.food}
+            userProfile={userProfile}
+            onClose={() => setModalState({ type: null })}
+            onSelectSubstitute={(food) => setModalState({ type: 'LOG_FOOD', food })}
+          />
+      )}
+
+      {modalState.type === 'DOCTOR_REPORT' && (
+          <DoctorReportModal 
+            userProfile={userProfile}
+            triedFoods={triedFoods}
+            onClose={() => setModalState({ type: null })}
+          />
+      )}
+
+      {modalState.type === 'FLAVOR_PAIRING' && (
+          <FlavorPairingModal 
+            triedFoods={triedFoods}
+            onClose={() => setModalState({ type: null })}
+          />
+      )}
+
+      {modalState.type === 'ALLERGEN_ALERT' && (
+          <AllergenAlertModal 
+            foodName={modalState.foodName}
+            allergens={modalState.allergens}
+            onClose={() => setModalState({ type: null })}
+          />
+      )}
+
+      {modalState.type === 'BADGE_UNLOCKED' && (
+          <BadgeUnlockedModal 
+            badge={modalState.badge}
+            onClose={() => setModalState({ type: null })}
+          />
+      )}
+
+      {modalState.type === 'CERTIFICATE' && (
+          <CertificateModal 
+            babyName={modalState.babyName}
+            date={modalState.date}
+            onClose={() => setModalState({ type: null })}
+          />
+      )}
+
+      {modalState.type === 'ADD_CUSTOM_FOOD' && (
+          <CustomFoodModal 
+            initialName={modalState.initialName}
+            scannedData={modalState.scannedData}
+            onClose={() => setModalState({ type: null })}
+            onSave={(newFood) => {
+                setCustomFoods(prev => [...prev, newFood]);
+                setModalState({ type: null });
+                // Optional: immediately open log modal
+                // setModalState({ type: 'LOG_FOOD', food: newFood });
+            }}
+          />
+      )}
+
+      {modalState.type === 'LOG_MEAL' && (
+          <LogMealModal 
+            recipes={recipes}
+            onClose={() => setModalState({ type: null })}
+            onSave={handleBatchLogMeal}
+            onCreateRecipe={handleCreateRecipe}
+            baseColor={config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '')}
+            initialFoods={modalState.initialFoods}
+            customFoods={customFoods}
+            enableScanner={mode === 'TODDLER'}
+            onAddCustomFood={(initialName) => setModalState({ type: 'ADD_CUSTOM_FOOD', initialName })}
+          />
+      )}
+
+      {modalState.type === 'SCAN_BARCODE' && (
+          <Suspense fallback={<div>Loading Scanner...</div>}>
+              <BarcodeScannerModal 
+                  onClose={() => setModalState({ type: null })}
+                  onScanSuccess={handleBarcodeScan}
+              />
+          </Suspense>
+      )}
+
+      {/* First Time Tutorial */}
+      {!userProfile && (
+          <TutorialModal onSave={handleSaveProfile} />
+      )}
     </Layout>
   );
 };
