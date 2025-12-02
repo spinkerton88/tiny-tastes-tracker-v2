@@ -29,8 +29,11 @@ interface NewbornPageProps {
 // ... existing helper components (PoopIcon, timeSince, formatTimer) ...
 // Custom SVG Icon for Poop to match requested visual style
 const PoopIcon = ({ className }: { className?: string }) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C9 2 7 4 7 6C7 7.3 7.8 8.4 9 9C8 9.5 7 10.5 7 12C7 13.5 8 14.5 9 15C6 15.5 4 17 4 19C4 21 6 22 12 22C18 22 20 21 20 19C20 17 18 15.5 15 15C16 14.5 17 13.5 17 12C17 10.5 16 9.5 15 9C16.2 8.4 17 7.3 17 6C17 4 15 2 12 2ZM10 13.5C10 13.2 10.2 13 10.5 13C10.8 13 11 13.2 11 13.5C11 13.8 10.8 14 10.5 14C10.2 14 10 13.8 10 13.5ZM13 13.5C13 13.2 13.2 13 13.5 13C13.8 13 14 13.2 14 13.5C14 13.8 13.8 14 13.5 14C13.2 14 13 13.8 13 13.5ZM12 18C13.5 18 14.5 17 14.5 17H9.5C9.5 17 10.5 18 12 18Z"/>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 16.5c.6.8 1 1.7 1 2.5 0 2.5-3.6 4.5-8 4.5s-8-2-8-4.5c0-.8.4-1.7 1-2.5" />
+        <path d="M6.5 12.5c-1 .8-1.5 1.7-1.5 2.5 0 2 3.1 3.5 7 3.5s7-1.5 7-3.5c0-.8-.5-1.7-1.5-2.5" />
+        <path d="M8.5 9c-.8.6-1.5 1.3-1.5 2 0 1.7 2.2 3 5 3s5-1.3 5-3c0-.7-.7-1.4-1.5-2" />
+        <path d="M12 3c0 2.5-3 3-3 5 0 1.5 1.3 2.5 3 2.5s3-1 3-2.5c0-2-1.5-3.5-3-5z" />
     </svg>
 );
 
