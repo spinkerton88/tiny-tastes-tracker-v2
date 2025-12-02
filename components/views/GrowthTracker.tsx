@@ -1,6 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
-import { GrowthLog } from '../../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { GrowthLog, UserProfile } from '../../types';
+import { calculateGrowthPercentile, calculateAgeInMonths } from '../../utils';
 import Icon from '../ui/Icon';
 
 interface GrowthTrackerProps {
@@ -8,6 +9,7 @@ interface GrowthTrackerProps {
     onSave: (log: GrowthLog) => void;
     onDelete: (id: string) => void;
     baseColor: string;
+    userProfile?: UserProfile | null;
 }
 
 const SimpleChart: React.FC<{ data: { value: number, date: string }[], color: string, unit: string, label: string }> = ({ data, color, unit, label }) => {
@@ -68,9 +70,16 @@ const SimpleChart: React.FC<{ data: { value: number, date: string }[], color: st
     );
 };
 
-export const GrowthTracker: React.FC<GrowthTrackerProps> = ({ logs, onSave, onDelete, baseColor }) => {
+export const GrowthTracker: React.FC<GrowthTrackerProps> = ({ logs, onSave, onDelete, baseColor, userProfile }) => {
     const [isFormOpen, setIsFormOpen] = useState(false);
+    // Local state for gender calculation if not in profile
+    const [calcGender, setCalcGender] = useState<'boy' | 'girl'>(userProfile?.gender || 'boy');
     
+    // Update local gender if profile changes
+    useEffect(() => {
+        if (userProfile?.gender) setCalcGender(userProfile.gender);
+    }, [userProfile?.gender]);
+
     // Form State
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [weightLb, setWeightLb] = useState('');
@@ -122,27 +131,77 @@ export const GrowthTracker: React.FC<GrowthTrackerProps> = ({ logs, onSave, onDe
         setWeightLb(''); setWeightOz(''); setHeightIn(''); setHeadIn(''); setNotes('');
     };
 
+    // Calculate Percentiles
+    const ageMonths = userProfile?.birthDate ? calculateAgeInMonths(userProfile.birthDate) : 0;
+    
+    const weightPercentile = useMemo(() => {
+        if (!latestLog || latestLog.weightLb === undefined) return null;
+        const totalKg = ((latestLog.weightLb || 0) * 0.453592) + ((latestLog.weightOz || 0) * 0.0283495);
+        return calculateGrowthPercentile(totalKg, 'weight', calcGender, ageMonths);
+    }, [latestLog, calcGender, ageMonths]);
+
+    const heightPercentile = useMemo(() => {
+        if (!latestLog || !latestLog.heightIn) return null;
+        const cm = latestLog.heightIn * 2.54;
+        return calculateGrowthPercentile(cm, 'height', calcGender, ageMonths);
+    }, [latestLog, calcGender, ageMonths]);
+
+    const getPercentileColor = (p: number) => {
+        if (p < 5 || p > 95) return 'text-orange-600 bg-orange-50';
+        return `text-${baseColor}-600 bg-${baseColor}-50`;
+    };
+
     return (
         <div className="space-y-6 pb-24">
+            {/* Gender Toggle (Only if not in profile) */}
+            {!userProfile?.gender && (
+                <div className="flex justify-center mb-4">
+                    <div className="bg-gray-100 p-1 rounded-lg inline-flex">
+                        <button 
+                            onClick={() => setCalcGender('boy')} 
+                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${calcGender === 'boy' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'}`}
+                        >
+                            Boy
+                        </button>
+                        <button 
+                            onClick={() => setCalcGender('girl')} 
+                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${calcGender === 'girl' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500'}`}
+                        >
+                            Girl
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Stats Cards */}
             <div className="grid grid-cols-2 gap-3">
-                <div className={`bg-${baseColor}-50 p-4 rounded-xl border border-${baseColor}-100 flex flex-col justify-center items-center shadow-sm`}>
-                    <div className="p-2 bg-white rounded-full mb-2 shadow-sm">
+                <div className={`bg-${baseColor}-50 p-4 rounded-xl border border-${baseColor}-100 flex flex-col justify-center items-center shadow-sm relative overflow-hidden`}>
+                    <div className="p-2 bg-white rounded-full mb-2 shadow-sm relative z-10">
                         <Icon name="scale" className={`w-5 h-5 text-${baseColor}-600`} />
                     </div>
-                    <span className={`text-[10px] uppercase font-bold text-${baseColor}-400 tracking-wider`}>Weight</span>
-                    <span className={`text-xl font-black text-${baseColor}-800 mt-1`}>
+                    <span className={`text-[10px] uppercase font-bold text-${baseColor}-400 tracking-wider relative z-10`}>Weight</span>
+                    <span className={`text-xl font-black text-${baseColor}-800 mt-1 relative z-10`}>
                         {latestLog?.weightLb ? `${latestLog.weightLb}lb ${latestLog.weightOz ? `${latestLog.weightOz}oz` : ''}` : '--'}
                     </span>
+                    {weightPercentile !== null && (
+                        <span className={`mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${getPercentileColor(weightPercentile)} relative z-10`}>
+                            {weightPercentile}th %
+                        </span>
+                    )}
                 </div>
-                <div className={`bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col justify-center items-center shadow-sm`}>
-                    <div className="p-2 bg-white rounded-full mb-2 shadow-sm">
+                <div className={`bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col justify-center items-center shadow-sm relative overflow-hidden`}>
+                    <div className="p-2 bg-white rounded-full mb-2 shadow-sm relative z-10">
                         <Icon name="ruler" className="w-5 h-5 text-blue-600" />
                     </div>
-                    <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider">Height</span>
-                    <span className="text-xl font-black text-blue-800 mt-1">
+                    <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider relative z-10">Height</span>
+                    <span className="text-xl font-black text-blue-800 mt-1 relative z-10">
                         {latestLog?.heightIn ? `${latestLog.heightIn} in` : '--'}
                     </span>
+                    {heightPercentile !== null && (
+                        <span className={`mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${getPercentileColor(heightPercentile)} relative z-10 text-blue-700 bg-blue-100`}>
+                            {heightPercentile}th %
+                        </span>
+                    )}
                 </div>
             </div>
 

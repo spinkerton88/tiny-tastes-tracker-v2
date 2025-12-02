@@ -34,6 +34,7 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ onSave }) => {
     const [step, setStep] = useState(0);
     const [babyName, setBabyName] = useState('');
     const [birthDate, setBirthDate] = useState('');
+    const [gender, setGender] = useState<'boy' | 'girl' | undefined>(undefined);
 
     const totalSteps = tutorialSteps.length + 1; // +1 for the final profile form step
 
@@ -51,7 +52,7 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ onSave }) => {
 
     const handleSubmit = () => {
         if (babyName.trim() && birthDate) {
-            onSave({ babyName: babyName.trim(), birthDate });
+            onSave({ babyName: babyName.trim(), birthDate, gender });
         } else {
             alert("Please enter your baby's name and birth date.");
         }
@@ -83,6 +84,23 @@ const TutorialModal: React.FC<TutorialModalProps> = ({ onSave }) => {
                                 <div>
                                     <label htmlFor="birth-date-input" className="block text-sm font-medium text-gray-700">Baby's Birth Date</label>
                                     <input type="date" id="birth-date-input" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender (For Growth Charts)</label>
+                                    <div className="flex gap-3">
+                                        <button 
+                                            onClick={() => setGender('boy')}
+                                            className={`flex-1 py-2 px-3 border rounded-md text-sm font-medium transition-colors ${gender === 'boy' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                                        >
+                                            Boy
+                                        </button>
+                                        <button 
+                                            onClick={() => setGender('girl')}
+                                            className={`flex-1 py-2 px-3 border rounded-md text-sm font-medium transition-colors ${gender === 'girl' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                                        >
+                                            Girl
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </>

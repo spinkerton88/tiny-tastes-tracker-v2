@@ -154,6 +154,7 @@ export interface Badge {
 export interface UserProfile {
     babyName?: string;
     birthDate?: string;
+    gender?: 'boy' | 'girl'; // Added gender for growth percentiles
     knownAllergies?: string[]; // Changed from string to string[]
     pediatricianApproved?: boolean;
     currentTextureStage?: TextureStage;

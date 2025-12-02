@@ -541,6 +541,7 @@ const App: React.FC = () => {
                   onLogGrowth={handleLogGrowth} 
                   onDeleteGrowth={handleDeleteGrowth} 
                   baseColor={baseColorName} 
+                  userProfile={userProfile}
               />;
           default:
               return <TrackerPage 

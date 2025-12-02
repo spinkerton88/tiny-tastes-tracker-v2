@@ -50,6 +50,7 @@ const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
 const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (profile: UserProfile) => void, onResetData: () => void, baseColor: string }> = ({ userProfile, onSaveProfile, onResetData, baseColor }) => {
     const [name, setName] = useState(userProfile?.babyName || '');
     const [birthDate, setBirthDate] = useState(userProfile?.birthDate || '');
+    const [gender, setGender] = useState<'boy' | 'girl' | undefined>(userProfile?.gender);
     const [allergies, setAllergies] = useState<string[]>(
         Array.isArray(userProfile?.knownAllergies) ? userProfile.knownAllergies : []
     );
@@ -63,6 +64,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
     useEffect(() => {
         setName(userProfile?.babyName || '');
         setBirthDate(userProfile?.birthDate || '');
+        setGender(userProfile?.gender);
         setAllergies(Array.isArray(userProfile?.knownAllergies) ? userProfile.knownAllergies : []);
         setCurrentTexture(userProfile?.currentTextureStage || 'puree');
         setAppMode(userProfile?.preferredMode || 'AUTO');
@@ -73,6 +75,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
             ...userProfile,
             babyName: name,
             birthDate: birthDate,
+            gender: gender,
             knownAllergies: allergies,
             currentTextureStage: currentTexture,
             preferredMode: appMode === 'AUTO' ? undefined : appMode,
@@ -90,6 +93,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
         });
     };
     
+    // ... existing backup code ...
     const getBackupData = () => {
         return {
             profile: JSON.parse(localStorage.getItem(`tiny-tastes-tracker-profile`) || 'null'),
@@ -202,6 +206,23 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
                     <div>
                         <label htmlFor="birth-date-input" className="block text-sm font-medium text-gray-700">Baby's Birth Date:</label>
                         <input type="date" id="birth-date-input" value={birthDate} onChange={e => setBirthDate(e.target.value)} className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${baseColor}-500 focus:ring-${baseColor}-500 sm:text-sm`} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Gender (For Growth Charts):</label>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setGender('boy')} 
+                                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium border transition-colors ${gender === 'boy' ? `bg-${baseColor}-100 border-${baseColor}-500 text-${baseColor}-700` : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                Boy
+                            </button>
+                            <button 
+                                onClick={() => setGender('girl')} 
+                                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium border transition-colors ${gender === 'girl' ? `bg-${baseColor}-100 border-${baseColor}-500 text-${baseColor}-700` : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                Girl
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -337,6 +358,7 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
     );
 };
 
+// ... existing LogView, MilestonesView, BadgesView, GalleryView, ProfilePage ...
 const NoLogIllustration = () => (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="20" y="10" width="60" height="80" rx="5" />
