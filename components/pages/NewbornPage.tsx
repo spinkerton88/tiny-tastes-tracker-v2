@@ -25,6 +25,13 @@ interface NewbornPageProps {
     onUpdateProfile?: (profile: UserProfile) => void;
 }
 
+// Custom SVG Icon for Poop to match requested visual style
+const PoopIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 512 512" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
+        <path d="M256 32C220.6 32 192 60.6 192 96C192 108.6 195.4 120.3 201.3 130.4C177.3 135.2 159 155.5 157.1 180.2C133.5 186.6 116 208.2 116 234C116 235.6 116.1 237.1 116.2 238.7C80.2 249.4 54 283.4 54 324C54 379.2 98.8 424 154 424H358C413.2 424 458 379.2 458 324C458 283.4 431.8 249.4 395.8 238.7C395.9 237.1 396 235.6 396 234C396 208.2 378.5 186.6 354.9 180.2C353 155.5 334.7 135.2 310.7 130.4C316.6 120.3 320 108.6 320 96C320 60.6 291.4 32 256 32ZM188 288C188 274.7 198.7 264 212 264H220C233.3 264 244 274.7 244 288C244 301.3 233.3 312 220 312H212C198.7 312 188 301.3 188 288ZM300 312H292C278.7 312 268 301.3 268 288C268 274.7 278.7 264 292 264H300C313.3 264 324 274.7 324 288C324 301.3 313.3 312 300 312ZM256 384C282.5 384 304 362.5 304 336H208C208 362.5 229.5 384 256 384Z"/>
+    </svg>
+);
+
 const timeSince = (dateString: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 1000);
     if (seconds < 60) return 'Just now';
@@ -51,7 +58,13 @@ const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
     const intervalRef = useRef<number | null>(null);
 
     // Manual State
-    const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 16)); // yyyy-MM-ddThh:mm
+    // Format current date for datetime-local input (YYYY-MM-DDTHH:mm)
+    const getCurrentLocalISO = () => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 16);
+    };
+    const [manualDate, setManualDate] = useState(getCurrentLocalISO());
     const [manualLeft, setManualLeft] = useState(0);
     const [manualRight, setManualRight] = useState(0);
 
@@ -69,10 +82,8 @@ const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
 
     const handleToggle = (side: 'left' | 'right') => {
         if (activeSide === side) {
-            // Pause if clicking active side
             setActiveSide(null);
         } else {
-            // Switch side or start
             setActiveSide(side);
         }
     };
@@ -105,7 +116,7 @@ const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
         const totalDuration = leftSecs + rightSecs;
 
         if (totalDuration === 0) {
-            alert("Please enter a duration.");
+            alert("Please enter a duration for at least one side.");
             return;
         }
 
@@ -128,16 +139,16 @@ const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
 
     return (
         <div className="fixed inset-0 bg-rose-900/95 z-[1000] flex flex-col items-center justify-center p-6 text-white overflow-y-auto">
-            <div className="w-full max-w-sm mb-6 flex justify-center border border-white/20 rounded-lg p-1">
+            <div className="w-full max-w-sm mb-6 flex justify-center bg-white/10 rounded-lg p-1">
                 <button 
                     onClick={() => setMode('timer')} 
-                    className={`flex-1 py-1 text-sm font-bold rounded-md transition-colors ${mode === 'timer' ? 'bg-white text-rose-900' : 'text-white/70 hover:text-white'}`}
+                    className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${mode === 'timer' ? 'bg-white text-rose-900 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                 >
                     Timer
                 </button>
                 <button 
                     onClick={() => setMode('manual')} 
-                    className={`flex-1 py-1 text-sm font-bold rounded-md transition-colors ${mode === 'manual' ? 'bg-white text-rose-900' : 'text-white/70 hover:text-white'}`}
+                    className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${mode === 'manual' ? 'bg-white text-rose-900 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                 >
                     Manual Entry
                 </button>
@@ -195,47 +206,53 @@ const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
                     </div>
                 </>
             ) : (
-                <div className="w-full max-w-sm bg-rose-800/50 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
-                    <h3 className="text-xl font-bold mb-4 text-center">Add Past Feed</h3>
+                <div className="w-full max-w-sm bg-white/10 p-6 rounded-2xl backdrop-blur-md border border-white/20">
+                    <h3 className="text-xl font-bold mb-6 text-center">Add Past Feed</h3>
                     
-                    <div className="space-y-4 mb-6">
+                    <div className="space-y-6 mb-8">
                         <div>
-                            <label className="block text-xs uppercase font-bold text-white/70 mb-1">Time</label>
+                            <label className="block text-xs uppercase font-bold text-white/70 mb-1.5">Date & Time</label>
                             <input 
                                 type="datetime-local" 
                                 value={manualDate}
                                 onChange={(e) => setManualDate(e.target.value)}
-                                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:ring-rose-400 focus:border-rose-400"
+                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-rose-400 focus:border-rose-400 placeholder-white/30"
                             />
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs uppercase font-bold text-white/70 mb-1">Left (min)</label>
-                                <input 
-                                    type="number" 
-                                    value={manualLeft || ''}
-                                    onChange={(e) => setManualLeft(parseInt(e.target.value) || 0)}
-                                    placeholder="0"
-                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-lg font-mono text-center focus:ring-rose-400 focus:border-rose-400"
-                                />
+                                <label className="block text-xs uppercase font-bold text-white/70 mb-1.5 text-center">Left (min)</label>
+                                <div className="flex items-center">
+                                    <button onClick={() => setManualLeft(Math.max(0, manualLeft - 1))} className="w-8 h-12 bg-white/10 rounded-l-xl flex items-center justify-center hover:bg-white/20">-</button>
+                                    <input 
+                                        type="number" 
+                                        value={manualLeft}
+                                        onChange={(e) => setManualLeft(parseInt(e.target.value) || 0)}
+                                        className="w-full bg-black/20 border-y border-x-0 border-white/10 py-3 text-white text-xl font-mono text-center focus:ring-0"
+                                    />
+                                    <button onClick={() => setManualLeft(manualLeft + 1)} className="w-8 h-12 bg-white/10 rounded-r-xl flex items-center justify-center hover:bg-white/20">+</button>
+                                </div>
                             </div>
                             <div>
-                                <label className="block text-xs uppercase font-bold text-white/70 mb-1">Right (min)</label>
-                                <input 
-                                    type="number" 
-                                    value={manualRight || ''}
-                                    onChange={(e) => setManualRight(parseInt(e.target.value) || 0)}
-                                    placeholder="0"
-                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-lg font-mono text-center focus:ring-rose-400 focus:border-rose-400"
-                                />
+                                <label className="block text-xs uppercase font-bold text-white/70 mb-1.5 text-center">Right (min)</label>
+                                <div className="flex items-center">
+                                    <button onClick={() => setManualRight(Math.max(0, manualRight - 1))} className="w-8 h-12 bg-white/10 rounded-l-xl flex items-center justify-center hover:bg-white/20">-</button>
+                                    <input 
+                                        type="number" 
+                                        value={manualRight}
+                                        onChange={(e) => setManualRight(parseInt(e.target.value) || 0)}
+                                        className="w-full bg-black/20 border-y border-x-0 border-white/10 py-3 text-white text-xl font-mono text-center focus:ring-0"
+                                    />
+                                    <button onClick={() => setManualRight(manualRight + 1)} className="w-8 h-12 bg-white/10 rounded-r-xl flex items-center justify-center hover:bg-white/20">+</button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex gap-3">
                         <button onClick={onClose} className="flex-1 py-3 rounded-xl font-bold border border-white/30 text-white hover:bg-white/10">Cancel</button>
-                        <button onClick={handleFinishManual} className="flex-1 py-3 rounded-xl font-bold bg-white text-rose-600 shadow-md">Save Log</button>
+                        <button onClick={handleFinishManual} className="flex-[2] py-3 rounded-xl font-bold bg-white text-rose-600 shadow-lg hover:bg-rose-50">Save Entry</button>
                     </div>
                 </div>
             )}
@@ -299,39 +316,39 @@ const PumpingModal: React.FC<{ onClose: () => void, onSave: (data: any) => void 
         <div className="fixed inset-0 bg-black/60 z-[1000] flex items-end sm:items-center justify-center p-4">
             <div className="bg-white w-full max-w-sm rounded-2xl p-6 animate-popIn">
                 <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">Pumping Session</h3>
-                <p className="text-center text-gray-500 text-sm mb-6">Log expressed milk output</p>
+                <p className="text-center text-gray-500 text-sm mb-6">Log expressed milk from each side</p>
                 
-                <div className="grid grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-2 gap-4 mb-8">
                     {/* Left Control */}
-                    <div className="flex flex-col items-center">
-                        <span className="text-xs font-bold text-gray-400 uppercase mb-2">Left Breast</span>
+                    <div className="bg-purple-50 p-3 rounded-xl border border-purple-100 flex flex-col items-center">
+                        <span className="text-xs font-bold text-purple-400 uppercase mb-2">Left Breast</span>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => updateAmount('left', -0.5)} className="w-8 h-8 rounded-full bg-gray-100 font-bold text-gray-600">-</button>
-                            <div className="text-center min-w-[60px]">
-                                <span className="text-2xl font-bold text-purple-600">{leftAmount}</span>
-                                <span className="text-xs text-gray-500 ml-0.5">oz</span>
+                            <button onClick={() => updateAmount('left', -0.5)} className="w-8 h-8 rounded-full bg-white border border-purple-100 font-bold text-purple-600 shadow-sm">-</button>
+                            <div className="text-center min-w-[50px]">
+                                <span className="text-2xl font-bold text-purple-700">{leftAmount}</span>
+                                <span className="text-xs text-purple-400 ml-0.5">oz</span>
                             </div>
-                            <button onClick={() => updateAmount('left', 0.5)} className="w-8 h-8 rounded-full bg-gray-100 font-bold text-gray-600">+</button>
+                            <button onClick={() => updateAmount('left', 0.5)} className="w-8 h-8 rounded-full bg-white border border-purple-100 font-bold text-purple-600 shadow-sm">+</button>
                         </div>
                     </div>
 
                     {/* Right Control */}
-                    <div className="flex flex-col items-center">
-                        <span className="text-xs font-bold text-gray-400 uppercase mb-2">Right Breast</span>
+                    <div className="bg-purple-50 p-3 rounded-xl border border-purple-100 flex flex-col items-center">
+                        <span className="text-xs font-bold text-purple-400 uppercase mb-2">Right Breast</span>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => updateAmount('right', -0.5)} className="w-8 h-8 rounded-full bg-gray-100 font-bold text-gray-600">-</button>
-                            <div className="text-center min-w-[60px]">
-                                <span className="text-2xl font-bold text-purple-600">{rightAmount}</span>
-                                <span className="text-xs text-gray-500 ml-0.5">oz</span>
+                            <button onClick={() => updateAmount('right', -0.5)} className="w-8 h-8 rounded-full bg-white border border-purple-100 font-bold text-purple-600 shadow-sm">-</button>
+                            <div className="text-center min-w-[50px]">
+                                <span className="text-2xl font-bold text-purple-700">{rightAmount}</span>
+                                <span className="text-xs text-purple-400 ml-0.5">oz</span>
                             </div>
-                            <button onClick={() => updateAmount('right', 0.5)} className="w-8 h-8 rounded-full bg-gray-100 font-bold text-gray-600">+</button>
+                            <button onClick={() => updateAmount('right', 0.5)} className="w-8 h-8 rounded-full bg-white border border-purple-100 font-bold text-purple-600 shadow-sm">+</button>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-purple-50 p-3 rounded-xl mb-6 text-center border border-purple-100">
-                    <span className="text-sm text-purple-800 font-medium">Total Output: </span>
-                    <span className="text-xl font-bold text-purple-900">{total} oz</span>
+                <div className="bg-gray-50 p-4 rounded-xl mb-6 text-center border border-gray-100 flex justify-between items-center px-6">
+                    <span className="text-sm text-gray-500 font-medium">Total Yield</span>
+                    <span className="text-2xl font-black text-purple-600">{total} oz</span>
                 </div>
 
                 <div className="flex gap-3">
@@ -350,23 +367,24 @@ const DiaperModal: React.FC<{ onClose: () => void, onSave: (type: 'wet' | 'dirty
                 <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">Diaper Check</h3>
                 
                 <div className="grid grid-cols-3 gap-3 mb-6">
-                    <button onClick={() => { onSave('wet'); onClose(); }} className="aspect-square rounded-xl bg-blue-50 border-2 border-blue-100 flex flex-col items-center justify-center gap-2 hover:bg-blue-100">
-                        <span className="text-4xl drop-shadow-sm">💧</span>
+                    <button onClick={() => { onSave('wet'); onClose(); }} className="aspect-square rounded-xl bg-blue-50 border-2 border-blue-100 flex flex-col items-center justify-center gap-2 hover:bg-blue-100 transition-colors group">
+                        <Icon name="droplet" className="w-10 h-10 text-blue-500 group-hover:scale-110 transition-transform" />
                         <span className="font-bold text-blue-700">Wet</span>
                     </button>
-                    <button onClick={() => { onSave('dirty'); onClose(); }} className="aspect-square rounded-xl bg-orange-50 border-2 border-orange-100 flex flex-col items-center justify-center gap-2 hover:bg-orange-100">
-                        <span className="text-4xl drop-shadow-sm">💩</span>
-                        <span className="font-bold text-orange-700">Dirty</span>
+                    <button onClick={() => { onSave('dirty'); onClose(); }} className="aspect-square rounded-xl bg-orange-50 border-2 border-orange-100 flex flex-col items-center justify-center gap-2 hover:bg-orange-100 transition-colors group">
+                        <PoopIcon className="w-10 h-10 text-orange-700 group-hover:scale-110 transition-transform" />
+                        <span className="font-bold text-orange-800">Dirty</span>
                     </button>
-                    <button onClick={() => { onSave('mixed'); onClose(); }} className="aspect-square rounded-xl bg-purple-50 border-2 border-purple-100 flex flex-col items-center justify-center gap-2 hover:bg-purple-100">
-                        <div className="flex gap-1 text-2xl">
-                            <span>💧</span><span>💩</span>
+                    <button onClick={() => { onSave('mixed'); onClose(); }} className="aspect-square rounded-xl bg-purple-50 border-2 border-purple-100 flex flex-col items-center justify-center gap-2 hover:bg-purple-100 transition-colors group">
+                        <div className="flex gap-1 group-hover:scale-110 transition-transform">
+                            <Icon name="droplet" className="w-5 h-5 text-blue-500" />
+                            <PoopIcon className="w-5 h-5 text-orange-700" />
                         </div>
                         <span className="font-bold text-purple-700">Both</span>
                     </button>
                 </div>
 
-                <button onClick={onClose} className="w-full py-3 text-gray-500 font-bold">Cancel</button>
+                <button onClick={onClose} className="w-full py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl transition-colors">Cancel</button>
             </div>
         </div>
     );
@@ -688,8 +706,7 @@ const HealthCheckView: React.FC<{ feedLogs: FeedLog[], diaperLogs: DiaperLog[], 
     );
 };
 
-// --- Sleep & Growth View Component ---
-
+// ... (SleepGrowthView)
 const SleepGrowthView: React.FC<{ 
     sleepLogs: SleepLog[], 
     growthLogs: GrowthLog[], 
