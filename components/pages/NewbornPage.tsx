@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FeedLog, DiaperLog, SleepLog, UserProfile, DailyLogAnalysis, MedicineLog, MedicineInstructions, GrowthLog } from '../../types';
 import { predictSleepWindow, SleepPrediction, analyzeDailyLogTotals, getMedicineInstructions } from '../../services/geminiService';
@@ -24,7 +25,6 @@ interface NewbornPageProps {
     onUpdateProfile?: (profile: UserProfile) => void;
 }
 
-// ... (Rest of formatTimer and helper functions remain unchanged)
 const timeSince = (dateString: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 1000);
     if (seconds < 60) return 'Just now';
@@ -41,69 +41,106 @@ const formatTimer = (seconds: number) => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-// ... (Existing Modals: BreastfeedingModal, BottleModal, DiaperModal, MedicineModal - KEEP AS IS)
 const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, lastSide?: 'left' | 'right' | 'both' }> = ({ onClose, onSave, lastSide }) => {
     const [activeSide, setActiveSide] = useState<'left' | 'right' | null>(null);
-    const [timer, setTimer] = useState(0);
-    const [isPaused, setIsPaused] = useState(true);
+    const [leftTimer, setLeftTimer] = useState(0);
+    const [rightTimer, setRightTimer] = useState(0);
     const intervalRef = useRef<number | null>(null);
 
     useEffect(() => {
-        if (!isPaused && activeSide) {
+        if (activeSide) {
             intervalRef.current = window.setInterval(() => {
-                setTimer(t => t + 1);
+                if (activeSide === 'left') setLeftTimer(t => t + 1);
+                if (activeSide === 'right') setRightTimer(t => t + 1);
             }, 1000);
         } else {
             if (intervalRef.current) clearInterval(intervalRef.current);
         }
         return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    }, [isPaused, activeSide]);
+    }, [activeSide]);
 
     const handleToggle = (side: 'left' | 'right') => {
         if (activeSide === side) {
-            setIsPaused(!isPaused);
+            // Pause if clicking active side
+            setActiveSide(null);
         } else {
+            // Switch side or start
             setActiveSide(side);
-            setIsPaused(false);
         }
     };
 
     const handleFinish = () => {
-        onSave({ type: 'breast', side: activeSide || 'left', durationSeconds: timer });
+        const totalDuration = leftTimer + rightTimer;
+        if (totalDuration === 0) {
+            onClose();
+            return;
+        }
+
+        let side: 'left' | 'right' | 'both' = 'left';
+        if (leftTimer > 0 && rightTimer > 0) side = 'both';
+        else if (rightTimer > leftTimer) side = 'right';
+
+        onSave({ 
+            type: 'breast', 
+            side, 
+            durationSeconds: totalDuration,
+            leftDuration: leftTimer,
+            rightDuration: rightTimer
+        });
         onClose();
     };
 
+    const totalTimer = leftTimer + rightTimer;
+
     return (
-        <div className="fixed inset-0 bg-rose-900/90 z-[1000] flex flex-col items-center justify-center p-6 text-white">
-            <h2 className="text-2xl font-bold mb-8 opacity-80">Breastfeeding Timer</h2>
+        <div className="fixed inset-0 bg-rose-900/95 z-[1000] flex flex-col items-center justify-center p-6 text-white">
+            <h2 className="text-2xl font-bold mb-2 opacity-80">Nursing Timer</h2>
             
-            <div className="text-7xl font-mono font-bold mb-12 tracking-wider">
-                {formatTimer(timer)}
+            <div className="text-7xl font-mono font-bold mb-8 tracking-wider tabular-nums">
+                {formatTimer(totalTimer)}
             </div>
 
-            <div className="flex gap-6 w-full max-w-sm mb-12">
+            <div className="flex gap-4 w-full max-w-sm mb-12">
+                {/* Left Button */}
                 <button 
                     onClick={() => handleToggle('left')}
-                    className={`flex-1 aspect-square rounded-full flex flex-col items-center justify-center border-4 transition-all ${activeSide === 'left' ? 'bg-white text-rose-600 border-white scale-110' : 'border-white/30 text-white hover:bg-white/10'}`}
+                    className={`flex-1 aspect-square rounded-full flex flex-col items-center justify-center border-4 transition-all relative ${
+                        activeSide === 'left' 
+                        ? 'bg-white text-rose-600 border-white scale-105 shadow-[0_0_30px_rgba(255,255,255,0.4)]' 
+                        : 'border-white/30 text-white hover:bg-white/10'
+                    }`}
                 >
-                    <span className="text-3xl font-bold">L</span>
-                    {activeSide === 'left' && <span className="text-xs mt-1 font-bold">{isPaused ? 'PAUSED' : 'ACTIVE'}</span>}
-                    {lastSide === 'left' && activeSide !== 'left' && <span className="text-[10px] mt-1 opacity-70">Last Side</span>}
+                    <span className="text-4xl font-bold mb-1">L</span>
+                    <span className="text-lg font-mono font-bold">{formatTimer(leftTimer)}</span>
+                    {activeSide === 'left' && <span className="absolute bottom-4 text-[10px] font-bold uppercase animate-pulse">Active</span>}
+                    {lastSide === 'left' && activeSide !== 'left' && (
+                        <span className="absolute -top-3 bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full border border-white font-bold shadow-sm">Last Side</span>
+                    )}
                 </button>
 
+                {/* Right Button */}
                 <button 
                     onClick={() => handleToggle('right')}
-                    className={`flex-1 aspect-square rounded-full flex flex-col items-center justify-center border-4 transition-all ${activeSide === 'right' ? 'bg-white text-rose-600 border-white scale-110' : 'border-white/30 text-white hover:bg-white/10'}`}
+                    className={`flex-1 aspect-square rounded-full flex flex-col items-center justify-center border-4 transition-all relative ${
+                        activeSide === 'right' 
+                        ? 'bg-white text-rose-600 border-white scale-105 shadow-[0_0_30px_rgba(255,255,255,0.4)]' 
+                        : 'border-white/30 text-white hover:bg-white/10'
+                    }`}
                 >
-                    <span className="text-3xl font-bold">R</span>
-                    {activeSide === 'right' && <span className="text-xs mt-1 font-bold">{isPaused ? 'PAUSED' : 'ACTIVE'}</span>}
-                    {lastSide === 'right' && activeSide !== 'right' && <span className="text-[10px] mt-1 opacity-70">Last Side</span>}
+                    <span className="text-4xl font-bold mb-1">R</span>
+                    <span className="text-lg font-mono font-bold">{formatTimer(rightTimer)}</span>
+                    {activeSide === 'right' && <span className="absolute bottom-4 text-[10px] font-bold uppercase animate-pulse">Active</span>}
+                    {lastSide === 'right' && activeSide !== 'right' && (
+                        <span className="absolute -top-3 bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full border border-white font-bold shadow-sm">Last Side</span>
+                    )}
                 </button>
             </div>
 
             <div className="flex gap-4 w-full max-w-sm">
                 <button onClick={onClose} className="flex-1 py-4 rounded-xl font-bold border border-white/30 text-white hover:bg-white/10">Discard</button>
-                <button onClick={handleFinish} className="flex-[2] py-4 rounded-xl font-bold bg-white text-rose-600 shadow-lg">Finish Feed</button>
+                <button onClick={handleFinish} className="flex-[2] py-4 rounded-xl font-bold bg-white text-rose-600 shadow-lg hover:bg-rose-50 transition-colors">
+                    Finish Feed
+                </button>
             </div>
         </div>
     );
@@ -134,6 +171,38 @@ const BottleModal: React.FC<{ onClose: () => void, onSave: (data: any) => void }
                 <div className="flex gap-3">
                     <button onClick={onClose} className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 rounded-xl">Cancel</button>
                     <button onClick={handleSave} className="flex-1 py-3 text-white font-bold bg-rose-600 rounded-xl shadow-md">Log Feed</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const PumpingModal: React.FC<{ onClose: () => void, onSave: (data: any) => void }> = ({ onClose, onSave }) => {
+    const [amount, setAmount] = useState(3); // oz
+
+    const handleSave = () => {
+        onSave({ type: 'pump', amount });
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[1000] flex items-end sm:items-center justify-center p-4">
+            <div className="bg-white w-full max-w-sm rounded-2xl p-6 animate-popIn">
+                <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">Pumping Session</h3>
+                <p className="text-center text-gray-500 text-sm mb-6">Log expressed milk output</p>
+                
+                <div className="flex items-center justify-center gap-6 mb-8">
+                    <button onClick={() => setAmount(Math.max(0.5, amount - 0.5))} className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-2xl font-bold text-gray-600">-</button>
+                    <div className="text-center">
+                        <span className="text-5xl font-bold text-rose-600">{amount}</span>
+                        <span className="text-gray-500 font-medium ml-1">oz</span>
+                    </div>
+                    <button onClick={() => setAmount(amount + 0.5)} className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-2xl font-bold text-gray-600">+</button>
+                </div>
+
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 rounded-xl">Cancel</button>
+                    <button onClick={handleSave} className="flex-1 py-3 text-white font-bold bg-rose-600 rounded-xl shadow-md">Log Pump</button>
                 </div>
             </div>
         </div>
@@ -295,7 +364,7 @@ const MedicineModal: React.FC<{ onClose: () => void, onSave: (med: MedicineLog) 
     );
 };
 
-// ... (HealthCheckView - KEEP AS IS)
+// ... (HealthCheckView)
 const HealthCheckView: React.FC<{ feedLogs: FeedLog[], diaperLogs: DiaperLog[], userProfile: UserProfile | null }> = ({ feedLogs, diaperLogs, userProfile }) => {
     const [analysis, setAnalysis] = useState<DailyLogAnalysis | null>(null);
     const [loading, setLoading] = useState(false);
@@ -312,10 +381,22 @@ const HealthCheckView: React.FC<{ feedLogs: FeedLog[], diaperLogs: DiaperLog[], 
         const wetDiapers = recentDiapers.filter(d => d.type === 'wet' || d.type === 'mixed').length;
         const dirtyDiapers = recentDiapers.filter(d => d.type === 'dirty' || d.type === 'mixed').length;
         
-        const totalFeedOz = recentFeeds.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+        const totalFeedOz = recentFeeds.filter(l => l.type === 'bottle').reduce((acc, curr) => acc + (curr.amount || 0), 0);
         const totalFeeds = recentFeeds.length;
 
-        return { wetDiapers, dirtyDiapers, totalFeedOz, totalFeeds };
+        // Nursing Duration Calc
+        const todayStart = new Date();
+        todayStart.setHours(0,0,0,0);
+        const yesterdayStart = new Date(todayStart);
+        yesterdayStart.setDate(todayStart.getDate() - 1);
+
+        const todayNursingLogs = feedLogs.filter(l => l.type === 'breast' && new Date(l.timestamp) >= todayStart);
+        const yesterdayNursingLogs = feedLogs.filter(l => l.type === 'breast' && new Date(l.timestamp) >= yesterdayStart && new Date(l.timestamp) < todayStart);
+
+        const todayNursingMinutes = Math.round(todayNursingLogs.reduce((acc, curr) => acc + (curr.durationSeconds || 0), 0) / 60);
+        const yesterdayNursingMinutes = Math.round(yesterdayNursingLogs.reduce((acc, curr) => acc + (curr.durationSeconds || 0), 0) / 60);
+
+        return { wetDiapers, dirtyDiapers, totalFeedOz, totalFeeds, todayNursingMinutes, yesterdayNursingMinutes };
     }, [feedLogs, diaperLogs]);
 
     const handleAnalyze = async () => {
@@ -370,6 +451,41 @@ const HealthCheckView: React.FC<{ feedLogs: FeedLog[], diaperLogs: DiaperLog[], 
                             {stats.totalFeedOz > 0 ? `${stats.totalFeedOz}oz` : `${stats.totalFeeds}x`}
                         </span>
                         <span className="text-[10px] uppercase font-bold text-gray-400">Intake (24h)</span>
+                    </div>
+                </div>
+
+                {/* Nursing Trends Card */}
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-6">
+                    <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+                        <Icon name="clock" className="w-3 h-3" /> Nursing Duration (Today vs Yesterday)
+                    </h4>
+                    <div className="flex items-end gap-2 mb-1">
+                        <div className="flex-1">
+                            <div className="flex justify-between text-xs mb-1">
+                                <span className="text-rose-700 font-medium">Today</span>
+                                <span className="text-rose-900 font-bold">{stats.todayNursingMinutes}m</span>
+                            </div>
+                            <div className="w-full bg-rose-200 rounded-full h-2">
+                                <div 
+                                    className="bg-rose-500 h-2 rounded-full" 
+                                    style={{ width: `${Math.min(100, (stats.todayNursingMinutes / (Math.max(stats.yesterdayNursingMinutes, 1) * 1.5)) * 100)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-end gap-2 opacity-60">
+                        <div className="flex-1">
+                            <div className="flex justify-between text-xs mb-1">
+                                <span className="text-rose-700 font-medium">Yesterday</span>
+                                <span className="text-rose-900 font-bold">{stats.yesterdayNursingMinutes}m</span>
+                            </div>
+                            <div className="w-full bg-rose-200 rounded-full h-2">
+                                <div 
+                                    className="bg-rose-500 h-2 rounded-full" 
+                                    style={{ width: `${Math.min(100, (stats.yesterdayNursingMinutes / (Math.max(stats.todayNursingMinutes, 1) * 1.5)) * 100)}%` }}
+                                ></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -634,12 +750,14 @@ const NewbornPage: React.FC<NewbornPageProps> = ({
     const [showBottleModal, setShowBottleModal] = useState(false);
     const [showDiaperModal, setShowDiaperModal] = useState(false);
     const [showMedicineModal, setShowMedicineModal] = useState(false);
+    const [showPumpingModal, setShowPumpingModal] = useState(false);
     const [showFeedOptions, setShowFeedOptions] = useState(false);
 
     const feedInterval = userProfile?.feedIntervalHours || 3;
 
     // --- Derived Data for Dashboard ---
-    const lastFeed = feedLogs[0];
+    // Last Feed logic: Find first item that is NOT a pump
+    const lastFeed = feedLogs.find(l => l.type !== 'pump');
     const lastDiaper = diaperLogs[0];
     const lastSleep = sleepLogs[0];
     const lastMedicine = medicineLogs[0];
@@ -678,6 +796,16 @@ const NewbornPage: React.FC<NewbornPageProps> = ({
         if (onUpdateProfile && userProfile) {
             onUpdateProfile({ ...userProfile, feedIntervalHours: Number(e.target.value) });
         }
+    };
+
+    const getLastFeedDetail = (log: FeedLog) => {
+        if (log.type === 'bottle') return `${log.amount}oz`;
+        if (log.type === 'breast') {
+            if (log.side === 'both') return 'Both Sides';
+            if (log.side) return `${log.side.charAt(0).toUpperCase() + log.side.slice(1)} Side`;
+            return `${Math.floor((log.durationSeconds || 0)/60)}m`;
+        }
+        return '';
     };
 
     if (currentPage === 'sleep_growth' || currentPage === 'growth') {
@@ -754,7 +882,7 @@ const NewbornPage: React.FC<NewbornPageProps> = ({
                             <Icon name="milk" className="w-4 h-4 text-rose-400" />
                             <span className="text-sm font-bold text-gray-800">{lastFeed ? timeSince(lastFeed.timestamp) : '--'}</span>
                         </div>
-                        {lastFeed && <span className="text-[10px] text-gray-400 mt-0.5 ml-6">{lastFeed.type === 'bottle' ? `${lastFeed.amount}oz` : `${Math.floor((lastFeed.durationSeconds || 0)/60)}m`}</span>}
+                        {lastFeed && <span className="text-[10px] text-gray-400 mt-0.5 ml-6">{getLastFeedDetail(lastFeed)}</span>}
                     </div>
 
                     {/* Last Diaper (Bottom Right) */}
@@ -832,11 +960,20 @@ const NewbornPage: React.FC<NewbornPageProps> = ({
                             title = log.medicineName;
                             detail = log.amount || 'Dose Logged';
                         } else if (log.amount !== undefined || log.durationSeconds !== undefined) {
-                            icon = 'milk'; 
-                            color = 'text-rose-500'; 
-                            bg = 'bg-rose-50';
-                            title = log.type === 'breast' ? `Nursing (${log.side})` : 'Bottle';
-                            detail = log.type === 'bottle' ? `${log.amount}oz` : `${Math.floor(log.durationSeconds/60)}m`;
+                            // Determine icon based on feed type
+                            if (log.type === 'pump') {
+                                icon = 'activity'; // Using activity as a pump surrogate icon
+                                color = 'text-purple-500';
+                                bg = 'bg-purple-50';
+                                title = 'Pumping Session';
+                                detail = `${log.amount}oz`;
+                            } else {
+                                icon = 'milk'; 
+                                color = 'text-rose-500'; 
+                                bg = 'bg-rose-50';
+                                title = log.type === 'breast' ? `Nursing (${log.side === 'both' ? 'Both' : log.side})` : 'Bottle';
+                                detail = log.type === 'bottle' ? `${log.amount}oz` : `${Math.floor(log.durationSeconds/60)}m`;
+                            }
                         } else if (log.type === 'wet' || log.type === 'dirty' || log.type === 'mixed') {
                             icon = 'baby';
                             color = 'text-blue-500';
@@ -891,6 +1028,13 @@ const NewbornPage: React.FC<NewbornPageProps> = ({
                                     <span className="text-xs text-gray-500">Track amount in oz/ml</span>
                                 </div>
                             </button>
+                            <button onClick={() => { setShowFeedOptions(false); setShowPumpingModal(true); }} className="w-full text-left p-3 hover:bg-gray-50 rounded-lg flex items-center gap-3 transition-colors">
+                                <div className="p-2 bg-purple-100 text-purple-600 rounded-full"><Icon name="activity" className="w-5 h-5"/></div>
+                                <div>
+                                    <span className="block font-bold text-gray-800">Pumping Session</span>
+                                    <span className="text-xs text-gray-500">Log expressed output</span>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -907,6 +1051,13 @@ const NewbornPage: React.FC<NewbornPageProps> = ({
             {showBottleModal && (
                 <BottleModal 
                     onClose={() => setShowBottleModal(false)}
+                    onSave={(data) => onLogFeed({ id: crypto.randomUUID(), timestamp: new Date().toISOString(), ...data })}
+                />
+            )}
+
+            {showPumpingModal && (
+                <PumpingModal 
+                    onClose={() => setShowPumpingModal(false)}
                     onSave={(data) => onLogFeed({ id: crypto.randomUUID(), timestamp: new Date().toISOString(), ...data })}
                 />
             )}
