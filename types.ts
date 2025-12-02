@@ -67,7 +67,9 @@ export interface FeedLog {
     id: string;
     type: 'breast' | 'bottle' | 'pump';
     side?: 'left' | 'right' | 'both'; // for breast
-    amount?: number; // oz for bottle/pump
+    amount?: number; // oz for bottle/pump (Total)
+    leftAmount?: number; // oz for pump
+    rightAmount?: number; // oz for pump
     durationSeconds?: number; // for breast
     leftDuration?: number; // split duration
     rightDuration?: number; // split duration

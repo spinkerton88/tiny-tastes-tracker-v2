@@ -42,10 +42,18 @@ const formatTimer = (seconds: number) => {
 };
 
 const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, lastSide?: 'left' | 'right' | 'both' }> = ({ onClose, onSave, lastSide }) => {
+    const [mode, setMode] = useState<'timer' | 'manual'>('timer');
+    
+    // Timer State
     const [activeSide, setActiveSide] = useState<'left' | 'right' | null>(null);
     const [leftTimer, setLeftTimer] = useState(0);
     const [rightTimer, setRightTimer] = useState(0);
     const intervalRef = useRef<number | null>(null);
+
+    // Manual State
+    const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 16)); // yyyy-MM-ddThh:mm
+    const [manualLeft, setManualLeft] = useState(0);
+    const [manualRight, setManualRight] = useState(0);
 
     useEffect(() => {
         if (activeSide) {
@@ -69,7 +77,7 @@ const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
         }
     };
 
-    const handleFinish = () => {
+    const handleFinishTimer = () => {
         const totalDuration = leftTimer + rightTimer;
         if (totalDuration === 0) {
             onClose();
@@ -85,7 +93,33 @@ const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
             side, 
             durationSeconds: totalDuration,
             leftDuration: leftTimer,
-            rightDuration: rightTimer
+            rightDuration: rightTimer,
+            timestamp: new Date().toISOString()
+        });
+        onClose();
+    };
+
+    const handleFinishManual = () => {
+        const leftSecs = manualLeft * 60;
+        const rightSecs = manualRight * 60;
+        const totalDuration = leftSecs + rightSecs;
+
+        if (totalDuration === 0) {
+            alert("Please enter a duration.");
+            return;
+        }
+
+        let side: 'left' | 'right' | 'both' = 'left';
+        if (leftSecs > 0 && rightSecs > 0) side = 'both';
+        else if (rightSecs > leftSecs) side = 'right';
+
+        onSave({
+            type: 'breast',
+            side,
+            durationSeconds: totalDuration,
+            leftDuration: leftSecs,
+            rightDuration: rightSecs,
+            timestamp: new Date(manualDate).toISOString()
         });
         onClose();
     };
@@ -93,55 +127,118 @@ const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
     const totalTimer = leftTimer + rightTimer;
 
     return (
-        <div className="fixed inset-0 bg-rose-900/95 z-[1000] flex flex-col items-center justify-center p-6 text-white">
-            <h2 className="text-2xl font-bold mb-2 opacity-80">Nursing Timer</h2>
-            
-            <div className="text-7xl font-mono font-bold mb-8 tracking-wider tabular-nums">
-                {formatTimer(totalTimer)}
-            </div>
-
-            <div className="flex gap-4 w-full max-w-sm mb-12">
-                {/* Left Button */}
+        <div className="fixed inset-0 bg-rose-900/95 z-[1000] flex flex-col items-center justify-center p-6 text-white overflow-y-auto">
+            <div className="w-full max-w-sm mb-6 flex justify-center border border-white/20 rounded-lg p-1">
                 <button 
-                    onClick={() => handleToggle('left')}
-                    className={`flex-1 aspect-square rounded-full flex flex-col items-center justify-center border-4 transition-all relative ${
-                        activeSide === 'left' 
-                        ? 'bg-white text-rose-600 border-white scale-105 shadow-[0_0_30px_rgba(255,255,255,0.4)]' 
-                        : 'border-white/30 text-white hover:bg-white/10'
-                    }`}
+                    onClick={() => setMode('timer')} 
+                    className={`flex-1 py-1 text-sm font-bold rounded-md transition-colors ${mode === 'timer' ? 'bg-white text-rose-900' : 'text-white/70 hover:text-white'}`}
                 >
-                    <span className="text-4xl font-bold mb-1">L</span>
-                    <span className="text-lg font-mono font-bold">{formatTimer(leftTimer)}</span>
-                    {activeSide === 'left' && <span className="absolute bottom-4 text-[10px] font-bold uppercase animate-pulse">Active</span>}
-                    {lastSide === 'left' && activeSide !== 'left' && (
-                        <span className="absolute -top-3 bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full border border-white font-bold shadow-sm">Last Side</span>
-                    )}
+                    Timer
                 </button>
-
-                {/* Right Button */}
                 <button 
-                    onClick={() => handleToggle('right')}
-                    className={`flex-1 aspect-square rounded-full flex flex-col items-center justify-center border-4 transition-all relative ${
-                        activeSide === 'right' 
-                        ? 'bg-white text-rose-600 border-white scale-105 shadow-[0_0_30px_rgba(255,255,255,0.4)]' 
-                        : 'border-white/30 text-white hover:bg-white/10'
-                    }`}
+                    onClick={() => setMode('manual')} 
+                    className={`flex-1 py-1 text-sm font-bold rounded-md transition-colors ${mode === 'manual' ? 'bg-white text-rose-900' : 'text-white/70 hover:text-white'}`}
                 >
-                    <span className="text-4xl font-bold mb-1">R</span>
-                    <span className="text-lg font-mono font-bold">{formatTimer(rightTimer)}</span>
-                    {activeSide === 'right' && <span className="absolute bottom-4 text-[10px] font-bold uppercase animate-pulse">Active</span>}
-                    {lastSide === 'right' && activeSide !== 'right' && (
-                        <span className="absolute -top-3 bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full border border-white font-bold shadow-sm">Last Side</span>
-                    )}
+                    Manual Entry
                 </button>
             </div>
 
-            <div className="flex gap-4 w-full max-w-sm">
-                <button onClick={onClose} className="flex-1 py-4 rounded-xl font-bold border border-white/30 text-white hover:bg-white/10">Discard</button>
-                <button onClick={handleFinish} className="flex-[2] py-4 rounded-xl font-bold bg-white text-rose-600 shadow-lg hover:bg-rose-50 transition-colors">
-                    Finish Feed
-                </button>
-            </div>
+            {mode === 'timer' ? (
+                <>
+                    <h2 className="text-2xl font-bold mb-2 opacity-80">Nursing Timer</h2>
+                    
+                    <div className="text-7xl font-mono font-bold mb-8 tracking-wider tabular-nums">
+                        {formatTimer(totalTimer)}
+                    </div>
+
+                    <div className="flex gap-4 w-full max-w-sm mb-12">
+                        {/* Left Button */}
+                        <button 
+                            onClick={() => handleToggle('left')}
+                            className={`flex-1 aspect-square rounded-full flex flex-col items-center justify-center border-4 transition-all relative ${
+                                activeSide === 'left' 
+                                ? 'bg-white text-rose-600 border-white scale-105 shadow-[0_0_30px_rgba(255,255,255,0.4)]' 
+                                : 'border-white/30 text-white hover:bg-white/10'
+                            }`}
+                        >
+                            <span className="text-4xl font-bold mb-1">L</span>
+                            <span className="text-lg font-mono font-bold">{formatTimer(leftTimer)}</span>
+                            {activeSide === 'left' && <span className="absolute bottom-4 text-[10px] font-bold uppercase animate-pulse">Active</span>}
+                            {lastSide === 'left' && activeSide !== 'left' && (
+                                <span className="absolute -top-3 bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full border border-white font-bold shadow-sm">Last Side</span>
+                            )}
+                        </button>
+
+                        {/* Right Button */}
+                        <button 
+                            onClick={() => handleToggle('right')}
+                            className={`flex-1 aspect-square rounded-full flex flex-col items-center justify-center border-4 transition-all relative ${
+                                activeSide === 'right' 
+                                ? 'bg-white text-rose-600 border-white scale-105 shadow-[0_0_30px_rgba(255,255,255,0.4)]' 
+                                : 'border-white/30 text-white hover:bg-white/10'
+                            }`}
+                        >
+                            <span className="text-4xl font-bold mb-1">R</span>
+                            <span className="text-lg font-mono font-bold">{formatTimer(rightTimer)}</span>
+                            {activeSide === 'right' && <span className="absolute bottom-4 text-[10px] font-bold uppercase animate-pulse">Active</span>}
+                            {lastSide === 'right' && activeSide !== 'right' && (
+                                <span className="absolute -top-3 bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full border border-white font-bold shadow-sm">Last Side</span>
+                            )}
+                        </button>
+                    </div>
+
+                    <div className="flex gap-4 w-full max-w-sm">
+                        <button onClick={onClose} className="flex-1 py-4 rounded-xl font-bold border border-white/30 text-white hover:bg-white/10">Discard</button>
+                        <button onClick={handleFinishTimer} className="flex-[2] py-4 rounded-xl font-bold bg-white text-rose-600 shadow-lg hover:bg-rose-50 transition-colors">
+                            Finish Feed
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <div className="w-full max-w-sm bg-rose-800/50 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
+                    <h3 className="text-xl font-bold mb-4 text-center">Add Past Feed</h3>
+                    
+                    <div className="space-y-4 mb-6">
+                        <div>
+                            <label className="block text-xs uppercase font-bold text-white/70 mb-1">Time</label>
+                            <input 
+                                type="datetime-local" 
+                                value={manualDate}
+                                onChange={(e) => setManualDate(e.target.value)}
+                                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:ring-rose-400 focus:border-rose-400"
+                            />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs uppercase font-bold text-white/70 mb-1">Left (min)</label>
+                                <input 
+                                    type="number" 
+                                    value={manualLeft || ''}
+                                    onChange={(e) => setManualLeft(parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-lg font-mono text-center focus:ring-rose-400 focus:border-rose-400"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs uppercase font-bold text-white/70 mb-1">Right (min)</label>
+                                <input 
+                                    type="number" 
+                                    value={manualRight || ''}
+                                    onChange={(e) => setManualRight(parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-lg font-mono text-center focus:ring-rose-400 focus:border-rose-400"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button onClick={onClose} className="flex-1 py-3 rounded-xl font-bold border border-white/30 text-white hover:bg-white/10">Cancel</button>
+                        <button onClick={handleFinishManual} className="flex-1 py-3 rounded-xl font-bold bg-white text-rose-600 shadow-md">Save Log</button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -178,11 +275,24 @@ const BottleModal: React.FC<{ onClose: () => void, onSave: (data: any) => void }
 };
 
 const PumpingModal: React.FC<{ onClose: () => void, onSave: (data: any) => void }> = ({ onClose, onSave }) => {
-    const [amount, setAmount] = useState(3); // oz
+    const [leftAmount, setLeftAmount] = useState(0);
+    const [rightAmount, setRightAmount] = useState(0);
+
+    const total = leftAmount + rightAmount;
 
     const handleSave = () => {
-        onSave({ type: 'pump', amount });
+        onSave({ 
+            type: 'pump', 
+            amount: total, 
+            leftAmount,
+            rightAmount
+        });
         onClose();
+    };
+
+    const updateAmount = (side: 'left' | 'right', delta: number) => {
+        if (side === 'left') setLeftAmount(Math.max(0, leftAmount + delta));
+        if (side === 'right') setRightAmount(Math.max(0, rightAmount + delta));
     };
 
     return (
@@ -191,18 +301,42 @@ const PumpingModal: React.FC<{ onClose: () => void, onSave: (data: any) => void 
                 <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">Pumping Session</h3>
                 <p className="text-center text-gray-500 text-sm mb-6">Log expressed milk output</p>
                 
-                <div className="flex items-center justify-center gap-6 mb-8">
-                    <button onClick={() => setAmount(Math.max(0.5, amount - 0.5))} className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-2xl font-bold text-gray-600">-</button>
-                    <div className="text-center">
-                        <span className="text-5xl font-bold text-rose-600">{amount}</span>
-                        <span className="text-gray-500 font-medium ml-1">oz</span>
+                <div className="grid grid-cols-2 gap-6 mb-8">
+                    {/* Left Control */}
+                    <div className="flex flex-col items-center">
+                        <span className="text-xs font-bold text-gray-400 uppercase mb-2">Left Breast</span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => updateAmount('left', -0.5)} className="w-8 h-8 rounded-full bg-gray-100 font-bold text-gray-600">-</button>
+                            <div className="text-center min-w-[60px]">
+                                <span className="text-2xl font-bold text-purple-600">{leftAmount}</span>
+                                <span className="text-xs text-gray-500 ml-0.5">oz</span>
+                            </div>
+                            <button onClick={() => updateAmount('left', 0.5)} className="w-8 h-8 rounded-full bg-gray-100 font-bold text-gray-600">+</button>
+                        </div>
                     </div>
-                    <button onClick={() => setAmount(amount + 0.5)} className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-2xl font-bold text-gray-600">+</button>
+
+                    {/* Right Control */}
+                    <div className="flex flex-col items-center">
+                        <span className="text-xs font-bold text-gray-400 uppercase mb-2">Right Breast</span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => updateAmount('right', -0.5)} className="w-8 h-8 rounded-full bg-gray-100 font-bold text-gray-600">-</button>
+                            <div className="text-center min-w-[60px]">
+                                <span className="text-2xl font-bold text-purple-600">{rightAmount}</span>
+                                <span className="text-xs text-gray-500 ml-0.5">oz</span>
+                            </div>
+                            <button onClick={() => updateAmount('right', 0.5)} className="w-8 h-8 rounded-full bg-gray-100 font-bold text-gray-600">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-purple-50 p-3 rounded-xl mb-6 text-center border border-purple-100">
+                    <span className="text-sm text-purple-800 font-medium">Total Output: </span>
+                    <span className="text-xl font-bold text-purple-900">{total} oz</span>
                 </div>
 
                 <div className="flex gap-3">
                     <button onClick={onClose} className="flex-1 py-3 text-gray-600 font-bold bg-gray-100 rounded-xl">Cancel</button>
-                    <button onClick={handleSave} className="flex-1 py-3 text-white font-bold bg-rose-600 rounded-xl shadow-md">Log Pump</button>
+                    <button onClick={handleSave} className="flex-1 py-3 text-white font-bold bg-purple-600 rounded-xl shadow-md">Log Pump</button>
                 </div>
             </div>
         </div>
@@ -217,17 +351,16 @@ const DiaperModal: React.FC<{ onClose: () => void, onSave: (type: 'wet' | 'dirty
                 
                 <div className="grid grid-cols-3 gap-3 mb-6">
                     <button onClick={() => { onSave('wet'); onClose(); }} className="aspect-square rounded-xl bg-blue-50 border-2 border-blue-100 flex flex-col items-center justify-center gap-2 hover:bg-blue-100">
-                        <Icon name="droplet" className="w-8 h-8 text-blue-500" />
+                        <span className="text-4xl drop-shadow-sm">💧</span>
                         <span className="font-bold text-blue-700">Wet</span>
                     </button>
                     <button onClick={() => { onSave('dirty'); onClose(); }} className="aspect-square rounded-xl bg-orange-50 border-2 border-orange-100 flex flex-col items-center justify-center gap-2 hover:bg-orange-100">
-                        <Icon name="poop" className="w-8 h-8 text-orange-600" /> {/* Using poop-like icon or circle */}
+                        <span className="text-4xl drop-shadow-sm">💩</span>
                         <span className="font-bold text-orange-700">Dirty</span>
                     </button>
                     <button onClick={() => { onSave('mixed'); onClose(); }} className="aspect-square rounded-xl bg-purple-50 border-2 border-purple-100 flex flex-col items-center justify-center gap-2 hover:bg-purple-100">
-                        <div className="flex gap-1">
-                            <Icon name="droplet" className="w-4 h-4 text-blue-500" />
-                            <Icon name="poop" className="w-4 h-4 text-orange-600" />
+                        <div className="flex gap-1 text-2xl">
+                            <span>💧</span><span>💩</span>
                         </div>
                         <span className="font-bold text-purple-700">Both</span>
                     </button>
@@ -966,7 +1099,15 @@ const NewbornPage: React.FC<NewbornPageProps> = ({
                                 color = 'text-purple-500';
                                 bg = 'bg-purple-50';
                                 title = 'Pumping Session';
-                                detail = `${log.amount}oz`;
+                                if (log.leftAmount > 0 && log.rightAmount > 0) {
+                                    detail = `L: ${log.leftAmount}oz, R: ${log.rightAmount}oz`;
+                                } else if (log.leftAmount > 0) {
+                                    detail = `L: ${log.leftAmount}oz`;
+                                } else if (log.rightAmount > 0) {
+                                    detail = `R: ${log.rightAmount}oz`;
+                                } else {
+                                    detail = `${log.amount}oz`;
+                                }
                             } else {
                                 icon = 'milk'; 
                                 color = 'text-rose-500'; 
