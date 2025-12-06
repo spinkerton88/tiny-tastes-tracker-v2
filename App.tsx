@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import Layout from './components/Layout';
 import TrackerPage from './components/pages/TrackerPage';
 import IdeasPage from './components/pages/IdeasPage';
@@ -28,6 +28,7 @@ import CertificateModal from './components/modals/CertificateModal';
 import CustomFoodModal from './components/modals/CustomFoodModal';
 import LogMealModal from './components/modals/LogMealModal';
 import TutorialModal from './components/modals/TutorialModal';
+import AddChildModal from './components/modals/AddChildModal';
 
 import { useAppMode } from './hooks/useAppMode';
 import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem, FeedLog, DiaperLog, SleepLog, MedicineLog, GrowthLog } from './types';
@@ -38,15 +39,58 @@ import { fetchProductIngredients } from './services/openFoodFactsService';
 const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal'));
 
 const App: React.FC = () => {
-  // State
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-profile');
-      return saved ? JSON.parse(saved) : null;
+  // --- CHILD MANAGEMENT STATE ---
+  const [profiles, setProfiles] = useState<UserProfile[]>(() => {
+      const savedProfiles = localStorage.getItem('tiny-tastes-tracker-profiles');
+      if (savedProfiles) return JSON.parse(savedProfiles);
+      
+      // MIGRATION: Check for legacy single profile
+      const legacyProfile = localStorage.getItem('tiny-tastes-tracker-profile');
+      if (legacyProfile) {
+          const parsed = JSON.parse(legacyProfile);
+          if (!parsed.id) parsed.id = crypto.randomUUID(); // Assign ID if missing
+          return [parsed];
+      }
+      return [];
   });
+
+  const [activeChildId, setActiveChildId] = useState<string>(() => {
+      const savedId = localStorage.getItem('tiny-tastes-tracker-activeChildId');
+      if (savedId) return savedId;
+      // Default to first child if available
+      const savedProfiles = localStorage.getItem('tiny-tastes-tracker-profiles');
+      if (savedProfiles) {
+          const parsed = JSON.parse(savedProfiles);
+          if (parsed.length > 0) return parsed[0].id;
+      }
+      // Migration fallback
+      const legacyProfile = localStorage.getItem('tiny-tastes-tracker-profile');
+      if (legacyProfile) {
+          const parsed = JSON.parse(legacyProfile);
+          return parsed.id || 'default'; // Should match ID generated in profiles state
+      }
+      return '';
+  });
+
+  // Derived Active Profile
+  const userProfile = useMemo(() => profiles.find(p => p.id === activeChildId) || null, [profiles, activeChildId]);
+
+  // Track if we are in the initial onboarding flow
+  const [isOnboarding, setIsOnboarding] = useState(profiles.length === 0);
+
+  // --- DATA STATE (ALL LOGS) ---
+  // Note: All logs are loaded entirely, then filtered by activeChildId for display.
+  // When saving, we attach activeChildId.
+  // Legacy migration: If a log has no childId, we assume it belongs to the first profile/legacy profile.
+
   const [triedFoods, setTriedFoods] = useState<TriedFoodLog[]>(() => {
       const saved = localStorage.getItem('tiny-tastes-tracker-triedFoods');
-      return saved ? JSON.parse(saved) : [];
+      const data = saved ? JSON.parse(saved) : [];
+      // Migration: Ensure logs have childId if possible
+      return data;
   });
+  
+  // Recipes & Meal Plan are GLOBAL (shared across family)
   const [recipes, setRecipes] = useState<Recipe[]>(() => {
       const saved = localStorage.getItem('tiny-tastes-tracker-recipes');
       return saved ? JSON.parse(saved) : [];
@@ -55,27 +99,33 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('tiny-tastes-tracker-mealPlan');
       return saved ? JSON.parse(saved) : {};
   });
-  const [milestones, setMilestones] = useState<Milestone[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-milestones');
-      return saved ? JSON.parse(saved) : DEFAULT_MILESTONES;
-  });
+  
+  // Custom foods are GLOBAL
   const [customFoods, setCustomFoods] = useState<CustomFood[]>(() => {
     const saved = localStorage.getItem('tiny-tastes-tracker-customFoods');
     return saved ? JSON.parse(saved) : [];
   });
   
-  // Saved Strategies for Picky Eater
+  // Milestones: Child Specific (Filtered below)
+  const [allMilestones, setAllMilestones] = useState<Milestone[]>(() => {
+      const saved = localStorage.getItem('tiny-tastes-tracker-milestones');
+      return saved ? JSON.parse(saved) : DEFAULT_MILESTONES; // This might be buggy for new children, dealt with in logic
+  });
+
   const [savedStrategies, setSavedStrategies] = useState<SavedStrategy[]>(() => {
       const saved = localStorage.getItem('tiny-tastes-tracker-savedStrategies');
       return saved ? JSON.parse(saved) : [];
   });
-  // Safe Foods for Picky Eater
-  const [safeFoods, setSafeFoods] = useState<string[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-safeFoods');
-      return saved ? JSON.parse(saved) : [];
-  });
-
-  // Shopping List Persistence
+  
+  // Safe Foods: Child Specific (Stored as simple strings, needs migration to object or separate keys if we want per-child. 
+  // For now, let's keep it simple and share safe foods or filter if we update the structure. 
+  // Strategy: Add childId to key in localStorage? No, let's keep array but maybe prefix? 
+  // BETTER: Store as object { childId: string[] } or array of objects. 
+  // CURRENT: It's string[]. Let's migrate to object map in a future refactor. For now, assume global or migrate.
+  // ACTUALLY: Let's make safeFoods part of UserProfile! It already is in types.ts!
+  // So we sync safeFoods state with the active profile.
+  
+  // Shopping List: Global
   const [manualShoppingItems, setManualShoppingItems] = useState<ManualShoppingItem[]>(() => {
       const saved = localStorage.getItem('tiny-tastes-tracker-manualShopping');
       return saved ? JSON.parse(saved) : [];
@@ -85,7 +135,7 @@ const App: React.FC = () => {
       return saved ? JSON.parse(saved) : {};
   });
 
-  // Newborn Mode Logs
+  // Newborn Logs: Child Specific
   const [feedLogs, setFeedLogs] = useState<FeedLog[]>(() => {
       const saved = localStorage.getItem('tiny-tastes-tracker-feedLogs');
       return saved ? JSON.parse(saved) : [];
@@ -102,7 +152,6 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('tiny-tastes-tracker-medicineLogs');
       return saved ? JSON.parse(saved) : [];
   });
-  // Growth Logs
   const [growthLogs, setGrowthLogs] = useState<GrowthLog[]>(() => {
       const saved = localStorage.getItem('tiny-tastes-tracker-growthLogs');
       return saved ? JSON.parse(saved) : [];
@@ -111,23 +160,59 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('tracker');
   const [modalState, setModalState] = useState<ModalState>({ type: null });
 
+  // --- FILTERED DATA FOR ACTIVE CHILD ---
+  // Helper: If a log has no childId, assign it to the first profile found (Legacy Support)
+  const filterByChild = <T extends { childId?: string }>(logs: T[]) => {
+      if (!activeChildId) return [];
+      return logs.filter(log => {
+          if (log.childId) return log.childId === activeChildId;
+          // If no childId, assume it belongs to the first profile (migration logic)
+          return profiles.length > 0 && profiles[0].id === activeChildId;
+      });
+  };
+
+  const activeTriedFoods = useMemo(() => filterByChild(triedFoods), [triedFoods, activeChildId, profiles]);
+  const activeFeedLogs = useMemo(() => filterByChild(feedLogs), [feedLogs, activeChildId, profiles]);
+  const activeDiaperLogs = useMemo(() => filterByChild(diaperLogs), [diaperLogs, activeChildId, profiles]);
+  const activeSleepLogs = useMemo(() => filterByChild(sleepLogs), [sleepLogs, activeChildId, profiles]);
+  const activeMedicineLogs = useMemo(() => filterByChild(medicineLogs), [medicineLogs, activeChildId, profiles]);
+  const activeGrowthLogs = useMemo(() => filterByChild(growthLogs), [growthLogs, activeChildId, profiles]);
+  const activeSavedStrategies = useMemo(() => filterByChild(savedStrategies), [savedStrategies, activeChildId, profiles]);
+  
+  // Milestones are tricky. If we switch children, we need a fresh set of milestones if they don't exist.
+  const activeMilestones = useMemo(() => {
+      if (!activeChildId) return DEFAULT_MILESTONES;
+      const childMilestones = allMilestones.filter(m => m.childId === activeChildId);
+      // If no milestones found for this child (new child), return default. 
+      // Note: We need to handle saving these properly.
+      if (childMilestones.length === 0 && activeChildId !== (profiles[0]?.id)) {
+          return DEFAULT_MILESTONES.map(m => ({ ...m, childId: activeChildId }));
+      }
+      // For legacy data (no childId), associate with first profile
+      if (childMilestones.length === 0 && profiles.length > 0 && activeChildId === profiles[0].id) {
+          return allMilestones.filter(m => !m.childId);
+      }
+      return childMilestones.length > 0 ? childMilestones : DEFAULT_MILESTONES.map(m => ({...m, childId: activeChildId}));
+  }, [allMilestones, activeChildId, profiles]);
+
+
   const { mode, config } = useAppMode(userProfile);
 
-  // Persistence Effects
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-profile', JSON.stringify(userProfile)), [userProfile]);
+  // --- PERSISTENCE EFFECTS ---
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-profiles', JSON.stringify(profiles)), [profiles]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-activeChildId', activeChildId), [activeChildId]);
+  
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-triedFoods', JSON.stringify(triedFoods)), [triedFoods]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-recipes', JSON.stringify(recipes)), [recipes]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-mealPlan', JSON.stringify(mealPlan)), [mealPlan]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-milestones', JSON.stringify(milestones)), [milestones]);
+  useEffect(() => localStorage.setItem('tiny-tastes-tracker-milestones', JSON.stringify(allMilestones)), [allMilestones]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-customFoods', JSON.stringify(customFoods)), [customFoods]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-savedStrategies', JSON.stringify(savedStrategies)), [savedStrategies]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-safeFoods', JSON.stringify(safeFoods)), [safeFoods]);
+  // safeFoods are inside profiles now
   
-  // Shopping List Persistence Effects
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-manualShopping', JSON.stringify(manualShoppingItems)), [manualShoppingItems]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-shoppingChecked', JSON.stringify(shoppingCheckedItems)), [shoppingCheckedItems]);
 
-  // Newborn Persistence
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-feedLogs', JSON.stringify(feedLogs)), [feedLogs]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-diaperLogs', JSON.stringify(diaperLogs)), [diaperLogs]);
   useEffect(() => localStorage.setItem('tiny-tastes-tracker-sleepLogs', JSON.stringify(sleepLogs)), [sleepLogs]);
@@ -145,20 +230,27 @@ const App: React.FC = () => {
   }, [mode, config]);
 
 
-  // Actions
-  const handleSaveProfile = (profile: UserProfile) => {
-      setUserProfile(profile);
+  // --- ACTIONS ---
+
+  const handleCreateChild = (child: UserProfile) => {
+      setProfiles(prev => [...prev, child]);
+      setActiveChildId(child.id);
+      setModalState({ type: null });
+  };
+
+  const handleUpdateProfile = (updatedProfile: UserProfile) => {
+      setProfiles(prev => prev.map(p => p.id === updatedProfile.id ? updatedProfile : p));
       setModalState({ type: null });
   };
 
   const handleResetData = () => {
-      if (window.confirm("Are you sure? This will delete all data.")) {
+      if (window.confirm("Are you sure? This will delete ALL data for ALL children.")) {
           localStorage.clear();
           window.location.reload();
       }
   };
 
-  // ... (existing helper functions like checkBadges, handleSaveFoodLog, etc.)
+  // Helper to update badges for ACTIVE child
   const checkBadges = (currentTried: TriedFoodLog[]) => {
       const triedCount = new Set(currentTried.map(f => f.id)).size;
       const currentBadges = userProfile?.badges || BADGES_LIST;
@@ -184,24 +276,28 @@ const App: React.FC = () => {
           }
       }
 
-      if (unlockedBadge) {
-          setUserProfile(prev => prev ? { ...prev, badges: newBadges } : null);
+      if (unlockedBadge && userProfile) {
+          handleUpdateProfile({ ...userProfile, badges: newBadges });
           setModalState({ type: 'BADGE_UNLOCKED', badge: unlockedBadge });
-      } else {
-          setUserProfile(prev => prev ? { ...prev, badges: newBadges } : null);
+      } else if (userProfile) {
+          handleUpdateProfile({ ...userProfile, badges: newBadges });
       }
   };
 
   const handleSaveFoodLog = (foodName: string, data: FoodLogData) => {
-      const newLog: TriedFoodLog = { id: foodName, ...data };
-      const updatedTried = [...triedFoods.filter(f => !(f.id === foodName && f.date === data.date && f.meal === data.meal)), newLog];
+      if (!activeChildId) return;
+      const newLog: TriedFoodLog = { id: foodName, childId: activeChildId, ...data };
+      
+      // Update global list, but logic relies on checking if *this child* already tried it
+      const updatedTried = [...triedFoods.filter(f => !(f.childId === activeChildId && f.id === foodName && f.date === data.date && f.meal === data.meal)), newLog];
       setTriedFoods(updatedTried);
       
-      const isFirstTime = !triedFoods.some(f => f.id === foodName);
+      const isFirstTimeForChild = !activeTriedFoods.some(f => f.id === foodName);
       setModalState({ type: null });
       
-      if (isFirstTime) {
-          checkBadges(updatedTried);
+      if (isFirstTimeForChild) {
+          // Pass the CHILD's tried foods to check badges
+          checkBadges(updatedTried.filter(f => f.childId === activeChildId));
           const customFood = customFoods.find(c => c.name === foodName);
           let allergens: string[] = [];
           if (customFood && customFood.details.allergen_info && customFood.details.allergen_info !== 'No common allergens') {
@@ -214,6 +310,7 @@ const App: React.FC = () => {
   };
 
   const handleBatchLogMeal = (items: LoggedItemData[], date: string, meal: string, photo?: string, notes?: string, strategy?: string) => {
+      if (!activeChildId) return;
       const newLogs: TriedFoodLog[] = items.map(item => {
           let reaction = 6; // Default to "Liked" (6/7)
           let moreThanOneBite = true;
@@ -228,6 +325,7 @@ const App: React.FC = () => {
 
           return {
               id: item.food,
+              childId: activeChildId,
               date,
               meal,
               reaction, 
@@ -245,11 +343,13 @@ const App: React.FC = () => {
       
       const updatedTried = [...triedFoods, ...newLogs];
       setTriedFoods(updatedTried);
-      checkBadges(updatedTried);
+      checkBadges(updatedTried.filter(f => f.childId === activeChildId));
   };
 
   const handleUpdateBatchLog = (originalDate: string, originalMeal: string, items: LoggedItemData[], newDate: string, newMeal: string, photo?: string, notes?: string, strategy?: string) => {
-      const filteredTried = triedFoods.filter(f => !(f.date === originalDate && f.meal === originalMeal));
+      if (!activeChildId) return;
+      // Remove old logs for THIS child at THIS meal
+      const filteredTried = triedFoods.filter(f => !(f.childId === activeChildId && f.date === originalDate && f.meal === originalMeal));
       
       const newLogs: TriedFoodLog[] = items.map(item => {
           let reaction = 6;
@@ -265,6 +365,7 @@ const App: React.FC = () => {
 
           return {
               id: item.food,
+              childId: activeChildId,
               date: newDate,
               meal: newMeal,
               reaction,
@@ -284,6 +385,7 @@ const App: React.FC = () => {
       setTriedFoods(updatedTried);
   };
 
+  // ... (Barcode, Recipe, Custom Food handlers remain mostly same, mostly global)
   const handleBarcodeScan = async (barcode: string) => {
       setModalState({ type: null });
       
@@ -367,11 +469,18 @@ const App: React.FC = () => {
   };
   
   const handleSaveStrategy = (strategy: SavedStrategy) => {
-      setSavedStrategies(prev => [...prev, strategy]);
+      setSavedStrategies(prev => [...prev, { ...strategy, childId: activeChildId }]);
   };
   
   const handleDeleteStrategy = (id: string) => {
       setSavedStrategies(prev => prev.filter(s => s.id !== id));
+  };
+
+  // Safe Foods now stored in Profile
+  const handleUpdateSafeFoods = (foods: string[]) => {
+      if (userProfile) {
+          handleUpdateProfile({ ...userProfile, safeFoods: foods });
+      }
   };
 
   const handleAddManualItem = (name: string) => {
@@ -414,25 +523,36 @@ const App: React.FC = () => {
 
   // --- Newborn Action Handlers ---
   const handleLogFeed = (feed: FeedLog) => {
-      setFeedLogs(prev => [feed, ...prev]);
+      setFeedLogs(prev => [{...feed, childId: activeChildId}, ...prev]);
   };
   const handleLogDiaper = (diaper: DiaperLog) => {
-      setDiaperLogs(prev => [diaper, ...prev]);
+      setDiaperLogs(prev => [{...diaper, childId: activeChildId}, ...prev]);
   };
   const handleLogSleep = (sleep: SleepLog) => {
-      setSleepLogs(prev => [sleep, ...prev]);
+      setSleepLogs(prev => [{...sleep, childId: activeChildId}, ...prev]);
   };
   const handleUpdateSleepLog = (updatedLog: SleepLog) => {
       setSleepLogs(prev => prev.map(log => log.id === updatedLog.id ? updatedLog : log));
   };
   const handleLogMedicine = (med: MedicineLog) => {
-      setMedicineLogs(prev => [med, ...prev]);
+      setMedicineLogs(prev => [{...med, childId: activeChildId}, ...prev]);
   }
   const handleLogGrowth = (log: GrowthLog) => {
-      setGrowthLogs(prev => [log, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setGrowthLogs(prev => [{...log, childId: activeChildId}, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   }
   const handleDeleteGrowth = (id: string) => {
       setGrowthLogs(prev => prev.filter(l => l.id !== id));
+  }
+  const handleUpdateMilestone = (m: Milestone) => {
+      setAllMilestones(prev => {
+          // If editing a legacy milestone (no childId), attach current childId
+          // Or if new
+          const mWithId = { ...m, childId: activeChildId };
+          
+          // Remove existing entry for this child/milestone if exists, then add new
+          const others = prev.filter(p => !(p.id === m.id && (p.childId === activeChildId || (!p.childId && activeChildId === profiles[0]?.id))));
+          return [...others, mWithId];
+      });
   }
 
   const renderPage = () => {
@@ -441,7 +561,7 @@ const App: React.FC = () => {
       switch (currentPage) {
           case 'tracker':
               return <TrackerPage 
-                  triedFoods={triedFoods} 
+                  triedFoods={activeTriedFoods} 
                   customFoods={customFoods}
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
                   userProfile={userProfile}
@@ -453,8 +573,8 @@ const App: React.FC = () => {
           case 'recommendations':
               return <IdeasPage 
                   userProfile={userProfile}
-                  triedFoods={triedFoods}
-                  onSaveProfile={setUserProfile}
+                  triedFoods={activeTriedFoods}
+                  onSaveProfile={handleUpdateProfile}
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
                   onShowSubstitutes={(food) => setModalState({ type: 'SUBSTITUTES', food })}
                   onShowFlavorPairing={() => setModalState({ type: 'FLAVOR_PAIRING' })}
@@ -464,9 +584,9 @@ const App: React.FC = () => {
               return <RecipesPage 
                   recipes={recipes}
                   mealPlan={mealPlan}
-                  triedFoods={triedFoods}
+                  triedFoods={activeTriedFoods}
                   customFoods={customFoods}
-                  savedStrategies={savedStrategies}
+                  savedStrategies={activeSavedStrategies}
                   manualShoppingItems={manualShoppingItems}
                   shoppingCheckedItems={shoppingCheckedItems}
                   onShowAddRecipe={() => setModalState({ type: 'ADD_RECIPE' })}
@@ -492,12 +612,12 @@ const App: React.FC = () => {
           case 'profile':
               return <ProfilePage 
                   userProfile={userProfile}
-                  triedFoods={triedFoods}
-                  milestones={milestones}
-                  onSaveProfile={handleSaveProfile}
+                  triedFoods={activeTriedFoods}
+                  milestones={activeMilestones}
+                  onSaveProfile={handleUpdateProfile}
                   onResetData={handleResetData}
                   onShowDoctorReport={() => setModalState({ type: 'DOCTOR_REPORT' })}
-                  onUpdateMilestone={(m) => setMilestones(prev => prev.map(mil => mil.id === m.id ? m : mil))}
+                  onUpdateMilestone={handleUpdateMilestone}
                   onShowCertificate={() => setModalState({ type: 'CERTIFICATE', babyName: userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })}
                   baseColor={baseColorName}
               />;
@@ -507,11 +627,11 @@ const App: React.FC = () => {
           case 'sleep_growth':
               return <NewbornPage 
                   currentPage={currentPage}
-                  feedLogs={feedLogs}
-                  diaperLogs={diaperLogs}
-                  sleepLogs={sleepLogs}
-                  medicineLogs={medicineLogs}
-                  growthLogs={growthLogs}
+                  feedLogs={activeFeedLogs}
+                  diaperLogs={activeDiaperLogs}
+                  sleepLogs={activeSleepLogs}
+                  medicineLogs={activeMedicineLogs}
+                  growthLogs={activeGrowthLogs}
                   onLogFeed={handleLogFeed}
                   onLogDiaper={handleLogDiaper}
                   onLogSleep={handleLogSleep}
@@ -521,23 +641,23 @@ const App: React.FC = () => {
                   onDeleteGrowth={handleDeleteGrowth}
                   baseColor={baseColorName}
                   userProfile={userProfile}
-                  onUpdateProfile={setUserProfile}
+                  onUpdateProfile={handleUpdateProfile}
               />;
           // TODDLER PAGES
           case 'picky_eater':
               return <ToddlerPickyEater 
                   baseColor={baseColorName}
-                  savedStrategies={savedStrategies}
+                  savedStrategies={activeSavedStrategies}
                   onSaveStrategy={handleSaveStrategy}
                   onDeleteStrategy={handleDeleteStrategy}
-                  safeFoods={safeFoods}
-                  onUpdateSafeFoods={setSafeFoods}
+                  safeFoods={userProfile?.safeFoods || []}
+                  onUpdateSafeFoods={handleUpdateSafeFoods}
               />;
           case 'balance':
-              return <BalanceDashboard triedFoods={triedFoods} baseColor={baseColorName} />;
+              return <BalanceDashboard triedFoods={activeTriedFoods} baseColor={baseColorName} />;
           case 'growth': // Toddler specific growth route
               return <ToddlerGrowthPage 
-                  growthLogs={growthLogs} 
+                  growthLogs={activeGrowthLogs} 
                   onLogGrowth={handleLogGrowth} 
                   onDeleteGrowth={handleDeleteGrowth} 
                   baseColor={baseColorName} 
@@ -545,7 +665,7 @@ const App: React.FC = () => {
               />;
           default:
               return <TrackerPage 
-                  triedFoods={triedFoods} 
+                  triedFoods={activeTriedFoods} 
                   customFoods={customFoods}
                   onFoodClick={(food) => setModalState({ type: 'LOG_FOOD', food })}
                   userProfile={userProfile}
@@ -562,7 +682,10 @@ const App: React.FC = () => {
       currentPage={currentPage} 
       setCurrentPage={setCurrentPage} 
       profile={userProfile} 
-      progress={{ triedCount: new Set(triedFoods.map(f => f.id)).size, totalCount: flatFoodList.length + customFoods.length }}
+      allProfiles={profiles}
+      onSwitchProfile={setActiveChildId}
+      onAddProfile={() => setModalState({ type: 'ADD_CHILD' })}
+      progress={{ triedCount: new Set(activeTriedFoods.map(f => f.id)).size, totalCount: flatFoodList.length + customFoods.length }}
       mode={mode}
       config={config}
     >
@@ -574,15 +697,15 @@ const App: React.FC = () => {
       {modalState.type === 'LOG_FOOD' && (
         <FoodLogModal 
           food={modalState.food} 
-          existingLog={triedFoods.find(f => f.id === modalState.food.name && f.date === new Date().toISOString().split('T')[0] && !f.meal)} // Simplified check, ideally pass specific log
+          existingLog={activeTriedFoods.find(f => f.id === modalState.food.name && f.date === new Date().toISOString().split('T')[0] && !f.meal)} // Simplified check
           onClose={() => setModalState({ type: null })}
           onSave={handleSaveFoodLog}
           onShowGuide={(food) => setModalState({ type: 'HOW_TO_SERVE', food, returnToLog: true, customDetails: (food as CustomFood).isCustom ? (food as CustomFood).details : undefined })}
           onIncrementTry={(id) => {
-              const log = triedFoods.find(f => f.id === id);
+              const log = triedFoods.find(f => f.id === id && f.childId === activeChildId);
               if (log) {
                   const updatedLog = { ...log, tryCount: (log.tryCount || 1) + 1 };
-                  setTriedFoods(prev => prev.map(f => f.id === id ? updatedLog : f));
+                  setTriedFoods(prev => prev.map(f => (f.id === id && f.childId === activeChildId) ? updatedLog : f));
               }
           }}
           baseColor={config.themeColor.replace('bg-', '').replace('-600', '').replace('-500', '')}
@@ -650,7 +773,7 @@ const App: React.FC = () => {
           <ShoppingListModal 
             recipes={recipes}
             mealPlan={mealPlan}
-            triedFoods={triedFoods}
+            triedFoods={activeTriedFoods}
             manualItems={manualShoppingItems}
             checkedItems={shoppingCheckedItems}
             onAddManualItem={handleAddManualItem}
@@ -681,14 +804,14 @@ const App: React.FC = () => {
       {modalState.type === 'DOCTOR_REPORT' && (
           <DoctorReportModal 
             userProfile={userProfile}
-            triedFoods={triedFoods}
+            triedFoods={activeTriedFoods}
             onClose={() => setModalState({ type: null })}
           />
       )}
 
       {modalState.type === 'FLAVOR_PAIRING' && (
           <FlavorPairingModal 
-            triedFoods={triedFoods}
+            triedFoods={activeTriedFoods}
             onClose={() => setModalState({ type: null })}
           />
       )}
@@ -753,9 +876,22 @@ const App: React.FC = () => {
           </Suspense>
       )}
 
+      {modalState.type === 'ADD_CHILD' && (
+          <AddChildModal 
+            onClose={() => setModalState({ type: null })}
+            onSave={handleCreateChild}
+          />
+      )}
+
       {/* First Time Tutorial */}
-      {!userProfile && (
-          <TutorialModal onSave={handleSaveProfile} />
+      {isOnboarding && (
+          <TutorialModal 
+            onSave={(data) => {
+                const newChild = { ...data, id: crypto.randomUUID() };
+                handleCreateChild(newChild);
+            }} 
+            onClose={() => setIsOnboarding(false)}
+          />
       )}
     </Layout>
   );

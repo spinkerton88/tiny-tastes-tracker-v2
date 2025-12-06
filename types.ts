@@ -60,11 +60,13 @@ export interface FoodLogData {
 
 export interface TriedFoodLog extends FoodLogData {
     id: string; // The food name
+    childId?: string; // Link to specific child
 }
 
 // --- Newborn Mode Types ---
 export interface FeedLog {
     id: string;
+    childId?: string; // Link to specific child
     type: 'breast' | 'bottle' | 'pump';
     side?: 'left' | 'right' | 'both'; // for breast
     amount?: number; // oz for bottle/pump (Total)
@@ -79,6 +81,7 @@ export interface FeedLog {
 
 export interface DiaperLog {
     id: string;
+    childId?: string; // Link to specific child
     type: 'wet' | 'dirty' | 'mixed';
     timestamp: string;
     notes?: string;
@@ -86,6 +89,7 @@ export interface DiaperLog {
 
 export interface SleepLog {
     id: string;
+    childId?: string; // Link to specific child
     type: 'sleep';
     startTime: string;
     endTime?: string;
@@ -94,6 +98,7 @@ export interface SleepLog {
 
 export interface MedicineLog {
     id: string;
+    childId?: string; // Link to specific child
     medicineName: string;
     amount?: string; // e.g. "2.5ml"
     unit?: string;
@@ -103,6 +108,7 @@ export interface MedicineLog {
 
 export interface GrowthLog {
     id: string;
+    childId?: string; // Link to specific child
     date: string;
     weightLb?: number; // Whole pounds
     weightOz?: number; // Ounces
@@ -152,6 +158,7 @@ export interface Badge {
 }
 
 export interface UserProfile {
+    id: string; // Unique ID for multi-child support
     babyName?: string;
     birthDate?: string;
     gender?: 'boy' | 'girl'; // Added gender for growth percentiles
@@ -180,6 +187,7 @@ export interface FoodSubstitute {
 
 export interface Milestone {
     id: string;
+    childId?: string; // Link to specific child (optional for backward compatibility)
     title: string;
     icon: string;
     description: string;
@@ -199,6 +207,7 @@ export interface PickyEaterStrategy {
 
 export interface SavedStrategy extends PickyEaterStrategy {
     id: string;
+    childId?: string;
     targetFood: string;
     safeFood: string;
     dateSaved: string;
@@ -253,6 +262,7 @@ type CertificateModalState = { type: 'CERTIFICATE'; babyName: string; date: stri
 type CustomFoodModalState = { type: 'ADD_CUSTOM_FOOD'; initialName?: string; scannedData?: ScannedProductData };
 type LogMealModalState = { type: 'LOG_MEAL'; initialFoods?: string[] };
 type ScanBarcodeModalState = { type: 'SCAN_BARCODE' };
+type AddChildModalState = { type: 'ADD_CHILD' };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -273,4 +283,5 @@ export type ModalState =
   | CustomFoodModalState
   | LogMealModalState
   | ScanBarcodeModalState
+  | AddChildModalState
   | NullModalState;
