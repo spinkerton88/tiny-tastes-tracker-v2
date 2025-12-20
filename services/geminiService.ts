@@ -29,15 +29,17 @@ export const suggestRecipe = async (prompt: string, babyAgeInMonths: number): Pr
     Respond ONLY with a JSON object in the format {"title": "...", "ingredients": "...", "instructions": "..."}.
     Make sure ingredients are a bulleted list and instructions are a numbered list.`;
 
+    // Fix: Using gemini-3-flash-preview for basic text tasks.
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text: fullPrompt }] }],
       config: {
         responseMimeType: "application/json",
       },
     });
 
-    const text = response.text.trim();
+    // Fix: Access response.text property directly.
+    const text = response.text?.trim() || "{}";
     return JSON.parse(text);
   } catch (error) {
     console.error("Error suggesting recipe with AI:", error);
@@ -52,13 +54,15 @@ export const importRecipeFromImage = async (file: File): Promise<Partial<Recipe>
       text: `You are a recipe parser. Extract the title, ingredients (as a bulleted list), and instructions (as a numbered list) from this image. Respond ONLY with a JSON object in the format {"title": "...", "ingredients": "...", "instructions": "..."}. If you cannot find one of the fields, return an empty string for it.`
     };
 
+    // Correctly using gemini-2.5-flash-image for image parsing.
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [textPart, imagePart] },
     });
     
     // Clean up potential markdown code blocks
-    let text = response.text.trim();
+    // Fix: Access response.text property directly.
+    let text = response.text?.trim() || "{}";
     if (text.startsWith('```json')) {
         text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (text.startsWith('```')) {
@@ -90,7 +94,8 @@ export const identifyFoodFromImage = async (file: File): Promise<string | null> 
             contents: { parts: [{ text: prompt }, imagePart] },
         });
 
-        let text = response.text.trim();
+        // Fix: Access response.text property directly.
+        let text = response.text?.trim() || "{}";
         // Clean up potential markdown code blocks
         if (text.startsWith('```json')) {
             text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -117,13 +122,15 @@ export const getFlavorPairingSuggestions = async (triedFoods: string[]): Promise
         Focus on interesting texture and flavor compliments (e.g. "Creamy & Sweet", "Savory Mash").
         Respond ONLY with a JSON object: { "pairings": [{ "title": "...", "description": "...", "ingredients": ["...", "..."] }] }`;
 
+         // Fix: Using gemini-3-flash-preview for text tasks.
          const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: [{ parts: [{ text: prompt }] }],
             config: { responseMimeType: "application/json" }
         });
 
-        const text = response.text.trim();
+        // Fix: Access response.text property directly.
+        const text = response.text?.trim() || "{\"pairings\": []}";
         return JSON.parse(text);
     } catch (error) {
          console.error("Error generating pairings:", error);
@@ -135,15 +142,17 @@ export const categorizeShoppingList = async (ingredients: string[]): Promise<Rec
     try {
         const prompt = `Categorize this shopping list into the following groups: Produce, Dairy, Meat, Pantry, and Other. Respond ONLY with a JSON object where keys are the categories and values are arrays of ingredients from this list. If an item doesn't fit, put it in 'Other'. \n\n${ingredients.join('\n')}`;
 
+        // Fix: Using gemini-3-flash-preview for basic text tasks.
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: [{ parts: [{ text: prompt }] }],
             config: {
               responseMimeType: "application/json",
             },
         });
         
-        const text = response.text.trim();
+        // Fix: Access response.text property directly.
+        const text = response.text?.trim() || "{}";
         return JSON.parse(text);
     } catch (error) {
         console.error("Error categorizing shopping list:", error);
@@ -171,15 +180,17 @@ export const getFoodSubstitutes = async (foodName: string, babyAgeInMonths: numb
             Ensure the 'name' of the substitute is just the food name (e.g., "Mashed Peas", "Avocado Spears").`;
         }
 
+        // Fix: Using gemini-3-flash-preview for text tasks.
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
             },
         });
         
-        const text = response.text.trim();
+        // Fix: Access response.text property directly.
+        const text = response.text?.trim() || "{\"substitutes\": []}";
         const parsed = JSON.parse(text);
         if (parsed.substitutes && Array.isArray(parsed.substitutes)) {
             return parsed.substitutes;
@@ -213,8 +224,9 @@ Then list 3 short, relevant follow-up questions that the user might want to ask 
         parts: [{ text: question }]
     });
 
+    // Fix: Using gemini-3-flash-preview for text tasks with search.
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
@@ -222,6 +234,7 @@ Then list 3 short, relevant follow-up questions that the user might want to ask 
       },
     });
 
+    // Fix: Access response.text property directly.
     let answer = response.text || "I couldn't generate an answer. Please try again.";
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
     
@@ -262,15 +275,17 @@ export const analyzeFoodWithGemini = async (foodName: string): Promise<CustomFoo
         - "emoji": A single emoji.
         - "category": Best fit from [Vegetables, Fruits, Grains, Protein, Dairy, Snacks]. Default to "Snacks" if unsure or packaged.`;
 
+        // Fix: Using gemini-3-flash-preview for text tasks.
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
             },
         });
 
-        const text = response.text.trim();
+        // Fix: Access response.text property directly.
+        const text = response.text?.trim() || "{}";
         return JSON.parse(text);
     } catch (error) {
         console.error("Error analyzing food with Gemini:", error);
@@ -295,15 +310,17 @@ export const analyzePackagedProduct = async (productName: string, ingredientsTex
 
         Respond ONLY with a JSON object matching this structure.`;
 
+        // Fix: Using gemini-3-flash-preview for text tasks.
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",
             },
         });
 
-        const text = response.text.trim();
+        // Fix: Access response.text property directly.
+        const text = response.text?.trim() || "{}";
         return JSON.parse(text);
     } catch (error) {
         console.error("Error analyzing packaged product:", error);
@@ -365,8 +382,9 @@ Constraints:
 
     const prompt = `Target Food: ${targetFood}\nSafe Foods: ${safeFoods}\nThe "Ick" Factor: ${ickFactor}`;
 
+    // Fix: Using gemini-3-flash-preview for text tasks.
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction: systemInstruction,
@@ -374,7 +392,8 @@ Constraints:
       },
     });
 
-    const text = response.text.trim();
+    // Fix: Access response.text property directly.
+    const text = response.text?.trim() || "{\"strategies\": []}";
     return JSON.parse(text);
   } catch (error) {
     console.error("Error generating picky eater strategies:", error);
@@ -409,8 +428,9 @@ Output JSON:
 
     const prompt = `Missing Nutrient: ${missingNutrient}\nCurrent Diet Trend: ${currentDietTrend}`;
 
+    // Fix: Using gemini-3-flash-preview for text tasks.
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction: systemInstruction,
@@ -418,7 +438,8 @@ Output JSON:
       },
     });
 
-    const text = response.text.trim();
+    // Fix: Access response.text property directly.
+    const text = response.text?.trim() || "{}";
     return JSON.parse(text);
   } catch (error) {
     console.error("Error getting nutrient gap suggestions:", error);
@@ -460,8 +481,9 @@ JSON Structure:
 
         const prompt = `Current Time: ${currentTime}\nLast Wake Time: ${lastWakeTime}\nSleep Log Data: ${sleepLogSummary}`;
 
+        // Fix: Using gemini-3-flash-preview for text tasks.
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: [{ parts: [{ text: prompt }] }],
             config: {
                 systemInstruction: systemInstruction,
@@ -469,7 +491,8 @@ JSON Structure:
             },
         });
 
-        const text = response.text.trim();
+        // Fix: Access response.text property directly.
+        const text = response.text?.trim() || "{}";
         return JSON.parse(text);
     } catch (error) {
         console.error("Error predicting sleep window:", error);
@@ -513,8 +536,9 @@ JSON Structure:
   "disclaimer_warning": "This tool is for informational comparison only. Always contact your doctor immediately with health concerns."
 }`;
 
+        // Fix: Using gemini-3-flash-preview for text tasks with search.
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: [{ parts: [{ text: "Analyze daily logs" }] }],
             config: {
                 systemInstruction: systemInstruction,
@@ -522,9 +546,8 @@ JSON Structure:
             },
         });
 
-        // The tool result text might contain the JSON we need, but sometimes it comes in parts.
-        // The standard response.text accessor should handle concatenation.
-        let text = response.text?.trim();
+        // Fix: Access response.text property directly.
+        let text = response.text?.trim() || "{}";
         
         // Remove markdown formatting if present
         if (text && text.startsWith('```json')) {
@@ -566,8 +589,9 @@ Output JSON Structure:
 
         const prompt = `Medicine Name: ${medicineName}\nBaby Weight: ${weightKg}`;
 
+        // Fix: Using gemini-3-flash-preview for text tasks with search.
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3-flash-preview",
             contents: [{ parts: [{ text: prompt }] }],
             config: {
                 systemInstruction: systemInstruction,
@@ -575,7 +599,8 @@ Output JSON Structure:
             },
         });
 
-        let text = response.text?.trim();
+        // Fix: Access response.text property directly.
+        let text = response.text?.trim() || "{}";
         if (text && text.startsWith('```json')) {
             text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
         } else if (text && text.startsWith('```')) {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Page, UserProfile, AppMode, AppModeConfig } from '../types';
 import Icon from './ui/Icon';
@@ -41,9 +40,8 @@ const NavButton: React.FC<{
 const Layout: React.FC<LayoutProps> = ({ currentPage, setCurrentPage, profile, allProfiles = [], onSwitchProfile, onAddProfile, children, mode = 'EXPLORER', config }) => {
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
-  // Fallback config if not provided
   const themeColor = config?.themeColor || 'bg-teal-600';
-  const homeTitle = config?.homeTitle || 'Tiny Tastes Tracker';
+  const homeTitle = config?.homeTitle || 'Tiny Tastes';
   const navItems = config?.navItems || [
       { id: 'tracker', label: 'Tracker', icon: 'grid-3x3' },
       { id: 'recommendations', label: 'Recs', icon: 'lightbulb' },
@@ -65,9 +63,12 @@ const Layout: React.FC<LayoutProps> = ({ currentPage, setCurrentPage, profile, a
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Header: Added pt-safe for iPhone Notch support. Increased z-index to 50 to overlap content (like charts) */}
-      <header className={`${themeColor} shadow-md sticky top-0 z-50 transition-colors duration-500 pt-safe`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      {/* 
+        Header: Changed to fixed to prevent iOS scrolling overlap issues.
+        The pt-safe ensures padding for the iOS Notch area.
+      */}
+      <header className={`fixed top-0 left-0 right-0 ${themeColor} shadow-md z-50 pt-safe transition-colors duration-500`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex justify-between items-center relative">
               <div>
                   <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow-sm">
@@ -78,7 +79,7 @@ const Layout: React.FC<LayoutProps> = ({ currentPage, setCurrentPage, profile, a
                   <div className="relative mt-1">
                       <button 
                         onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
-                        className="flex items-center gap-1 text-sm text-teal-50 font-medium hover:text-white transition-colors focus:outline-none"
+                        className="flex items-center gap-1 text-sm text-white/90 font-medium hover:text-white transition-colors focus:outline-none"
                       >
                           <span>Tracking: <span className="font-bold border-b border-white/40">{profile?.babyName || 'Baby'}</span></span>
                           <Icon name="chevron-down" className={`w-3 h-3 transition-transform ${isSwitcherOpen ? 'rotate-180' : ''}`} />
@@ -111,7 +112,7 @@ const Layout: React.FC<LayoutProps> = ({ currentPage, setCurrentPage, profile, a
                   </div>
               </div>
               <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full border border-white/30">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  <span className="text-[10px] sm:text-xs font-bold text-white uppercase tracking-wider">
                       {mode} MODE
                   </span>
               </div>
@@ -122,13 +123,19 @@ const Layout: React.FC<LayoutProps> = ({ currentPage, setCurrentPage, profile, a
       {/* Click backdrop for switcher */}
       {isSwitcherOpen && <div className="fixed inset-0 z-40" onClick={() => setIsSwitcherOpen(false)}></div>}
 
-      <main className="flex-grow max-w-7xl mx-auto w-full">
-        <div className="page-content py-6 px-4 sm:px-6 lg:px-8">
-            {children}
+      {/* 
+        Spacer for the fixed header: 
+        Height should match header content (approx 72px) + safe area 
+      */}
+      <main className="flex-grow pt-[calc(76px+env(safe-area-inset-top))] sm:pt-[calc(88px+env(safe-area-inset-top))] pb-[calc(80px+env(safe-area-inset-bottom))]">
+        <div className="max-w-7xl mx-auto w-full">
+            <div className="page-content px-4 sm:px-6 lg:px-8">
+                {children}
+            </div>
         </div>
       </main>
 
-      {/* Nav: Added pb-safe for iPhone Home Indicator support */}
+      {/* Nav: Proper safe area support for iOS Home Indicator */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 pb-safe">
         <div className="max-w-7xl mx-auto flex justify-around px-2 sm:px-6 lg:px-8">
           {navItems.map(item => (

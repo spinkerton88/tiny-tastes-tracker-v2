@@ -429,22 +429,22 @@ export const recommendationData: Record<string, { title: string; message: string
     '6_months': {
         title: "6 Months: First Tastes",
         message: "Focus on iron-rich foods and easy-to-hold shapes (strips). Let baby explore textures.",
-        foods: ["AVOCADO", "SWEET POTATO", "BANANA", "BROCCOLI", "BEEF, SLICED", "OATMEAL"]
+        foods: ["AVOCADO", "SWEET POTATO", "BANANA", "BROCCOLI", "BEEF, SLICED", "OATMEAL", "BUTTERNUT SQUASH", "CARROTS", "PEARS", "CHICKEN"]
     },
     '7_8_months': {
         title: "7-8 Months: Allergens & Flavors",
         message: "Introduce top allergens one at a time. Mix flavors and offer lumpy mashed textures.",
-        foods: ["EGGS", "PEANUT BUTTER", "SALMON", "YOGURT", "TOFU", "STRAWBERRIES"]
+        foods: ["EGGS", "PEANUT BUTTER", "SALMON", "YOGURT", "TOFU", "STRAWBERRIES", "LENTILS", "ALMOND BUTTER", "MANGO", "CAULIFLOWER"]
     },
     '9_11_months': {
         title: "9-11 Months: Pincer Grasp",
         message: "Baby is using thumb and forefinger. Offer smaller, bite-sized pieces (like a chickpea).",
-        foods: ["BLUEBERRIES", "PEAS", "MOZZARELLA", "PASTA", "CHICKPEAS", "BEEF, GROUND", "CORN"]
+        foods: ["BLUEBERRIES", "PEAS", "MOZZARELLA", "PASTA", "CHICKPEAS", "BEEF, GROUND", "CORN", "SNAP PEAS", "KIWIFRUIT", "QUINOA"]
     },
     '12_plus': {
         title: "12+ Months: Table Foods",
         message: "Baby can eat most family meals! Watch sodium/sugar. Continue offering variety.",
-        foods: ["TOMATOES", "MUSHROOMS", "SPINACH", "SHRIMP", "BELL PEPPERS"]
+        foods: ["TOMATOES", "MUSHROOMS", "SPINACH", "SHRIMP", "BELL PEPPERS", "EGGPLANT", "PORK", "ORANGE", "APPLES", "ZUCCHINI"]
     }
 };
 

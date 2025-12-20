@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Food, TriedFoodLog, Filter, FoodCategory, UserProfile, CustomFood } from '../../types';
 import { allFoods, totalFoodCount, FOOD_ALLERGY_MAPPING, FOOD_NUTRIENT_MAPPING, NUTRIENT_STYLES } from '../../constants';
 import { identifyFoodFromImage } from '../../services/geminiService';
@@ -108,7 +108,6 @@ const FilterButton: React.FC<{ filter: Filter, currentFilter: Filter, onClick: (
 const CategoryProgress: React.FC<{ category: FoodCategory, triedCount: number }> = ({ category, triedCount }) => {
     const total = category.items.length;
     const percent = total > 0 ? (triedCount / total) * 100 : 0;
-    // Extract the base color name (e.g., 'green', 'red') from the tailwind class 'bg-green-100'
     const colorName = category.color.replace('bg-', '').replace('-100', '');
     const barColor = `bg-${colorName}-500`; 
     
@@ -143,9 +142,12 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
   const [isIdentifying, setIsIdentifying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const triedFoodSet = new Set(triedFoods.map(f => f.id));
-  const triedCount = triedFoods.length;
-  const progressPercent = (triedCount / totalFoodCount) * 100;
+  // CRITICAL FIX: Use a Set to ensure we only count unique food IDs, not the total number of logs.
+  // Fix: Imported useMemo from React.
+  const triedFoodSet = useMemo(() => new Set(triedFoods.map(f => f.id)), [triedFoods]);
+  const triedCount = triedFoodSet.size;
+  const totalCount = totalFoodCount + customFoods.length;
+  const progressPercent = totalCount > 0 ? (triedCount / totalCount) * 100 : 0;
   
   const knownAllergens = Array.isArray(userProfile?.knownAllergies) ? userProfile?.knownAllergies : [];
 
@@ -188,14 +190,19 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
       return foodAllergens.some(allergen => knownAllergens.includes(allergen));
   };
   
-  // Logic for Recently Tried
-  const recentLogs = [...triedFoods]
-    .sort((a, b) => {
-        const dateA = new Date(a.date).getTime() || 0;
-        const dateB = new Date(b.date).getTime() || 0;
-        return dateB - dateA;
-    })
-    .slice(0, 5);
+  // Logic for Recently Tried (Show unique items, most recent first)
+  // Fix: Imported useMemo from React.
+  const recentLogs = useMemo(() => {
+    const uniqueRecent = new Map<string, TriedFoodLog>();
+    [...triedFoods]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .forEach(log => {
+            if (!uniqueRecent.has(log.id)) {
+                uniqueRecent.set(log.id, log);
+            }
+        });
+    return Array.from(uniqueRecent.values()).slice(0, 5);
+  }, [triedFoods]);
 
   const handleCameraClick = () => {
       fileInputRef.current?.click();
@@ -210,10 +217,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
           const identifiedFoodName = await identifyFoodFromImage(file);
           
           if (identifiedFoodName) {
-              // Find the food object in our list
               let foundFood: Food | undefined;
-              
-              // Check standard foods
               for (const cat of allFoods) {
                   const match = cat.items.find(item => item.name === identifiedFoodName);
                   if (match) {
@@ -221,7 +225,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                       break;
                   }
               }
-              // Check custom foods
               if (!foundFood) {
                   foundFood = customFoods.find(f => f.name === identifiedFoodName);
               }
@@ -239,12 +242,10 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
           alert("Error analyzing image.");
       } finally {
           setIsIdentifying(false);
-          // Reset input
           if (fileInputRef.current) fileInputRef.current.value = '';
       }
   };
 
-  // Styling for Custom Food Cards
   const customCategoryStyle: FoodCategory = {
       category: "Custom",
       color: "bg-white",
@@ -257,7 +258,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
     <>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold text-gray-800">My 100 Foods</h2>
-        {/* Hidden File Input */}
         <input 
             type="file" 
             accept="image/*" 
@@ -344,7 +344,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                         let foundCategory: FoodCategory | undefined;
                         let foundFood: Food | undefined;
 
-                        // Check standard categories
                         for (const cat of allFoods) {
                             const f = cat.items.find(i => i.name === log.id);
                             if (f) {
@@ -354,7 +353,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                             }
                         }
                         
-                        // Check Custom foods if not found
                         if (!foundFood) {
                             foundFood = customFoods.find(f => f.name === log.id);
                             if (foundFood) {
@@ -393,7 +391,7 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
       <div className="bg-white p-4 rounded-lg shadow mb-6">
         <div className="flex justify-between items-center mb-2">
           <span className={`text-lg font-semibold text-${baseColor}-700`}>Food Journey Progress</span>
-          <span className={`text-lg font-bold text-${baseColor}-700`}>{triedCount} / {totalFoodCount + customFoods.length}</span>
+          <span className={`text-lg font-bold text-${baseColor}-700`}>{triedCount} / {totalCount}</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
           <div className={`bg-${baseColor}-600 h-4 rounded-full transition-all duration-500`} style={{ width: `${progressPercent}%` }}></div>
@@ -409,12 +407,10 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
             </button>
             
             <div className={`grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 transition-all duration-300 ease-in-out overflow-hidden ${isBreakdownOpen ? 'max-h-[1000px] opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
-                {/* Standard Categories */}
                 {allFoods.map(cat => {
                     const catTriedCount = cat.items.filter(item => triedFoodSet.has(item.name)).length;
                     return <CategoryProgress key={cat.category} category={cat} triedCount={catTriedCount} />;
                 })}
-                {/* Custom Category Summary */}
                 {customFoods.length > 0 && (
                     <CategoryProgress 
                         category={customCategoryStyle}
@@ -427,7 +423,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
 
       {hasResults ? (
         <>
-            {/* Standard Categories */}
             {filteredCategories.map(category => (
                 <div key={category.category}>
                     <h2 className={`text-2xl font-semibold ${category.textColor} mt-8 mb-4`}>{category.category}</h2>
@@ -450,7 +445,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
                 </div>
             ))}
 
-            {/* Custom & Scanned Foods - Added back as a separate list at the bottom */}
             {filteredCustomFoods.length > 0 && (
                 <div className="mb-8 p-4 bg-white rounded-xl border border-gray-100 shadow-sm mt-8">
                     <h2 className="text-xl font-bold text-violet-900 mb-4 flex items-center gap-2">
