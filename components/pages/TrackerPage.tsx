@@ -143,7 +143,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // CRITICAL FIX: Use a Set to ensure we only count unique food IDs, not the total number of logs.
-  // Fix: Imported useMemo from React.
   const triedFoodSet = useMemo(() => new Set(triedFoods.map(f => f.id)), [triedFoods]);
   const triedCount = triedFoodSet.size;
   const totalCount = totalFoodCount + customFoods.length;
@@ -191,7 +190,6 @@ const TrackerPage: React.FC<TrackerPageProps> = ({ triedFoods, customFoods = [],
   };
   
   // Logic for Recently Tried (Show unique items, most recent first)
-  // Fix: Imported useMemo from React.
   const recentLogs = useMemo(() => {
     const uniqueRecent = new Map<string, TriedFoodLog>();
     [...triedFoods]

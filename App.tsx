@@ -32,6 +32,7 @@ import AddChildModal from './components/modals/AddChildModal';
 import { LiveSageModal } from './components/modals/LiveSageModal';
 
 import { useAppMode } from './hooks/useAppMode';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem, FeedLog, DiaperLog, SleepLog, MedicineLog, GrowthLog } from './types';
 import { DEFAULT_MILESTONES, BADGES_LIST, flatFoodList } from './constants';
 import { fetchProductIngredients } from './services/openFoodFactsService';
@@ -39,95 +40,62 @@ import { fetchProductIngredients } from './services/openFoodFactsService';
 const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal'));
 
 const App: React.FC = () => {
-  const [profiles, setProfiles] = useState<UserProfile[]>(() => {
-      const savedProfiles = localStorage.getItem('tiny-tastes-tracker-profiles');
-      if (savedProfiles) return JSON.parse(savedProfiles);
-      const legacyProfile = localStorage.getItem('tiny-tastes-tracker-profile');
-      if (legacyProfile) {
-          const parsed = JSON.parse(legacyProfile);
-          if (!parsed.id) parsed.id = crypto.randomUUID();
-          return [parsed];
+  // Profiles has custom migration logic, so we keep the initializer but use the hook for persistence
+  const [profiles, setProfiles] = useLocalStorage<UserProfile[]>('tiny-tastes-tracker-profiles', []);
+  
+  // Handle legacy profile migration only once on mount if profiles are empty
+  useEffect(() => {
+      if (profiles.length === 0) {
+          const legacyProfile = localStorage.getItem('tiny-tastes-tracker-profile');
+          if (legacyProfile) {
+              try {
+                  const parsed = JSON.parse(legacyProfile);
+                  if (!parsed.id) parsed.id = crypto.randomUUID();
+                  setProfiles([parsed]);
+              } catch (e) {
+                  console.error("Failed to migrate legacy profile", e);
+              }
+          }
       }
-      return [];
-  });
+  }, []);
 
-  const [activeChildId, setActiveChildId] = useState<string>(() => {
-      const savedId = localStorage.getItem('tiny-tastes-tracker-activeChildId');
-      if (savedId) return savedId;
-      const savedProfiles = localStorage.getItem('tiny-tastes-tracker-profiles');
-      if (savedProfiles) {
-          const parsed = JSON.parse(savedProfiles);
-          if (parsed.length > 0) return parsed[0].id;
+  const [activeChildId, setActiveChildId] = useLocalStorage<string>('tiny-tastes-tracker-activeChildId', '');
+
+  // Initialize activeChildId if empty and profiles exist
+  useEffect(() => {
+      if (!activeChildId && profiles.length > 0) {
+          setActiveChildId(profiles[0].id);
       }
-      const legacyProfile = localStorage.getItem('tiny-tastes-tracker-profile');
-      if (legacyProfile) {
-          const parsed = JSON.parse(legacyProfile);
-          return parsed.id || 'default';
-      }
-      return '';
-  });
+  }, [profiles, activeChildId, setActiveChildId]);
 
   const userProfile = useMemo(() => profiles.find(p => p.id === activeChildId) || null, [profiles, activeChildId]);
-  const [isOnboarding, setIsOnboarding] = useState(profiles.length === 0);
+  const [isOnboarding, setIsOnboarding] = useState(false);
 
-  const [triedFoods, setTriedFoods] = useState<TriedFoodLog[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-triedFoods');
-      return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [recipes, setRecipes] = useState<Recipe[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-recipes');
-      return saved ? JSON.parse(saved) : [];
-  });
-  const [mealPlan, setMealPlan] = useState<MealPlan>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-mealPlan');
-      return saved ? JSON.parse(saved) : {};
-  });
-  
-  const [customFoods, setCustomFoods] = useState<CustomFood[]>(() => {
-    const saved = localStorage.getItem('tiny-tastes-tracker-customFoods');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [allMilestones, setAllMilestones] = useState<Milestone[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-milestones');
-      return saved ? JSON.parse(saved) : DEFAULT_MILESTONES;
-  });
+  // Trigger onboarding if no profiles exist (after initial load attempt)
+  useEffect(() => {
+      if (profiles.length === 0) {
+          // Check if we just tried to migrate and failed, or if it's truly a fresh user
+          const legacy = localStorage.getItem('tiny-tastes-tracker-profile');
+          if (!legacy) setIsOnboarding(true);
+      }
+  }, [profiles.length]);
 
-  const [savedStrategies, setSavedStrategies] = useState<SavedStrategy[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-savedStrategies');
-      return saved ? JSON.parse(saved) : [];
-  });
+  // Consolidate all data state using the custom hook
+  const [triedFoods, setTriedFoods] = useLocalStorage<TriedFoodLog[]>('tiny-tastes-tracker-triedFoods', []);
+  const [recipes, setRecipes] = useLocalStorage<Recipe[]>('tiny-tastes-tracker-recipes', []);
+  const [mealPlan, setMealPlan] = useLocalStorage<MealPlan>('tiny-tastes-tracker-mealPlan', {});
+  const [customFoods, setCustomFoods] = useLocalStorage<CustomFood[]>('tiny-tastes-tracker-customFoods', []);
+  const [allMilestones, setAllMilestones] = useLocalStorage<Milestone[]>('tiny-tastes-tracker-milestones', DEFAULT_MILESTONES);
+  const [savedStrategies, setSavedStrategies] = useLocalStorage<SavedStrategy[]>('tiny-tastes-tracker-savedStrategies', []);
+  const [manualShoppingItems, setManualShoppingItems] = useLocalStorage<ManualShoppingItem[]>('tiny-tastes-tracker-manualShopping', []);
+  const [shoppingCheckedItems, setShoppingCheckedItems] = useLocalStorage<Record<string, string>>('tiny-tastes-tracker-shoppingChecked', {});
   
-  const [manualShoppingItems, setManualShoppingItems] = useState<ManualShoppingItem[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-manualShopping');
-      return saved ? JSON.parse(saved) : [];
-  });
-  const [shoppingCheckedItems, setShoppingCheckedItems] = useState<Record<string, string>>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-shoppingChecked');
-      return saved ? JSON.parse(saved) : {};
-  });
-
-  const [feedLogs, setFeedLogs] = useState<FeedLog[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-feedLogs');
-      return saved ? JSON.parse(saved) : [];
-  });
-  const [diaperLogs, setDiaperLogs] = useState<DiaperLog[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-diaperLogs');
-      return saved ? JSON.parse(saved) : [];
-  });
-  const [sleepLogs, setSleepLogs] = useState<SleepLog[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-sleepLogs');
-      return saved ? JSON.parse(saved) : [];
-  });
-  const [medicineLogs, setMedicineLogs] = useState<MedicineLog[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-medicineLogs');
-      return saved ? JSON.parse(saved) : [];
-  });
-  const [growthLogs, setGrowthLogs] = useState<GrowthLog[]>(() => {
-      const saved = localStorage.getItem('tiny-tastes-tracker-growthLogs');
-      return saved ? JSON.parse(saved) : [];
-  });
+  // Newborn Mode Data
+  const [feedLogs, setFeedLogs] = useLocalStorage<FeedLog[]>('tiny-tastes-tracker-feedLogs', []);
+  const [diaperLogs, setDiaperLogs] = useLocalStorage<DiaperLog[]>('tiny-tastes-tracker-diaperLogs', []);
+  const [sleepLogs, setSleepLogs] = useLocalStorage<SleepLog[]>('tiny-tastes-tracker-sleepLogs', []);
+  const [medicineLogs, setMedicineLogs] = useLocalStorage<MedicineLog[]>('tiny-tastes-tracker-medicineLogs', []);
+  const [growthLogs, setGrowthLogs] = useLocalStorage<GrowthLog[]>('tiny-tastes-tracker-growthLogs', []);
 
   const [currentPage, setCurrentPage] = useState('tracker');
   const [modalState, setModalState] = useState<ModalState>({ type: null });
@@ -161,22 +129,6 @@ const App: React.FC = () => {
   }, [allMilestones, activeChildId, profiles]);
 
   const { mode, config } = useAppMode(userProfile);
-
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-profiles', JSON.stringify(profiles)), [profiles]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-activeChildId', activeChildId), [activeChildId]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-triedFoods', JSON.stringify(triedFoods)), [triedFoods]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-recipes', JSON.stringify(recipes)), [recipes]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-mealPlan', JSON.stringify(mealPlan)), [mealPlan]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-milestones', JSON.stringify(allMilestones)), [allMilestones]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-customFoods', JSON.stringify(customFoods)), [customFoods]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-savedStrategies', JSON.stringify(savedStrategies)), [savedStrategies]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-manualShopping', JSON.stringify(manualShoppingItems)), [manualShoppingItems]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-shoppingChecked', JSON.stringify(shoppingCheckedItems)), [shoppingCheckedItems]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-feedLogs', JSON.stringify(feedLogs)), [feedLogs]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-diaperLogs', JSON.stringify(diaperLogs)), [diaperLogs]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-sleepLogs', JSON.stringify(sleepLogs)), [sleepLogs]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-medicineLogs', JSON.stringify(medicineLogs)), [medicineLogs]);
-  useEffect(() => localStorage.setItem('tiny-tastes-tracker-growthLogs', JSON.stringify(growthLogs)), [growthLogs]);
 
   useEffect(() => {
     if (config && config.navItems.length > 0) {

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Recipe, RecipeFilter, MealPlan, TriedFoodLog, Food, CustomFood, LoggedItemData, FoodStatus, SavedStrategy, ManualShoppingItem, AppMode } from '../../types';
 import { allFoods, BEHAVIOR_TAGS } from '../../constants';
@@ -96,7 +97,7 @@ const PlateBuilderView: React.FC<{
     const [showSavePreset, setShowSavePreset] = useState(false);
 
     // Initialize from editingLog if present
-    useMemo(() => {
+    useEffect(() => {
         if (editingLog) {
             setDate(editingLog.originalDate);
             setMeal(editingLog.originalMeal as RecipeFilter);
@@ -114,7 +115,7 @@ const PlateBuilderView: React.FC<{
             }));
             setSelectedFoods(convertedItems);
         }
-    }, [editingLog]);
+    }, [editingLog, setDate]);
 
     // Derived Foods List for Pantry
     const pantryFoods = useMemo(() => {
