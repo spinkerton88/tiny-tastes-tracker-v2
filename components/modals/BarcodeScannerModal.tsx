@@ -11,84 +11,87 @@ interface BarcodeScannerModalProps {
 const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onScanSuccess }) => {
     const [error, setError] = useState<string | null>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
-    const isScanningRef = useRef<boolean>(false);
+    const isMounted = useRef(false);
 
     useEffect(() => {
+        isMounted.current = true;
         const scannerId = "reader";
-        if (!document.getElementById(scannerId)) return;
-
-        // Initialize with formats in the constructor (CRITICAL for non-QR codes)
-        // Enable native barcode detector for better performance
-        const html5QrCode = new Html5Qrcode(scannerId, {
-            formatsToSupport: [
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E,
-                Html5QrcodeSupportedFormats.CODE_128
-            ],
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true
-            },
-            verbose: false
-        });
         
-        scannerRef.current = html5QrCode;
-
-        const config = { 
-            fps: 10,
-            // Removing qrbox makes it scan the full frame, which is much easier for the user
-            // even if we have a visual guide overlay.
-            aspectRatio: 1.0,
-            videoConstraints: {
-                facingMode: "environment",
-                focusMode: "continuous" // Attempt to force focus
+        // Wait for DOM
+        const initScanner = async () => {
+            if (!document.getElementById(scannerId)) return;
+            
+            // Clean up any existing instances first
+            if (scannerRef.current) {
+                try {
+                    await scannerRef.current.clear();
+                } catch (e) {
+                    // Ignore clear errors
+                }
+                scannerRef.current = null;
             }
-        };
 
-        const startScanner = async () => {
+            const html5QrCode = new Html5Qrcode(scannerId, {
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.CODE_128
+                ],
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                },
+                verbose: false
+            });
+            
+            scannerRef.current = html5QrCode;
+
             try {
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
-                    config,
+                    { 
+                        fps: 10,
+                        aspectRatio: 1.0,
+                        videoConstraints: {
+                            facingMode: "environment",
+                            focusMode: "continuous"
+                        } as any
+                    },
                     (decodedText) => {
-                        // Success
-                        if (isScanningRef.current) {
-                            isScanningRef.current = false;
-                            // Stop immediately to freeze on the frame/result
+                        if (isMounted.current) {
+                            // Stop scanning immediately on success to freeze
                             html5QrCode.stop().then(() => {
                                 html5QrCode.clear();
                                 onScanSuccess(decodedText);
-                            }).catch(err => {
-                                console.warn("Stop failed", err);
+                            }).catch(() => {
+                                // Force callback even if stop fails
                                 onScanSuccess(decodedText);
                             });
                         }
                     },
                     (errorMessage) => {
-                        // Frame error, ignore
+                        // Ignore frame errors
                     }
                 );
-                isScanningRef.current = true;
             } catch (err) {
-                console.error("Error starting scanner", err);
-                setError("Camera permission denied or unavailable. Please check your settings.");
+                if (isMounted.current) {
+                    console.error("Error starting scanner", err);
+                    setError("Camera permission denied or unavailable. Please check settings.");
+                }
             }
         };
 
-        // Small timeout to ensure DOM is ready and previous instances cleared
-        const timer = setTimeout(() => {
-            startScanner();
-        }, 100);
+        const timer = setTimeout(initScanner, 100);
 
         return () => {
+            isMounted.current = false;
             clearTimeout(timer);
-            isScanningRef.current = false;
             if (scannerRef.current) {
                 if (scannerRef.current.isScanning) {
                     scannerRef.current.stop().then(() => {
                         scannerRef.current?.clear();
-                    }).catch(err => console.error("Cleanup error", err));
+                    }).catch(console.error);
                 } else {
                     scannerRef.current.clear();
                 }
@@ -97,10 +100,7 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
     }, [onScanSuccess]);
 
     return (
-        // Use 100dvh (dynamic viewport height) to account for iOS Safari address bar quirks
         <div className="fixed inset-0 bg-black z-[9999] flex flex-col h-[100dvh]">
-            
-            {/* Header: Added pt-safe for Notch */}
             <div className="absolute top-0 left-0 right-0 p-4 pt-[calc(env(safe-area-inset-top)+1rem)] bg-gradient-to-b from-black/80 to-transparent z-20 flex justify-between items-start pointer-events-none">
                 <div className="pointer-events-auto">
                     <h3 className="font-bold text-lg text-white flex items-center gap-2 drop-shadow-md">
@@ -119,11 +119,8 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
                 </button>
             </div>
 
-            {/* Scanner Container */}
             <div className="flex-1 relative w-full h-full bg-black overflow-hidden">
                  <div id="reader" className="w-full h-full"></div>
-                 
-                 {/* Visual Guide Overlay (Does not affect scanning area now) */}
                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                     <div className="w-64 h-64 border-2 border-white/50 rounded-lg relative">
                         <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-teal-400 -mt-1 -ml-1"></div>
@@ -137,7 +134,6 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
                  </div>
             </div>
 
-            {/* Footer: Added pb-safe for Home Indicator */}
             <div className="absolute bottom-0 left-0 right-0 p-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] flex flex-col items-center bg-gradient-to-t from-black/90 to-transparent z-20 pointer-events-none">
                 <button 
                     onClick={onClose}
@@ -148,7 +144,6 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({ onClose, onSc
                 {error && <p className="text-red-400 text-xs mt-3 bg-black/80 inline-block px-3 py-1 rounded text-center">{error}</p>}
             </div>
 
-            {/* CSS to ensure the video element fills the container */}
             <style>{`
                 #reader video {
                     object-fit: cover;

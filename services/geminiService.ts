@@ -3,14 +3,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Recipe, FoodSubstitute, CustomFoodDetails, DailyLogAnalysis, MedicineInstructions, SleepPrediction } from '../types';
 import { flatFoodList } from '../constants';
 
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  console.error("Gemini API key is not set. Please set the API_KEY environment variable.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
-
 const fileToGenerativePart = async (file: File) => {
   const base64EncodedDataPromise = new Promise<string>((resolve) => {
     const reader = new FileReader();
@@ -31,8 +23,17 @@ const callGemini = async <T>(params: {
     config?: any;
 }): Promise<T> => {
     try {
+        // Instantiate client per call to ensure latest API key is used
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent(params);
-        return JSON.parse(response.text || "{}") as T;
+        
+        let text = response.text || "{}";
+        // Clean up Markdown code blocks if present
+        if (text.trim().startsWith("```")) {
+            text = text.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
+        }
+        
+        return JSON.parse(text) as T;
     } catch (error) {
         console.error("Gemini API Error:", error);
         throw new Error("Failed to generate content");
@@ -154,6 +155,7 @@ export const askResearchAssistant = async (history: { role: string; text: string
     contents.push({ role: 'user', parts: [{ text: question }] });
 
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
             contents: contents,
@@ -174,7 +176,12 @@ export const askResearchAssistant = async (history: { role: string; text: string
             },
         });
 
-        const parsed = JSON.parse(response.text || "{}");
+        let text = response.text || "{}";
+        if (text.trim().startsWith("```")) {
+            text = text.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
+        }
+        
+        const parsed = JSON.parse(text);
         const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
 
         return {
@@ -270,7 +277,7 @@ export const analyzeDailyLogTotals = async (ageDescription: string, data: { wetD
         config: {
             systemInstruction: `Analyze daily totals against WHO/AAP guidelines.`,
             responseMimeType: "application/json",
-            tools: [{ googleSearch: {} }],
+            // Removed googleSearch tool to ensure robust JSON output for statistics
             responseSchema: {
                 type: Type.OBJECT,
                 properties: {
