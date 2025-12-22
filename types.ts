@@ -96,6 +96,15 @@ export interface SleepLog {
     notes?: string;
 }
 
+// FIX: Added SleepPrediction interface to support typing in NewbornPage.tsx and geminiService.ts
+export interface SleepPrediction {
+    prediction_status: 'Ready' | 'Needs More Data';
+    next_sweet_spot_start: string;
+    average_wake_window_minutes: number;
+    reasoning_summary: string;
+    troubleshooting_tip: string;
+}
+
 export interface MedicineLog {
     id: string;
     childId?: string; // Link to specific child

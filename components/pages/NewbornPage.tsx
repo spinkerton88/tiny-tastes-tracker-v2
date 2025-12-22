@@ -1,5 +1,4 @@
 
-// ... existing imports ...
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FeedLog, DiaperLog, SleepLog, UserProfile, DailyLogAnalysis, MedicineLog, MedicineInstructions, GrowthLog } from '../../types';
 import { predictSleepWindow, SleepPrediction, analyzeDailyLogTotals, getMedicineInstructions } from '../../services/geminiService';
@@ -26,8 +25,6 @@ interface NewbornPageProps {
     onUpdateProfile?: (profile: UserProfile) => void;
 }
 
-// ... existing helper components (PoopIcon, timeSince, formatTimer) ...
-// Custom SVG Icon for Poop to match requested visual style
 const PoopIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} xmlns="http://www.w3.org/2000/svg">
         <path d="M19 16.5c.6.8 1 1.7 1 2.5 0 2.5-3.6 4.5-8 4.5s-8-2-8-4.5c0-.8.4-1.7 1-2.5" />
@@ -53,8 +50,6 @@ const formatTimer = (seconds: number) => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-// ... existing modals (BreastfeedingModal, BottleModal, PumpingModal, DiaperModal, MedicineModal, HealthCheckView) ...
-// Keeping all previous modals intact...
 const BreastfeedingModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, lastSide?: 'left' | 'right' | 'both' }> = ({ onClose, onSave, lastSide }) => {
     const [mode, setMode] = useState<'timer' | 'manual'>('timer');
     const [activeSide, setActiveSide] = useState<'left' | 'right' | null>(null);
@@ -223,7 +218,6 @@ const DiaperModal: React.FC<{ onClose: () => void, onSave: (type: 'wet' | 'dirty
     );
 };
 
-// ... rest of the file (MedicineModal, HealthCheckView, SleepGrowthView, NewbornPage) ...
 const MedicineModal: React.FC<{ onClose: () => void, onSave: (med: MedicineLog) => void }> = ({ onClose, onSave }) => {
     const [name, setName] = useState('');
     const [weight, setWeight] = useState('');
@@ -272,8 +266,30 @@ const HealthCheckView: React.FC<{ feedLogs: FeedLog[], diaperLogs: DiaperLog[], 
         const yesterdayNursingMinutes = Math.round(yesterdayNursingLogs.reduce((acc, curr) => acc + (curr.durationSeconds || 0), 0) / 60);
         return { wetDiapers, dirtyDiapers, totalFeedOz, totalFeeds, todayNursingMinutes, yesterdayNursingMinutes };
     }, [feedLogs, diaperLogs]);
-    const handleAnalyze = async () => { setLoading(true); setError(null); try { const ageMonths = userProfile?.birthDate ? calculateAgeInMonths(userProfile.birthDate) : 3; const ageDesc = `${ageMonths} months old`; const result = await analyzeDailyLogTotals(ageDesc, stats); setAnalysis(result); } catch (err) { console.error(err); setError("Sage couldn't connect to safety databases right now."); } finally { setLoading(false); } };
-    const getStatusColor = (status: string) => { if (status === 'Normal') return 'bg-green-100 text-green-800 border-green-200'; if (status === 'Watch Closely' || status === 'Low' || status === 'High') return 'bg-yellow-100 text-yellow-800 border-yellow-200'; if (status === 'Contact Pediatrician') return 'bg-red-100 text-red-800 border-red-200'; return 'bg-gray-100 text-gray-800'; };
+
+    const handleAnalyze = async () => { 
+        setLoading(true); 
+        setError(null); 
+        try { 
+            const ageMonths = userProfile?.birthDate ? calculateAgeInMonths(userProfile.birthDate) : 3; 
+            const ageDesc = `${ageMonths} months old`; 
+            const result = await analyzeDailyLogTotals(ageDesc, stats); 
+            setAnalysis(result); 
+        } catch (err) { 
+            console.error(err); 
+            setError("Sage couldn't connect to safety databases or parse the response right now."); 
+        } finally { 
+            setLoading(false); 
+        } 
+    };
+
+    const getStatusColor = (status: string) => { 
+        if (status === 'Normal') return 'bg-green-100 text-green-800 border-green-200'; 
+        if (status === 'Watch Closely' || status === 'Low' || status === 'High') return 'bg-yellow-100 text-yellow-800 border-yellow-200'; 
+        if (status === 'Contact Pediatrician') return 'bg-red-100 text-red-800 border-red-200'; 
+        return 'bg-gray-100 text-gray-800'; 
+    };
+
     return (
         <div className="space-y-6 pb-24">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -287,7 +303,6 @@ const HealthCheckView: React.FC<{ feedLogs: FeedLog[], diaperLogs: DiaperLog[], 
     );
 };
 
-// ... (SleepGrowthView) - Updated to pass userProfile
 const SleepGrowthView: React.FC<{ 
     sleepLogs: SleepLog[], 
     growthLogs: GrowthLog[], 
@@ -358,13 +373,11 @@ const SleepGrowthView: React.FC<{
     );
 };
 
-// ... (NewbornPage component - updated to pass userProfile to SleepGrowthView) ...
 const NewbornPage: React.FC<NewbornPageProps> = ({ 
     currentPage, feedLogs, diaperLogs, sleepLogs, medicineLogs = [], growthLogs = [],
     onLogFeed, onLogDiaper, onLogSleep, onUpdateSleepLog, onLogMedicine, onLogGrowth = () => {}, onDeleteGrowth = () => {},
     baseColor = 'rose', userProfile, onUpdateProfile 
 }) => {
-    // ... existing state ...
     const [showBreastTimer, setShowBreastTimer] = useState(false);
     const [showBottleModal, setShowBottleModal] = useState(false);
     const [showDiaperModal, setShowDiaperModal] = useState(false);
@@ -374,7 +387,6 @@ const NewbornPage: React.FC<NewbornPageProps> = ({
 
     const feedInterval = userProfile?.feedIntervalHours || 3;
 
-    // ... existing derived data ...
     const lastFeed = feedLogs.find(l => l.type !== 'pump');
     const lastDiaper = diaperLogs[0];
     const lastSleep = sleepLogs[0];

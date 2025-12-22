@@ -30,7 +30,7 @@ interface LearnPageProps {
 
 const CollapsibleSources: React.FC<{ sources: any[], baseColor: string }> = ({ sources, baseColor }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const validSources = sources.filter(source => source && source.web && source.web.uri);
+    const validSources = Array.isArray(sources) ? sources.filter(source => source && source.web && source.web.uri) : [];
 
     if (validSources.length === 0) return null;
 
@@ -75,15 +75,13 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
-    const content = LEARNING_RESOURCES[mode];
+    const content = LEARNING_RESOURCES[mode] || { guides: [], research: [] };
 
-    // Smart scrolling logic
     useEffect(() => {
         const container = chatContainerRef.current;
         if (!container) return;
 
         if (isLoading) {
-             // When loading, scroll to bottom to show spinner
              container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
              return;
         }
@@ -93,15 +91,11 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
         const lastMsg = messages[messages.length - 1];
 
         if (lastMsg.role === 'user') {
-            // User sent a message: scroll to bottom
             container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
         } else if (lastMsg.role === 'model') {
-            // AI Replied: scroll to the TOP of the response
             setTimeout(() => {
                 const msgElement = document.getElementById(`msg-${lastMsg.id}`);
                 if (msgElement) {
-                    // Scroll container to the element's top position minus some padding
-                    // This prevents the whole page from bouncing
                     container.scrollTo({ 
                         top: msgElement.offsetTop - 24, 
                         behavior: 'smooth' 
@@ -122,9 +116,7 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
         setIsLoading(true);
 
         try {
-            // Prepare history for API (exclude current message as it's passed separately, and sources)
             const history = messages.map(m => ({ role: m.role, text: m.text }));
-            
             const response = await askResearchAssistant(history, textToAsk);
             
             const aiMsg: ChatMessage = {
@@ -151,10 +143,8 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
 
     return (
         <div className="space-y-8">
-            {/* Primary Feature: AI Chat */}
             <div>
                 <h2 className="text-2xl font-semibold text-gray-800 mb-4">Sage AI</h2>
-                
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden flex flex-col h-[600px]">
                     <div className="p-4 bg-gray-50 border-b flex items-center gap-3">
                         <div className="p-2 bg-violet-100 rounded-full">
@@ -166,7 +156,6 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
                         </div>
                     </div>
 
-                    {/* Chat Area - Added relative positioning for accurate scrolling */}
                     <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-white scroll-smooth relative">
                         {messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center text-gray-400 p-8">
@@ -181,45 +170,18 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
                         )}
 
                         {messages.map((msg) => (
-                            <div 
-                                key={msg.id} 
-                                id={`msg-${msg.id}`}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div 
-                                    className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm ${
-                                        msg.role === 'user' 
-                                        ? `bg-${baseColor}-600 text-white rounded-tr-none` 
-                                        : 'bg-gray-100 text-gray-800 rounded-tl-none'
-                                    }`}
-                                >
-                                    {msg.role === 'user' ? (
-                                        <p>{msg.text}</p>
-                                    ) : (
+                            <div key={msg.id} id={`msg-${msg.id}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? `bg-${baseColor}-600 text-white rounded-tr-none` : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
+                                    {msg.role === 'user' ? <p>{msg.text}</p> : (
                                         <>
-                                            <div 
-                                                className="prose-static prose-sm max-w-none prose-p:my-1 prose-a:text-blue-600" 
-                                                dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.text, baseColor) }} 
-                                            />
-                                            
-                                            {/* Collapsible Sources */}
-                                            {msg.sources && msg.sources.length > 0 && (
-                                                <CollapsibleSources sources={msg.sources} baseColor={baseColor} />
-                                            )}
-
-                                            {/* Suggested Questions */}
+                                            <div className="prose-static prose-sm max-w-none prose-p:my-1 prose-a:text-blue-600" dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(msg.text, baseColor) }} />
+                                            {msg.sources && msg.sources.length > 0 && <CollapsibleSources sources={msg.sources} baseColor={baseColor} />}
                                             {msg.suggestedQuestions && msg.suggestedQuestions.length > 0 && (
                                                 <div className="mt-4 pt-2 border-t border-gray-200/50">
                                                     <p className="text-[10px] uppercase font-bold text-gray-400 mb-2 tracking-wider">Suggested Questions</p>
                                                     <div className="flex flex-col gap-2">
                                                         {msg.suggestedQuestions.map((question, idx) => (
-                                                            <button 
-                                                                key={idx}
-                                                                onClick={() => handleAskAI(question)}
-                                                                className="text-left text-xs bg-white border border-violet-200 hover:bg-violet-50 hover:border-violet-300 text-violet-700 px-3 py-2 rounded-lg transition-colors shadow-sm"
-                                                            >
-                                                                {question}
-                                                            </button>
+                                                            <button key={idx} onClick={() => handleAskAI(question)} className="text-left text-xs bg-white border border-violet-200 hover:bg-violet-50 hover:border-violet-300 text-violet-700 px-3 py-2 rounded-lg transition-colors shadow-sm">{question}</button>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -241,23 +203,10 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
                         )}
                     </div>
 
-                    {/* Input Area */}
                     <div className="p-4 bg-white border-t border-gray-100">
                         <div className="flex gap-2">
-                            <input 
-                                type="text" 
-                                value={query}
-                                onChange={e => setQuery(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleAskAI()}
-                                placeholder="Type your question..." 
-                                className="flex-grow block w-full rounded-full border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm px-4 py-3"
-                                disabled={isLoading}
-                            />
-                            <button 
-                                onClick={() => handleAskAI()}
-                                disabled={isLoading || !query.trim()}
-                                className="inline-flex justify-center items-center p-3 border border-transparent rounded-full shadow-sm text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
+                            <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleAskAI()} placeholder="Type your question..." className="flex-grow block w-full rounded-full border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 text-sm px-4 py-3" disabled={isLoading} />
+                            <button onClick={() => handleAskAI()} disabled={isLoading || !query.trim()} className="inline-flex justify-center items-center p-3 border border-transparent rounded-full shadow-sm text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                 <Icon name="send" className="w-5 h-5" />
                             </button>
                         </div>
@@ -265,21 +214,17 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal' }) => {
                 </div>
             </div>
 
-            {/* Secondary Section: Common Questions */}
             <div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <Icon name="book-open" className={`w-5 h-5 text-${baseColor}-600`} />
                     Common Questions & Resources ({mode === 'EXPLORER' ? '6-12m' : mode.charAt(0) + mode.slice(1).toLowerCase()})
                 </h3>
                 <div className="space-y-3">
-                    {/* Mode Specific Guides */}
                     {content.guides.map((guide, index) => (
                         <Accordion key={`guide-${index}`} title={guide.title} icon={guide.icon} defaultOpen={false} baseColor={baseColor}>
                             <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: guide.content }}></div>
                         </Accordion>
                     ))}
-                    
-                    {/* Mode Specific Research Data */}
                     {content.research.map((item, index) => (
                         <Accordion key={`research-${index}`} title={item.title} icon={item.icon} defaultOpen={false} baseColor={baseColor}>
                             <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: item.content }} />
