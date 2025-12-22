@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { UserProfile, TriedFoodLog, Milestone, TextureStage, AppMode } from '../../types';
 import { allFoods, COMMON_ALLERGENS, TEXTURE_STAGES, BADGES_LIST } from '../../constants';
-import { useAuth } from '../../hooks/useAuth';
 import Icon from '../ui/Icon';
 import EmptyState from '../ui/EmptyState';
 
@@ -26,19 +25,23 @@ const SyncInfoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><Icon name="x" /></button>
         </div>
         <div className="p-6 modal-scroll-content prose-static">
-            <p>You can keep your Tiny Tastes data in sync between your phone, tablet, and computer by signing in with Google.</p>
+            <p>You can keep your Tiny Tastes data in sync between your phone, tablet, and computer by using a cloud storage service like iCloud Drive or Google Drive.</p>
             <h4 className="font-semibold mt-4">How it works:</h4>
             <ol className="list-decimal list-outside pl-5 space-y-2">
                 <li>
-                    <strong>Cloud Sync:</strong> When you are signed in, your data is automatically saved to the cloud.
+                    <strong>First-Time Save:</strong><br />
+                    On your primary device, tap <strong>"Download Backup"</strong>. When your device asks where to save the <code>tiny-tastes-backup.json</code> file, choose a location inside your <strong>iCloud Drive</strong> or <strong>Google Drive</strong>.
                 </li>
                 <li>
-                    <strong>Offline Mode:</strong> If you are offline, data saves to your device and syncs when you reconnect.
+                    <strong>Loading on Another Device:</strong><br />
+                    On your second device, open the app and tap <strong>"Load from Backup File"</strong> on this page. Navigate to your cloud drive and select the <code>.json</code> file you saved. Your data will now be loaded.
                 </li>
                 <li>
-                    <strong>Multiple Devices:</strong> Sign in on another device to instantly see your data.
+                    <strong>Updating Your Backup:</strong><br />
+                    After logging new foods or recipes, save your progress by tapping <strong>"Update Backup File"</strong>. Select the <em>same</em> <code>.json</code> file in your cloud drive to overwrite it with your latest data.
                 </li>
             </ol>
+            <p className="text-xs text-gray-500 mt-4">Note: The "Update Backup File" feature requires a modern browser like Chrome or Edge.</p>
         </div>
       </div>
     </div>
@@ -55,9 +58,6 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
     const [currentTexture, setCurrentTexture] = useState<TextureStage>(userProfile?.currentTextureStage || 'puree');
     const [appMode, setAppMode] = useState<AppMode | 'AUTO'>(userProfile?.preferredMode || 'AUTO');
     const [showInfoModal, setShowInfoModal] = useState(false);
-    
-    // Auth
-    const { user, login, logout } = useAuth();
     
     const isSavePickerSupported = 'showSaveFilePicker' in window;
     
@@ -195,29 +195,6 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
     return (
         <div className="space-y-6">
             {showInfoModal && <SyncInfoModal onClose={() => setShowInfoModal(false)} />}
-            
-            {/* Cloud Sync Card */}
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <Icon name="cloud" className="w-5 h-5 text-blue-500" /> Cloud Sync
-                </h3>
-                {user ? (
-                    <div className="mt-3">
-                        <p className="text-sm text-gray-600 mb-3">Signed in as <strong>{user.email}</strong>. Your data is being synced.</p>
-                        <button onClick={logout} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            Sign Out
-                        </button>
-                    </div>
-                ) : (
-                    <div className="mt-3">
-                        <p className="text-sm text-gray-600 mb-3">Sign in to sync your data across multiple devices.</p>
-                        <button onClick={login} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 shadow-sm flex items-center gap-2">
-                            <Icon name="log-in" className="w-4 h-4" /> Sign In with Google
-                        </button>
-                    </div>
-                )}
-            </div>
-
             <div className="bg-white p-6 rounded-lg shadow">
                 <h3 className="text-xl font-semibold text-gray-800">My Baby's Profile</h3>
                 <p className="text-sm text-gray-600 mt-1 mb-4">Personalize the app with your baby's name, birth date, and any known allergies.</p>
@@ -342,15 +319,15 @@ const ProfileView: React.FC<{ userProfile: UserProfile | null, onSaveProfile: (p
             
             <div className="bg-white p-6 rounded-lg shadow">
                 <div className="flex items-center gap-2 mb-4">
-                    <h3 className="text-xl font-semibold text-gray-800">Manual Data Management</h3>
+                    <h3 className="text-xl font-semibold text-gray-800">Account & Data</h3>
                     <button onClick={() => setShowInfoModal(true)} title="Learn how to sync data" className="text-gray-400 hover:text-gray-600">
                         <Icon name="info" className="w-5 h-5" />
                     </button>
                 </div>
                 <div className="space-y-3">
                     <div className="p-4 bg-gray-50 rounded-lg border">
-                        <h4 className="font-medium text-gray-800">Export / Import File</h4>
-                        <p className="text-sm text-gray-600 mt-1">Manually save your data to a file as a backup.</p>
+                        <h4 className="font-medium text-gray-800">Backup & Restore Data</h4>
+                        <p className="text-sm text-gray-600 mt-1">Save your data to a file to transfer between devices or keep as a backup.</p>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button onClick={handleExport} className="w-full inline-flex justify-center items-center gap-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                                 <Icon name="download" className="w-4 h-4" /> Download Backup

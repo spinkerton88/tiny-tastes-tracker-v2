@@ -32,8 +32,7 @@ import AddChildModal from './components/modals/AddChildModal';
 import { LiveSageModal } from './components/modals/LiveSageModal';
 
 import { useAppMode } from './hooks/useAppMode';
-import { useAuth } from './hooks/useAuth';
-import { useSyncData } from './hooks/useSyncData';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import { UserProfile, TriedFoodLog, Recipe, MealPlan, Milestone, ModalState, Food, CustomFood, FoodLogData, Badge, SavedStrategy, LoggedItemData, ManualShoppingItem, FeedLog, DiaperLog, SleepLog, MedicineLog, GrowthLog } from './types';
 import { DEFAULT_MILESTONES, BADGES_LIST, flatFoodList } from './constants';
 import { fetchProductIngredients } from './services/openFoodFactsService';
@@ -41,16 +40,12 @@ import { fetchProductIngredients } from './services/openFoodFactsService';
 const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal'));
 
 const App: React.FC = () => {
-  // Auth Hook
-  const { user, loading: authLoading } = useAuth();
-
   // Profiles has custom migration logic, so we keep the initializer but use the hook for persistence
-  const [profiles, setProfiles] = useSyncData<UserProfile[]>('tiny-tastes-tracker-profiles', [], user, authLoading);
+  const [profiles, setProfiles] = useLocalStorage<UserProfile[]>('tiny-tastes-tracker-profiles', []);
   
   // Handle legacy profile migration only once on mount if profiles are empty
   useEffect(() => {
-      // Only run this logic if we are NOT loading auth (to avoid overwriting cloud data with local legacy data immediately)
-      if (!authLoading && profiles.length === 0) {
+      if (profiles.length === 0) {
           const legacyProfile = localStorage.getItem('tiny-tastes-tracker-profile');
           if (legacyProfile) {
               try {
@@ -62,9 +57,9 @@ const App: React.FC = () => {
               }
           }
       }
-  }, [authLoading, profiles.length]); // Added dependencies to satisfy linter, logic guarded inside
+  }, []);
 
-  const [activeChildId, setActiveChildId] = useSyncData<string>('tiny-tastes-tracker-activeChildId', '', user, authLoading);
+  const [activeChildId, setActiveChildId] = useLocalStorage<string>('tiny-tastes-tracker-activeChildId', '');
 
   // Initialize activeChildId if empty and profiles exist
   useEffect(() => {
@@ -78,29 +73,29 @@ const App: React.FC = () => {
 
   // Trigger onboarding if no profiles exist (after initial load attempt)
   useEffect(() => {
-      if (!authLoading && profiles.length === 0) {
+      if (profiles.length === 0) {
           // Check if we just tried to migrate and failed, or if it's truly a fresh user
           const legacy = localStorage.getItem('tiny-tastes-tracker-profile');
           if (!legacy) setIsOnboarding(true);
       }
-  }, [profiles.length, authLoading]);
+  }, [profiles.length]);
 
   // Consolidate all data state using the custom hook
-  const [triedFoods, setTriedFoods] = useSyncData<TriedFoodLog[]>('tiny-tastes-tracker-triedFoods', [], user, authLoading);
-  const [recipes, setRecipes] = useSyncData<Recipe[]>('tiny-tastes-tracker-recipes', [], user, authLoading);
-  const [mealPlan, setMealPlan] = useSyncData<MealPlan>('tiny-tastes-tracker-mealPlan', {}, user, authLoading);
-  const [customFoods, setCustomFoods] = useSyncData<CustomFood[]>('tiny-tastes-tracker-customFoods', [], user, authLoading);
-  const [allMilestones, setAllMilestones] = useSyncData<Milestone[]>('tiny-tastes-tracker-milestones', DEFAULT_MILESTONES, user, authLoading);
-  const [savedStrategies, setSavedStrategies] = useSyncData<SavedStrategy[]>('tiny-tastes-tracker-savedStrategies', [], user, authLoading);
-  const [manualShoppingItems, setManualShoppingItems] = useSyncData<ManualShoppingItem[]>('tiny-tastes-tracker-manualShopping', [], user, authLoading);
-  const [shoppingCheckedItems, setShoppingCheckedItems] = useSyncData<Record<string, string>>('tiny-tastes-tracker-shoppingChecked', {}, user, authLoading);
+  const [triedFoods, setTriedFoods] = useLocalStorage<TriedFoodLog[]>('tiny-tastes-tracker-triedFoods', []);
+  const [recipes, setRecipes] = useLocalStorage<Recipe[]>('tiny-tastes-tracker-recipes', []);
+  const [mealPlan, setMealPlan] = useLocalStorage<MealPlan>('tiny-tastes-tracker-mealPlan', {});
+  const [customFoods, setCustomFoods] = useLocalStorage<CustomFood[]>('tiny-tastes-tracker-customFoods', []);
+  const [allMilestones, setAllMilestones] = useLocalStorage<Milestone[]>('tiny-tastes-tracker-milestones', DEFAULT_MILESTONES);
+  const [savedStrategies, setSavedStrategies] = useLocalStorage<SavedStrategy[]>('tiny-tastes-tracker-savedStrategies', []);
+  const [manualShoppingItems, setManualShoppingItems] = useLocalStorage<ManualShoppingItem[]>('tiny-tastes-tracker-manualShopping', []);
+  const [shoppingCheckedItems, setShoppingCheckedItems] = useLocalStorage<Record<string, string>>('tiny-tastes-tracker-shoppingChecked', {});
   
   // Newborn Mode Data
-  const [feedLogs, setFeedLogs] = useSyncData<FeedLog[]>('tiny-tastes-tracker-feedLogs', [], user, authLoading);
-  const [diaperLogs, setDiaperLogs] = useSyncData<DiaperLog[]>('tiny-tastes-tracker-diaperLogs', [], user, authLoading);
-  const [sleepLogs, setSleepLogs] = useSyncData<SleepLog[]>('tiny-tastes-tracker-sleepLogs', [], user, authLoading);
-  const [medicineLogs, setMedicineLogs] = useSyncData<MedicineLog[]>('tiny-tastes-tracker-medicineLogs', [], user, authLoading);
-  const [growthLogs, setGrowthLogs] = useSyncData<GrowthLog[]>('tiny-tastes-tracker-growthLogs', [], user, authLoading);
+  const [feedLogs, setFeedLogs] = useLocalStorage<FeedLog[]>('tiny-tastes-tracker-feedLogs', []);
+  const [diaperLogs, setDiaperLogs] = useLocalStorage<DiaperLog[]>('tiny-tastes-tracker-diaperLogs', []);
+  const [sleepLogs, setSleepLogs] = useLocalStorage<SleepLog[]>('tiny-tastes-tracker-sleepLogs', []);
+  const [medicineLogs, setMedicineLogs] = useLocalStorage<MedicineLog[]>('tiny-tastes-tracker-medicineLogs', []);
+  const [growthLogs, setGrowthLogs] = useLocalStorage<GrowthLog[]>('tiny-tastes-tracker-growthLogs', []);
 
   const [currentPage, setCurrentPage] = useState('tracker');
   const [modalState, setModalState] = useState<ModalState>({ type: null });
