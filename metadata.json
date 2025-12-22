@@ -2,6 +2,7 @@
   "name": "tiny-tastes-tracker-ai",
   "description": "The intelligent, AI-powered baby food tracker. Features smart recipe suggestions, instant image-to-recipe import, nutritional substitute analysis, and doctor-ready progress reports.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "microphone"
   ]
 }

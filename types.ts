@@ -96,7 +96,6 @@ export interface SleepLog {
     notes?: string;
 }
 
-// FIX: Added SleepPrediction interface to support typing in NewbornPage.tsx and geminiService.ts
 export interface SleepPrediction {
     prediction_status: 'Ready' | 'Needs More Data';
     next_sweet_spot_start: string;
@@ -152,7 +151,7 @@ export interface Recipe {
     instructions: string;
     tags: string[];
     mealTypes: RecipeFilter[];
-    createdAt: string; // Changed from Firebase Timestamp to ISO string
+    createdAt: string; 
     rating?: number;
 }
 
@@ -167,17 +166,17 @@ export interface Badge {
 }
 
 export interface UserProfile {
-    id: string; // Unique ID for multi-child support
+    id: string; 
     babyName?: string;
     birthDate?: string;
-    gender?: 'boy' | 'girl'; // Added gender for growth percentiles
-    knownAllergies?: string[]; // Changed from string to string[]
+    gender?: 'boy' | 'girl'; 
+    knownAllergies?: string[]; 
     pediatricianApproved?: boolean;
     currentTextureStage?: TextureStage;
     badges?: Badge[];
     preferredMode?: AppMode;
     safeFoods?: string[];
-    feedIntervalHours?: number; // NEW: Preferred feeding interval
+    feedIntervalHours?: number; 
 }
 
 export interface MealPlan {
@@ -196,7 +195,7 @@ export interface FoodSubstitute {
 
 export interface Milestone {
     id: string;
-    childId?: string; // Link to specific child (optional for backward compatibility)
+    childId?: string; 
     title: string;
     icon: string;
     description: string;
@@ -205,7 +204,6 @@ export interface Milestone {
     notes?: string;
 }
 
-// Picky Eater Types
 export interface PickyEaterStrategy {
     type: string;
     title: string;
@@ -222,7 +220,6 @@ export interface SavedStrategy extends PickyEaterStrategy {
     dateSaved: string;
 }
 
-// Log Meal Types
 export type FoodStatus = 'eaten' | 'touched' | 'refused';
 
 export interface LoggedItemData {
@@ -241,16 +238,10 @@ export interface ScannedProductData {
     image?: string;
 }
 
-// Shopping List Types
 export interface ManualShoppingItem {
     id: string;
     name: string;
     addedAt: string;
-}
-
-export interface ShoppingListState {
-    manualItems: ManualShoppingItem[];
-    checkedItems: Record<string, string>; // Maps itemName -> ISODateString of when it was checked
 }
 
 // Modal State Types
@@ -272,6 +263,7 @@ type CustomFoodModalState = { type: 'ADD_CUSTOM_FOOD'; initialName?: string; sca
 type LogMealModalState = { type: 'LOG_MEAL'; initialFoods?: string[] };
 type ScanBarcodeModalState = { type: 'SCAN_BARCODE' };
 type AddChildModalState = { type: 'ADD_CHILD' };
+type LiveSageModalState = { type: 'LIVE_SAGE' };
 type NullModalState = { type: null };
 
 export type ModalState =
@@ -293,4 +285,5 @@ export type ModalState =
   | LogMealModalState
   | ScanBarcodeModalState
   | AddChildModalState
+  | LiveSageModalState
   | NullModalState;
