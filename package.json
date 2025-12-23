@@ -1,4 +1,3 @@
-
 {
   "name": "tiny-tastes-tracker-ai",
   "private": true,
@@ -10,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.0",
-    "@google/genai": "^1.29.0",
+    "@google/generative-ai": "^0.21.0",
+    "firebase": "10.10.0",
+    "html5-qrcode": "^2.3.8",
     "react": "^19.2.0",
-    "html5-qrcode": "^2.3.8"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

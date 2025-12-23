@@ -35,6 +35,7 @@ import { useAppMode } from './hooks/useAppMode';
 import { useAppLogic } from './hooks/useAppLogic';
 import { CustomFood } from './types';
 import { flatFoodList } from './constants';
+import Profile from './Profile';
 
 const BarcodeScannerModal = React.lazy(() => import('./components/modals/BarcodeScannerModal'));
 
@@ -65,7 +66,12 @@ const App: React.FC = () => {
           case 'learn':
               return <LearnPage mode={mode} baseColor={baseColorName} onStartLiveSage={() => actions.setModalState({ type: 'LIVE_SAGE' })} />;
           case 'profile':
-              return <ProfilePage userProfile={state.userProfile} triedFoods={state.activeTriedFoods} milestones={state.activeMilestones} onSaveProfile={actions.handleUpdateProfile} onResetData={actions.handleResetData} onShowDoctorReport={() => actions.setModalState({ type: 'DOCTOR_REPORT' })} onUpdateMilestone={actions.handleUpdateMilestone} onShowCertificate={() => actions.setModalState({ type: 'CERTIFICATE', babyName: state.userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })} baseColor={baseColorName} />;
+              return (
+                  <>
+                      <Profile />
+                      <ProfilePage userProfile={state.userProfile} triedFoods={state.activeTriedFoods} milestones={state.activeMilestones} onSaveProfile={actions.handleUpdateProfile} onResetData={actions.handleResetData} onShowDoctorReport={() => actions.setModalState({ type: 'DOCTOR_REPORT' })} onUpdateMilestone={actions.handleUpdateMilestone} onShowCertificate={() => actions.setModalState({ type: 'CERTIFICATE', babyName: state.userProfile?.babyName || 'Baby', date: new Date().toLocaleDateString() })} baseColor={baseColorName} />
+                  </>
+              );
           case 'feed':
           case 'health_check':
           case 'sleep_growth':
