@@ -169,3 +169,108 @@ If you are an AI agent tasked with recreating this:
 4.  **Create Atomic UI:** Build `Icon`, `Accordion`, and `EmptyState` first.
 5.  **Assemble Pages:** Build the logic-heavy pages (`NewbornPage`, `TrackerPage`) component by component.
 6.  **Integrate:** Wire everything in `App.tsx` using `useAppLogic`.
+
+---
+
+## 8. Swift (iOS) Application Porting Guide
+
+This section is dedicated to agents tasked with converting **Tiny Tastes Tracker AI** into a native iOS application.
+
+### 8.1 Architecture Translation
+*   **Paradigm:** Transition from **React/Hooks** to **SwiftUI/MVVM**.
+*   **State Management:**
+    *   `useAppLogic.ts` → Create a main `@Observable class AppState`.
+    *   `useAppMode.ts` → Computed properties within `AppState` based on the child's DOB.
+*   **Persistence:**
+    *   Replace `localStorage` with **SwiftData** (iOS 17+) for structured data (`UserProfile`, `TriedFoodLog`, `Recipe`).
+    *   Use `UserDefaults` only for simple flags (e.g., `hasCompletedOnboarding`).
+
+### 8.2 Dependency Mapping
+| Web Tech | iOS Native Equivalent | Notes |
+| :--- | :--- | :--- |
+| React 19 | SwiftUI | Use `NavigationStack` for routing. |
+| Tailwind CSS | SwiftUI Modifiers | Create a `Color+Extension.swift` for the Teal/Rose/Indigo themes. |
+| @google/genai | `GoogleGenerativeAI` SDK | Add package via SPM: `https://github.com/google/generative-ai-swift` |
+| html5-qrcode | VisionKit | Use `DataScannerViewController` for instant, high-performance barcode scanning. |
+| Web Audio API | AVFoundation | Use `AVAudioEngine` for the Live Sage feature. |
+
+### 8.3 Data Model Adaptation
+*   Convert interfaces in `types.ts` to Swift `structs` or `classes` annotated with `@Model` (if using SwiftData).
+*   **Important:** Maintain `Codable` conformance to allow the iOS app to import/export the *same* JSON backup files as the web app.
+
+### 8.4 Critical Implementation Details
+1.  **Live Activities:** The "Newborn Mode" timers (breastfeeding) are perfect candidates for **Live Activities** on the Lock Screen/Dynamic Island.
+2.  **Charts:** Replace the SVG charts in `GrowthTracker.tsx` and `BalanceDashboard.tsx` with the **Swift Charts** framework.
+3.  **Shortcuts:** Expose "Log Diaper" or "Log Feed" as **App Intents** for Siri/Shortcuts integration.
+
+### 8.5 Gemini Integration Steps
+1.  **API Key:** Store in `GenerativeAI-Info.plist` (do not check into source control).
+2.  **Chat:** Use `GenerativeModel.generateContentStream` for the "Ask Sage" feature to maintain the streaming text effect.
+3.  **Vision:** Use `UIImage` converted to JPEG data for the `identifyFoodFromImage` equivalent.
+
+---
+
+## 9. AI Persona & Prompt Engineering
+
+To ensure the "Sage" personality remains consistent across recreations, adhere to these specific system instructions found in `geminiService.ts`.
+
+### 9.1 The "Sage" Persona (Chat)
+*   **Role:** Specialized research assistant for parents/caregivers.
+*   **Tone:** Clear, empathetic, evidence-based.
+*   **Constraint:** Must base answers on high-authority sources (AAP, CDC, WHO).
+*   **Output Format:** Must end every response with 3 distinct "FOLLOWUP:" questions to drive engagement.
+*   **Grounding:** Uses `tools: [{ googleSearch: {} }]`.
+
+### 9.2 Recipe Generation
+*   **Role:** World-class pediatric chef and nutritionist.
+*   **Constraint:** Recipes must be appropriate for the specific age provided in months.
+*   **Schema:** Returns strict JSON (`title`, `ingredients`, `instructions`).
+
+### 9.3 Safety Analysis
+*   **Role:** Pediatric safety expert.
+*   **Ratings:** Must classify foods into strictly "Safe", "Use Caution", or "Avoid".
+*   **Logic:** "Use Caution" usually applies to round shapes (grapes) or allergens. "Avoid" applies to honey (under 1y) or high sodium.
+
+### 9.4 Sleep Predictor
+*   **Input:** Current time, Last Wake Time, and a log summary of last 48h.
+*   **Output:** `prediction_status` ("Ready" or "Needs More Data"), `next_sweet_spot_start` (Time string).
+
+---
+
+## 10. Critical Implementation Quirks
+
+These are specific code patterns used in the React implementation that differ from standard documentation.
+
+### 10.1 Icon Rendering (`Icon.tsx`)
+The app does **not** import individual icons from `lucide-react`.
+*   **Pattern:** It uses a global `window.lucide.createIcons()` call.
+*   **Implementation:** The `Icon` component renders a `<span>` with a `data-lucide` attribute, then triggers the global create method in a `useEffect`.
+*   **Reason:** Reduces bundle size and allows for dynamic icon name strings stored in the database.
+
+### 10.2 Image Compression (`utils.ts`)
+*   **Constraint:** LocalStorage has a 5MB limit.
+*   **Solution:** Before saving `messyFaceImage`, the app converts the File to a Canvas, resizes it to a max width of **300px**, and exports as `image/jpeg` with **0.7** quality.
+
+### 10.3 Gemini Live API Audio Format
+*   **Input:** 16kHz PCM (via `AudioContext.createScriptProcessor`).
+*   **Output:** 24kHz PCM.
+*   **Protocol:** WebSocket via `ai.live.connect`.
+*   **Voice:** "Zephyr" (Prebuilt).
+
+---
+
+## 11. Gamification Logic & Badges
+
+The gamification logic in `useAppLogic.ts` is specific. To recreate the experience accurately, use these exact thresholds:
+
+| Badge ID | Trigger Condition |
+| :--- | :--- |
+| `tried_10` | 10 unique foods logged |
+| `tried_20` | 20 unique foods logged |
+| ... | (Increments by 10 up to 90) |
+| `100_club` | 100 unique foods logged |
+| `green_machine` | 10 foods from category "Vegetables" that are explicitly Green (defined in `constants.ts`) |
+| `fruit_ninja` | 15 unique foods from category "Fruits" |
+| `protein_power` | 5 unique foods from categories "Meat" or "Plant Protein" |
+
+**Note:** Badges are checked every time a new food log is saved.
