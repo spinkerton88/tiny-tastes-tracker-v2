@@ -1,146 +1,171 @@
-# Tiny Tastes Tracker AI - Project Documentation
+# Tiny Tastes Tracker AI - Master Project Blueprint
 
 ## 1. Executive Summary
-**Tiny Tastes Tracker AI** is an intelligent, adaptive web application designed to assist parents through the critical stages of early childhood nutrition and development. Unlike static tracking apps, it evolves with the child—from a newborn logger to a solid food tracker (The "100 Foods Challenge"), and finally into a toddler meal planner and picky eater assistant. It leverages Google's Gemini AI ("Sage") to provide real-time safety checks, recipe generation, and parenting advice.
+**Tiny Tastes Tracker AI** is an intelligent, adaptive web application designed to assist parents through the critical stages of early childhood nutrition and development. It operates as a local-first, offline-capable Progressive Web App (PWA) powered by Google Gemini AI.
+
+**Core Value Proposition:**
+*   **Newborns (0-6m):** Precision tracking for sleep, feeding, and growth.
+*   **Explorers (6-12m):** Gamified "100 Foods Challenge" with safety and allergen tracking.
+*   **Toddlers (12m+):** Meal planning, recipe generation, and "picky eater" psychological strategies.
 
 ---
 
-## 2. Business Requirements
+## 2. Architecture Overview
 
-### 2.1 Problem Statement
-Parents often use fragmented tools: one app for breastfeeding timers, another for tracking solid food introduction, and Google Search for safety questions ("Can babies eat honey?"). This leads to data silos and decision fatigue.
-
-### 2.2 Objectives
-*   **Consolidation:** Combine health logging, food tracking, and meal planning into one app.
-*   **Safety:** Provide immediate, AI-vetted advice on allergens, choking hazards, and serving sizes.
-*   **Gamification:** Encourage dietary variety through badges and progress bars (e.g., "The 100 Club").
-*   **Accessibility:** Offline-first architecture ensuring data is available even without an internet connection.
-
-### 2.3 Target Audience
-*   New parents (0-6 months).
-*   Parents starting solids (6-12 months).
-*   Parents of toddlers dealing with picky eating (12+ months).
-
----
-
-## 3. Functional Specifications
-
-The application operates in three distinct "Modes" based on the child's age profile.
-
-### 3.1 Mode: Newborn (0-6 Months)
-*   **Feed Tracker:** Timer for breastfeeding (left/right side tracking), bottle logging (oz), and pumping sessions.
-*   **Diaper Log:** Track wet, dirty, or mixed diapers.
-*   **Sleep & Growth:**
-    *   Sleep logging (start/stop).
-    *   **AI Feature:** "Sleep Sweet Spot" predictor uses historical data to suggest the next nap window.
-    *   Growth chart visualization (Weight/Height) with WHO percentile calculation.
-*   **Medicine:** Log dosage with AI safety checks against baby's weight.
-*   **Health Check:** AI analysis of last 24h logs (wet diapers/feed volume) against medical guidelines.
-
-### 3.2 Mode: Explorer (6-12 Months)
-*   **100 Foods Tracker:** A checklist of 100 ingredients categorized by type (Veg, Fruit, Protein, etc.).
-*   **Food Logging:** Track reaction (Loved it/Hated it), texture, and allergens.
-*   **AI Analysis:**
-    *   **Image Identification:** Identify food from a photo.
-    *   **Safety Guide:** "How to Serve" modal showing preparation methods for specific ages (blw vs puree).
-    *   **Allergen Alert:** Immediate warning if a logged food contains common allergens (nuts, eggs, etc.).
-*   **Gamification:** Unlock badges (e.g., "Green Machine" for eating 5 green veggies).
-
-### 3.3 Mode: Toddler (12+ Months)
-*   **Plate Builder:** Visual tray to build meals from pantry items or recipes.
-*   **Recipe Management:**
-    *   **AI Chef:** Generate recipes based on available ingredients (e.g., "I have spinach and yogurt").
-    *   **Scan to Import:** Extract recipe text from a photo of a cookbook.
-*   **Picky Eater Rescue:**
-    *   **Strategies:** AI generates specific psychological strategies (e.g., "Food Chaining") to bridge a "Safe Food" to a "Refused Food".
-*   **Balance Dashboard:** Visual breakdown of weekly nutritional intake (Carbs vs Protein vs Veg) with AI suggestions to fill nutrient gaps.
-
-### 3.4 Shared Features
-*   **Multi-Profile:** Track multiple children with independent data.
-*   **Ask Sage (AI Chat):** A context-aware chatbot for parenting advice with Google Search grounding.
-*   **Live Sage:** Real-time voice conversation mode using Gemini Live API.
-*   **Data Sync:** Manual JSON export/import for cross-device transfer.
-
----
-
-## 4. Design and Architecture
-
-### 4.1 Tech Stack
-*   **Frontend Framework:** React 19 (Functional Components, Hooks).
-*   **Language:** TypeScript (Strict typing for robust data handling).
-*   **Build Tool:** Vite.
-*   **Styling:** Tailwind CSS (Utility-first, responsive design).
-*   **AI Provider:** Google GenAI SDK (`@google/genai`).
+### 2.1 Tech Stack
+*   **Core:** React 19, TypeScript, Vite.
+*   **Styling:** Tailwind CSS (Utility-first).
+*   **AI Engine:** Google GenAI SDK (`@google/genai`) - Models: `gemini-2.0-flash` (Text/Vision), `gemini-2.5-flash-native-audio-preview` (Live Audio).
+*   **Data Persistence:** `localStorage` (Client-side only for privacy and offline speed).
+*   **Hardware Access:** `html5-qrcode` (Camera/Barcode), Web Audio API.
 *   **Icons:** Lucide React.
 
-### 4.2 Application Architecture
-The app follows a **Monolithic Client-Side** architecture. It is designed to be hosted statically but behaves like a native app.
+### 2.2 Directory Structure
+The project follows a feature-based organization within `src` (conceptually flattened for this environment).
 
-*   **State Management:**
-    *   **`useAppLogic` Hook:** Centralized controller for app actions and state.
-    *   **`useLocalStorage` Hook:** Custom hook providing persistence layer. All data is stored in the browser's `localStorage` as JSON strings.
-*   **Service Layer:**
-    *   `geminiService.ts`: Handles all interactions with Google Gemini. Includes a custom **Retry Engine** with exponential backoff to handle `429 Resource Exhausted` errors.
-    *   `openFoodFactsService.ts`: Handles barcode lookup for packaged foods.
-*   **Routing:**
-    *   Manual state-based routing (`currentPage` state) rather than `react-router`. This simplifies the transition logic between modes.
-
-### 4.3 Data Model (Key Types)
-*   `UserProfile`: Stores name, DOB, allergies, and app mode.
-*   `TriedFoodLog`: Stores food ID, reaction score (1-5), date, and notes.
-*   `Recipe`: Stores ingredients, instructions, and meal types.
-*   `MealPlan`: Key-value map of `Date -> MealSlot`.
-
----
-
-## 5. Technical Requirements
-
-### 5.1 Environment Variables
-*   `GEMINI_API_KEY`: Required for all AI features. Must be enabled for the project in Google AI Studio.
-
-### 5.2 Browser Capabilities
-*   **LocalStorage:** Critical for data persistence.
-*   **Camera:** Required for food identification and barcode scanning.
-*   **Microphone:** Required for "Live Sage" voice mode.
-*   **File API:** Required for importing/exporting backup JSONs.
-
-### 5.3 AI Model Configuration
-*   **Text/Reasoning:** `gemini-2.0-flash` (Chosen for speed and stability over preview models).
-*   **Vision:** `gemini-2.0-flash` (Multimodal inputs).
-*   **Live/Audio:** `gemini-2.5-flash-native-audio-preview` (For low-latency voice interaction).
-*   **Grounding:** Google Search tool enabled for the "Research Assistant" to provide up-to-date medical info.
+```text
+/
+├── index.html              # Entry point, PWA meta tags
+├── index.tsx               # React Root
+├── App.tsx                 # Main Routing & Layout Orchestrator
+├── types.ts                # TypeScript Interfaces (Single Source of Truth)
+├── constants.ts            # Static Data (Food Lists, Guidelines, Colors)
+├── utils.ts                # Helper Functions (Age calc, Image resize)
+├── hooks/
+│   ├── useAppLogic.ts      # Global Controller (State Facade)
+│   ├── useAppMode.ts       # Mode/Theme Selector Logic
+│   └── useLocalStorage.ts  # Persistence Hook
+├── services/
+│   ├── geminiService.ts    # AI Logic & Retry Engine
+│   └── openFoodFactsService.ts # Barcode API Wrapper
+├── components/
+│   ├── Layout.tsx          # Responsive Shell (Header/Nav)
+│   ├── ui/                 # Atomic Components (Icon, EmptyState, Accordion)
+│   ├── pages/              # Route Views
+│   │   ├── TrackerPage.tsx     # 100 Foods Grid
+│   │   ├── RecipesPage.tsx     # Meal Planner & Recipe Box
+│   │   ├── NewbornPage.tsx     # Logs for 0-6m
+│   │   └── ... (Other Pages)
+│   └── modals/             # Action Dialogs
+│       ├── FoodLogModal.tsx    # Detailed Logging Form
+│       ├── RecipeModal.tsx     # Recipe Editor
+│       ├── LiveSageModal.tsx   # AI Voice Assistant Interface
+│       └── ... (Other Modals)
+```
 
 ---
 
-## 6. Process of Building
+## 3. Data Schema & Persistence
 
-### Phase 1: Foundation & State
-1.  **Setup:** Initialize Vite with React/TypeScript template. Configure Tailwind.
-2.  **Data Layer:** Implement `useLocalStorage` to create a persistence layer that survives refreshes.
-3.  **Types:** Define the core `Food`, `Log`, and `Profile` interfaces to ensure type safety throughout development.
+All data is stored in `localStorage` keys prefixed with `tiny-tastes-tracker-`.
 
-### Phase 2: Core Tracker (Explorer Mode)
-1.  **Food Database:** Create a static constant `flatFoodList` and categorization logic.
-2.  **Tracker UI:** Build the grid view for foods with status toggles (Tried/Untried).
-3.  **Logging:** Implement the `FoodLogModal` to capture reactions and timestamps.
+### 3.1 Core State Objects
+*   **User Profile (`UserProfile`):**
+    ```json
+    {
+      "id": "uuid-string",
+      "babyName": "Alex",
+      "birthDate": "2023-09-15",
+      "gender": "boy",
+      "knownAllergies": ["Peanut"],
+      "preferredMode": "EXPLORER" // Optional override
+    }
+    ```
+*   **Food Log (`TriedFoodLog`):**
+    ```json
+    {
+      "id": "AVOCADO", // References constants.ts food name
+      "date": "2024-03-20",
+      "reaction": 5, // 1-7 scale
+      "meal": "breakfast",
+      "allergyReaction": "none",
+      "messyFaceImage": "data:image/jpeg;base64...", // Compressed base64
+      "tryCount": 3
+    }
+    ```
+*   **Recipe (`Recipe`):**
+    ```json
+    {
+      "id": "uuid",
+      "title": "Spinach Pancakes",
+      "ingredients": "Oats, Spinach, Banana, Egg",
+      "instructions": "Blend and fry.",
+      "tags": ["breakfast", "iron-rich"],
+      "mealTypes": ["breakfast"]
+    }
+    ```
 
-### Phase 3: AI Integration
-1.  **Service Setup:** Create `geminiService.ts` and instantiate the `GoogleGenAI` client.
-2.  **Features:**
-    *   Implement `analyzeFoodWithGemini` to generate safety ratings for custom foods.
-    *   Implement `suggestRecipe` for the fridge-to-recipe feature.
-3.  **Error Handling:** Implement the retry loop logic to handle API quotas gracefully.
+---
 
-### Phase 4: Expansion (Newborn & Toddler)
-1.  **Mode Logic:** Implement `getAppMode` util to switch UI based on birth date.
-2.  **Newborn Views:** Build the specialized timers for breastfeeding and sleep.
-3.  **Toddler Views:** Build the drag-and-drop style Plate Builder and Recipe system.
+## 4. UI/UX Design System
 
-### Phase 5: Polish & Hardware Features
-1.  **Camera:** Integrate `html5-qrcode` for barcode scanning.
-2.  **Live API:** Implement the WebSocket connection for the real-time "Sage" voice assistant.
-3.  **Export:** Add the JSON export feature to allow users to save their data externally.
+The app uses a **Mode-Adaptive Theme** system controlled by `useAppMode.ts`.
 
-### Phase 6: Refinement
-1.  **Design System:** Standardize colors (Teal for Explorer, Rose for Newborn, Indigo for Toddler).
-2.  **Performance:** Memoize heavy calculations (like stats aggregation) using `useMemo`.
+### 4.1 Themes
+1.  **Newborn Mode (`bg-rose-500`):**
+    *   **Focus:** Sleep, Comfort, Nursing.
+    *   **Visuals:** Soft pinks, rounded timers, large high-contrast buttons for tired parents.
+2.  **Explorer Mode (`bg-teal-600`):**
+    *   **Focus:** Discovery, Nature, Freshness.
+    *   **Visuals:** Vibrant teals, food emojis, progress bars, grid layouts.
+3.  **Toddler Mode (`bg-indigo-500`):**
+    *   **Focus:** Structure, Planning, Learning.
+    *   **Visuals:** Deep indigos, plate-building interfaces, weekly calendars.
+
+### 4.2 Key Interactions
+*   **Modal-First Workflow:** Almost all data entry (Logging food, adding recipes) happens in Modals to preserve context of the underlying dashboard.
+*   **Sticky Actions:** Primary actions (Review Plate, Save Log) are often sticky at the bottom of the viewport on mobile.
+*   **Haptic Feedback:** Used in Newborn mode triggers (Start/Stop timer) for tactile confirmation.
+
+---
+
+## 5. Functional Specifications by Feature
+
+### 5.1 The "100 Foods" Tracker (Explorer Mode)
+*   **Food Grid:** Renders ~100 predefined items grouped by category (Veg, Fruit, Protein).
+*   **State:** Items toggle visual state: "Untried" (Opacity 100%) -> "Tried" (Greyscale + Checkmark overlay).
+*   **AI Recognition:** `identifyFoodFromImage` uses Gemini Vision to match a photo to a database item.
+*   **Safety Guide:** Clicking the "Chef Hat" icon opens `HowToServeModal`, providing specific cut sizes (strip vs bite-sized) based on age.
+
+### 5.2 The Recipe & Plate Builder (Toddler Mode)
+*   **Plate Builder:** A horizontal scrolling "tray" where users select foods.
+*   **AI Chef:** `suggestRecipe` takes a list of fridge ingredients and generates a baby-safe recipe using Gemini.
+*   **Scanner:** Uses `html5-qrcode` to scan a barcode -> `openFoodFactsService` fetches ingredients -> App adds them to the food log.
+
+### 5.3 Newborn Logs
+*   **Nursing Timer:** Two independent timers (Left/Right breast) that can run simultaneously or sequentially.
+*   **Sleep Predictor:** `predictSleepWindow` sends last 48h of sleep logs to Gemini to calculate the optimal next wake window.
+
+### 5.4 "Sage" AI Assistant
+*   **Chat:** Context-aware text chat (`askResearchAssistant`) grounded with Google Search for medical validity.
+*   **Live:** Real-time voice interaction (`LiveSageModal`) using WebSocket-based Gemini Live API for hands-free advice during messy meal times.
+
+---
+
+## 6. Technical Implementation Details
+
+### 6.1 Service Layer: `geminiService.ts`
+This file is the critical AI gateway.
+*   **Retry Logic:** Must implement exponential backoff (4s, 8s, 16s) to handle `429 Resource Exhausted` errors from the free tier API.
+*   **JSON Enforcement:** All generative calls (except Chat) must request `responseMimeType: "application/json"` and provide a strict `responseSchema` to ensure the UI doesn't crash on malformed AI output.
+
+### 6.2 State Management: `useAppLogic.ts`
+*   Acts as the Facade pattern.
+*   Aggregates all `useLocalStorage` hooks.
+*   Exposes `actions` (e.g., `handleLogFeed`, `handleSaveFoodLog`) that encapsulate business logic (e.g., unlocking a badge when food count hits 10).
+
+### 6.3 Performance Considerations
+*   **Image Compression:** All user-uploaded photos must be resized (max 300px) client-side before storing in LocalStorage to prevent quota overflow (5MB limit).
+*   **Lazy Loading:** Heavy modals (BarcodeScanner) should be lazy-loaded.
+
+---
+
+## 7. Hand-off Checklist for Agents
+
+If you are an AI agent tasked with recreating this:
+1.  **Start with `types.ts`:** Define the data shape first. This is the contract for the entire app.
+2.  **Build `constants.ts`:** Populate the static food database and color mappings.
+3.  **Implement Services:** Set up the `geminiService` with the retry loop immediately; it is essential for stability.
+4.  **Create Atomic UI:** Build `Icon`, `Accordion`, and `EmptyState` first.
+5.  **Assemble Pages:** Build the logic-heavy pages (`NewbornPage`, `TrackerPage`) component by component.
+6.  **Integrate:** Wire everything in `App.tsx` using `useAppLogic`.
