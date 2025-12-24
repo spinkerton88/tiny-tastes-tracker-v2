@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Recipe, FoodSubstitute, CustomFoodDetails, DailyLogAnalysis, MedicineInstructions, SleepPrediction } from '../types';
 import { flatFoodList } from '../constants';
 
@@ -15,47 +15,69 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 /**
- * Generic helper to handle Gemini API calls, error handling, retry logic, and JSON parsing.
+ * Core function to handle API calls with robust exponential backoff for 429/503 errors.
+ */
+const generateContentWithRetry = async (params: {
+    model: string;
+    contents: any[];
+    config?: any;
+}): Promise<GenerateContentResponse> => {
+    // Increased retries and base delay to handle strict free tier quotas
+    const MAX_RETRIES = 5;
+    const BASE_DELAY = 4000; // 4 seconds base delay (4s, 8s, 16s...)
+    
+    let attempt = 0;
+
+    while (attempt < MAX_RETRIES) {
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const response = await ai.models.generateContent(params);
+            return response;
+        } catch (error: any) {
+            // Check for quota/rate limit errors (429) or server errors (503)
+            const isRetryable = error.status === 429 || error.status === 503 || 
+                                (error.message && (error.message.includes('429') || error.message.includes('503') || error.message.includes('quota') || error.message.includes('Resource has been exhausted')));
+
+            if (isRetryable && attempt < MAX_RETRIES - 1) {
+                // Calculate exponential backoff with jitter
+                // Attempt 0: ~4s
+                // Attempt 1: ~8s
+                // Attempt 2: ~16s
+                // Attempt 3: ~32s
+                const delay = Math.pow(2, attempt) * BASE_DELAY + (Math.random() * 1000);
+                console.warn(`Gemini API 429/503 (Attempt ${attempt + 1}). Retrying in ${Math.round(delay/1000)}s...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                attempt++;
+            } else {
+                console.error(`Gemini API Failed after ${attempt + 1} attempts:`, error);
+                throw error;
+            }
+        }
+    }
+    throw new Error("Failed to generate content after maximum retries.");
+};
+
+/**
+ * Helper to handle JSON parsing from the retry-enabled response.
  */
 const callGemini = async <T>(params: {
     model: string;
     contents: any[];
     config?: any;
 }): Promise<T> => {
-    const MAX_RETRIES = 3;
-    let attempt = 0;
-
-    while (attempt < MAX_RETRIES) {
-        try {
-            // Instantiate client per call to ensure latest API key is used
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent(params);
-            
-            let text = response.text || "{}";
-            // Clean up Markdown code blocks if present
-            if (text.trim().startsWith("```")) {
-                text = text.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
-            }
-            
-            return JSON.parse(text) as T;
-        } catch (error: any) {
-            console.error(`Gemini API Error (Attempt ${attempt + 1}/${MAX_RETRIES}):`, error);
-            
-            // Check for quota/rate limit errors (429) or server errors (503)
-            const isRetryable = error.status === 429 || error.status === 503 || 
-                                (error.message && (error.message.includes('429') || error.message.includes('503') || error.message.includes('quota')));
-
-            if (isRetryable && attempt < MAX_RETRIES - 1) {
-                const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 500);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                attempt++;
-            } else {
-                // If it's not retryable or we ran out of retries, throw the error
-                throw new Error("Failed to generate content. Please try again later.");
-            }
+    try {
+        const response = await generateContentWithRetry(params);
+        let text = response.text || "{}";
+        
+        if (text.trim().startsWith("```")) {
+            text = text.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
         }
+        
+        return JSON.parse(text) as T;
+    } catch (error) {
+        console.error("Gemini JSON Parsing or API Error:", error);
+        throw new Error("Failed to process AI response. Please try again in a moment.");
     }
-    throw new Error("Failed to generate content after retries.");
 };
 
 export const suggestRecipe = async (prompt: string, babyAgeInMonths: number): Promise<Partial<Recipe>> => {
@@ -106,7 +128,6 @@ export const importRecipeFromImage = async (file: File): Promise<Partial<Recipe>
 export const identifyFoodFromImage = async (file: File): Promise<string | null> => {
     try {
         const imagePart = await fileToGenerativePart(file);
-        // Using a truncated list or category hint might be better for large lists, but this works for now.
         const foodListString = flatFoodList.join(', ');
 
         const result = await callGemini<{ foodName: string | null }>({
@@ -160,7 +181,6 @@ export const getFlavorPairingSuggestions = async (triedFoods: string[]): Promise
             }
         }
     });
-    // Ensure array exists even if model returns empty object
     return { pairings: result.pairings || [] };
 };
 
@@ -173,8 +193,8 @@ export const askResearchAssistant = async (history: { role: string; text: string
     contents.push({ role: 'user', parts: [{ text: question }] });
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
+        // Now using generateContentWithRetry to handle 429s in the chat as well
+        const response = await generateContentWithRetry({
             model: "gemini-2.0-flash",
             contents: contents,
             config: {
@@ -185,13 +205,11 @@ export const askResearchAssistant = async (history: { role: string; text: string
                 At the very end of your response, strictly include 3 distinct followup questions for the user, 
                 each starting with "FOLLOWUP: ".`,
                 tools: [{ googleSearch: {} }],
-                // Removed thinkingConfig as it is not supported in gemini-2.0-flash
             },
         });
 
         const text = response.text || "I'm sorry, I couldn't find an answer to that right now.";
         
-        // Extract follow-up questions from the plain text
         const lines = text.split('\n');
         const answerLines = lines.filter(l => !l.startsWith('FOLLOWUP:'));
         const suggestedQuestions = lines
@@ -211,7 +229,7 @@ export const askResearchAssistant = async (history: { role: string; text: string
         };
     } catch (error) {
         console.error("Error asking research assistant:", error);
-        throw new Error("Failed to get a research-backed answer.");
+        throw new Error("Failed to get a research-backed answer. Please try again.");
     }
 };
 
@@ -296,7 +314,6 @@ export const analyzeDailyLogTotals = async (ageDescription: string, data: { wetD
         config: {
             systemInstruction: `Analyze daily totals against WHO/AAP guidelines.`,
             responseMimeType: "application/json",
-            // Removed googleSearch tool to ensure robust JSON output for statistics
             responseSchema: {
                 type: Type.OBJECT,
                 properties: {
