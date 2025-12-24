@@ -106,7 +106,13 @@ const LearnPage: React.FC<LearnPageProps> = ({ mode, baseColor = 'teal', onStart
         try {
             const history = messages.map(m => ({ role: m.role, text: m.text }));
             const response = await askResearchAssistant(history, textToAsk);
-            const aiMsg: ChatMessage = { id: (Date.now() + 1).toString(), role: 'model', text: response.answer, sources: response.sources, suggestedQuestions: response.suggestedQuestions };
+            const aiMsg: ChatMessage = { 
+                id: (Date.now() + 1).toString(), 
+                role: 'model', 
+                text: response.answer, 
+                sources: response.sources, 
+                suggestedQuestions: response.suggestedQuestions 
+            };
             setMessages(prev => [...prev, aiMsg]);
         } catch (err) {
             const errorMsg: ChatMessage = { id: (Date.now() + 1).toString(), role: 'model', text: "I encountered an error. Please try again." };

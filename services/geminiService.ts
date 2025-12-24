@@ -160,34 +160,38 @@ export const askResearchAssistant = async (history: { role: string; text: string
             model: "gemini-3-flash-preview",
             contents: contents,
             config: {
-                systemInstruction: `You are Sage, a research assistant for parents. Base your answers on authoritative sources. Use a thinking budget to ensure high quality. Return JSON with 'answer' (markdown), 'suggestedQuestions' (array of 3), and 'thinking' (your reasoning).`,
+                systemInstruction: `You are Sage, a specialized research assistant for parents and caregivers. 
+                Base your answers on high-authority sources like the AAP, CDC, WHO, and peer-reviewed journals.
+                Provide clear, empathetic, and evidence-based guidance.
+                
+                At the very end of your response, strictly include 3 distinct followup questions for the user, 
+                each starting with "FOLLOWUP: ".`,
                 tools: [{ googleSearch: {} }],
-                thinkingConfig: { thinkingBudget: 4000 },
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        answer: { type: Type.STRING },
-                        suggestedQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
-                        thinking: { type: Type.STRING }
-                    },
-                    required: ["answer", "suggestedQuestions"]
-                }
+                thinkingConfig: { thinkingBudget: 4000 }
+                // NOTE: responseMimeType: "application/json" is NOT used here 
+                // because Search Grounding responses should not be treated as JSON.
             },
         });
 
-        let text = response.text || "{}";
-        if (text.trim().startsWith("```")) {
-            text = text.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
-        }
+        const text = response.text || "I'm sorry, I couldn't find an answer to that right now.";
         
-        const parsed = JSON.parse(text);
+        // Extract follow-up questions from the plain text
+        const lines = text.split('\n');
+        const answerLines = lines.filter(l => !l.startsWith('FOLLOWUP:'));
+        const suggestedQuestions = lines
+            .filter(l => l.startsWith('FOLLOWUP:'))
+            .map(l => l.replace('FOLLOWUP:', '').trim());
+
         const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
 
         return {
-            answer: parsed.answer,
+            answer: answerLines.join('\n').trim(),
             sources,
-            suggestedQuestions: parsed.suggestedQuestions || []
+            suggestedQuestions: suggestedQuestions.length > 0 ? suggestedQuestions : [
+                "Is this safe for my baby's age?",
+                "What are some iron-rich alternatives?",
+                "When should I talk to my pediatrician about this?"
+            ]
         };
     } catch (error) {
         console.error("Error asking research assistant:", error);
